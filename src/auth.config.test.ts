@@ -35,3 +35,39 @@ describe("authConfig.callbacks.authorized", () => {
     expect(result).toBe(true);
   });
 });
+
+// El id devuelto por `authorize()` solo llega a `session.user.id` si estos
+// dos callbacks lo trasladan explícitamente: primero al JWT, luego a la
+// sesión. Sin ellos, `session.user` queda vacío (regresión real detectada
+// en fase 3 al verificar /peso manualmente).
+describe("authConfig.callbacks.jwt / session", () => {
+  const jwt = authConfig.callbacks!.jwt!;
+  const session = authConfig.callbacks!.session!;
+
+  it("copia el id del usuario autenticado al token en el login", async () => {
+    const token = await jwt({
+      token: {},
+      user: { id: "user-1" },
+    } as never);
+
+    expect(token.id).toBe("user-1");
+  });
+
+  it("conserva el id del token en llamadas posteriores sin `user`", async () => {
+    const token = await jwt({
+      token: { id: "user-1" },
+      user: undefined,
+    } as never);
+
+    expect(token.id).toBe("user-1");
+  });
+
+  it("expone el id del token en session.user.id", async () => {
+    const result = await session({
+      session: { user: {}, expires: "" },
+      token: { id: "user-1" },
+    } as never);
+
+    expect(result.user.id).toBe("user-1");
+  });
+});

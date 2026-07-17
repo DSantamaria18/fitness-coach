@@ -36,6 +36,20 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   rutas salvo `/login`, `/api/auth/*` y los assets estáticos de Next.js.
 - `src/lib/verify-credentials.ts` — lógica pura de verificación de usuario/contraseña,
   desacoplada de Auth.js para poder testearla con un mock simple.
+- Los callbacks `jwt`/`session` de `authConfig` trasladan el `id` devuelto por `authorize()`
+  al token y de ahí a `session.user.id` — sin ellos, `session.user` solo trae los campos
+  estándar de Auth.js (name/email/image) y cualquier código que dependa de `session.user.id`
+  ve siempre `undefined`.
+
+## Registro de peso corporal
+
+- `src/lib/validate-body-weight.ts` — esquema Zod único (peso 20–300 kg, fecha ISO no futura),
+  consumido tanto por la ruta API como por la Server Action del formulario.
+- `src/lib/create-body-weight.ts` — punto único de persistencia (valida con
+  `validate-body-weight.ts` y escribe con Prisma), reutilizado por:
+  - `src/app/api/body-weight/route.ts` (`POST`, pensado para el futuro servidor MCP).
+  - `src/app/peso/actions.ts` (Server Action del formulario `/peso`).
+  Ambos derivan el `userId` de la sesión (`auth()`), nunca del cuerpo de la petición.
 
 ## Estructura de carpetas relevante
 

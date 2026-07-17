@@ -18,6 +18,21 @@ export const authConfig = {
 
       return isLoggedIn;
     },
+    // Sin esto, `session.user` solo trae los campos estándar (name/email/
+    // image) y nunca el id devuelto por `authorize()` — cualquier código que
+    // lea `session.user.id` vería siempre `undefined`.
+    jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
+    session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+      }
+      return session;
+    },
   },
   providers: [],
 } satisfies NextAuthConfig;

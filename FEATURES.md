@@ -25,5 +25,18 @@ cambio relevante.
   defecto de Auth.js).
 - Formulario de login mobile-first en `/login`.
 
-Aún no hay funcionalidad de registro de peso/sesiones, historial, informe de progreso ni MCP
-— llega en las siguientes fases del roadmap.
+## Registro de peso corporal
+
+- Formulario mobile-first en `/peso` para registrar el peso corporal del día (o de una fecha
+  pasada): campo peso en kg y fecha (por defecto hoy, no permite fechas futuras).
+- Validación de dominio compartida (`src/lib/validate-body-weight.ts`, Zod): peso entre 20 y
+  300 kg, fecha válida y no futura.
+- Persistencia vía `src/lib/create-body-weight.ts`, reutilizada tanto por el endpoint
+  `POST /api/body-weight` (pensado para el futuro servidor MCP) como por la Server Action del
+  formulario `/peso` — una sola fuente de verdad para la validación y la escritura en base de
+  datos, sin duplicar lógica entre ambos puntos de entrada.
+- El `userId` de cada registro sale siempre de la sesión autenticada, nunca del cuerpo de la
+  petición ni del formulario.
+
+Aún no hay funcionalidad de registro de sesiones de entreno, historial, informe de progreso ni
+MCP — llega en las siguientes fases del roadmap.

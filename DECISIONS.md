@@ -99,4 +99,37 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-17
+- **Decisión:** Registro de peso corporal (fase 3 del roadmap) implementado con una capa de
+  dominio (`validate-body-weight.ts`, Zod) y una capa de persistencia compartida
+  (`create-body-weight.ts`) que reutilizan tanto la ruta `POST /api/body-weight` como la Server
+  Action del formulario `/peso` — evita duplicar la validación/escritura entre el futuro
+  servidor MCP y la UI web. La ruta API y el formulario UI se implementaron con dos agentes en
+  paralelo (regla 9 de CLAUDE.md), cada uno con el contrato exacto de la capa de dominio ya
+  cerrada; tras integrarlos se extrajo `create-body-weight.ts` porque ambos habían duplicado
+  la misma lógica de validación+Prisma de forma independiente.
+- **Alternativas consideradas:** que la Server Action hiciera un `fetch` HTTP a su propia API
+  en vez de compartir código directamente — descartado por depender de una URL base no
+  trivial de resolver dentro de una Server Action, y por ser una vuelta innecesaria dado que
+  ambas corren en el mismo proceso Node.
+- **Justificación:** una sola fuente de verdad para las reglas de negocio (rango de peso, fecha
+  no futura, `userId` siempre desde la sesión) que se pueda testear una vez y reutilizar en
+  cualquier punto de entrada futuro (MCP incluido).
+- **Lecciones aprendidas:**
+  - `authConfig` (fase 2) no tenía callbacks `jwt`/`session`, así que `session.user` nunca
+    incluía el `id` devuelto por `authorize()` — cualquier código que dependiera de
+    `session.user.id` trataba silenciosamente al usuario como no autenticado (401 en vez de
+    guardar el dato). No se detectó en la fase 2 porque sus tests solo cubrían el callback
+    `authorized`, no la forma de la sesión resultante. Se detectó en la verificación manual de
+    `/peso` de esta fase, no por los tests automáticos — refuerza que la verificación manual en
+    navegador exigida por CLAUDE.md para cambios de UI/flujo no es opcional aunque los tests
+    unitarios estén en verde.
+  - Al lanzar dos agentes en paralelo con un contrato de dominio ya cerrado pero sin visibilidad
+    mutua del trabajo del otro, ambos reimplementaron independientemente el mismo patrón
+    auth+validar+persistir. No es un problema grave (la lógica era correcta en ambos), pero
+    conviene, tras integrar el trabajo paralelo, revisar activamente si hay duplicación que
+    extraer antes de dar la fase por cerrada.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
