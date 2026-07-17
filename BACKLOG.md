@@ -6,8 +6,11 @@ dificultad estimada (baja/media/alta). Cuando algo se implementa, se mueve de aq
 
 ## Pendiente de aprobación del usuario
 
-_(vacío por ahora — se irán añadiendo propuestas de mejora a medida que avance el proyecto,
-sin implementarlas hasta que David las apruebe explícitamente.)_
+- **Tests E2E con Playwright** cubriendo los flujos críticos de móvil (login, registrar peso,
+  registrar sesión) una vez existan pantallas reales. Justificación: Vitest + Testing Library
+  cubren lógica de dominio y componentes aislados, pero no verifican el flujo completo en un
+  navegador real como lo usará David desde el móvil. Dificultad: baja-media (configuración
+  estándar, pero exige mantener los tests al día con la UI).
 
 ## Iteraciones futuras ya acordadas (no implementar todavía)
 

@@ -1,8 +1,35 @@
+# dependencies
 node_modules/
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
 dist/
-build/
+
+# env files (nunca committear secretos)
 .env
 .env.*
 !.env.example
+
+# testing
+/coverage
+
+# prisma / sqlite
+*.db
+*.db-journal
+/prisma/dev.db*
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# misc
 *.log
 .DS_Store
+*.pem
+.vercel
+
+/src/generated/prisma

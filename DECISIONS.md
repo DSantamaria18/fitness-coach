@@ -42,4 +42,30 @@ nueva.
 
 ---
 
+---
+
+- **Fecha:** 2026-07-17
+- **Decisión:** Elecciones técnicas concretas para el andamiaje (fase 1 del roadmap de
+  implementación): ORM Prisma (con el generador `prisma-client` + driver adapter
+  `@prisma/adapter-better-sqlite3`, requerido por Prisma 7 al no traer motor Rust embebido por
+  defecto), Vitest + Testing Library para tests (sin Playwright en el MVP), ESLint +
+  Prettier, Tailwind CSS v4 para estilos mobile-first, y GitHub Actions ejecutando
+  format/lint/typecheck/test en cada push. Estas decisiones concretan el stack ya aprobado en
+  SPEC.md (Next.js + TypeScript + SQLite) sin cambiar lo pactado con David.
+- **Alternativas consideradas:** Drizzle ORM (descartado frente a Prisma por su generador de
+  migraciones más maduro y su integración más directa con TypeScript sin configuración
+  adicional), Playwright para E2E (pospuesto a BACKLOG.md, no bloquea el MVP).
+- **Justificación:** mantener el andamiaje simple y con herramientas de uso muy extendido,
+  priorizando velocidad de desarrollo para un proyecto de un único desarrollador/usuario.
+- **Lecciones aprendidas:**
+  - `create-next-app` se niega a generar en un directorio que ya contiene ficheros (los `.md`
+    de documentación viva). Hay que generar en un directorio temporal y copiar selectivamente
+    los ficheros del scaffold, sin pisar la documentación ni el `CLAUDE.md` del proyecto.
+  - `npm run format` (Prettier) reescribe agresivamente el `.md` de reglas de trabajo
+    (`CLAUDE.md`), incluyendo las etiquetas tipo XML que usa para delimitar secciones,
+    corrompiendo su indentación. Por eso `*.md` está excluido de Prettier vía
+    `.prettierignore` — la documentación del proyecto se edita a mano, no se autoformatea.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

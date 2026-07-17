@@ -1,0 +1,123 @@
+// Esquema de dominio — ver SPEC.md §3 para la definición funcional.
+// Cambios aquí deben reflejarse en SPEC.md/ARCHITECTURE.md si alteran el contrato.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// Single-user en el MVP (SPEC §2), pero modelado como tabla para no acoplar
+// el login a una fila implícita y dejar la puerta abierta a auditar sesiones.
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  bodyWeights BodyWeight[]
+  sessions    Session[]
+}
+
+model BodyWeight {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime
+  weightKg  Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+enum ExerciseType {
+  STRENGTH
+  CARDIO
+}
+
+// Catálogo cerrado (SPEC §3): sembrado por seed script, no editable desde
+// el registro de una sesión.
+model Exercise {
+  id        String       @id @default(cuid())
+  name      String       @unique
+  type      ExerciseType
+  createdAt DateTime     @default(now())
+
+  strengthEntries StrengthEntry[]
+  cardioEntries   CardioEntry[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  strengthEntries StrengthEntry[]
+  cardioEntries   CardioEntry[]
+
+  @@index([userId, date])
+}
+
+// Un StrengthEntry agrupa las series de un ejercicio de fuerza dentro de
+// una sesión (una sesión puede tener varios ejercicios de fuerza).
+model StrengthEntry {
+  id         String  @id @default(cuid())
+  sessionId  String
+  exerciseId String
+  notes      String?
+  order      Int
+
+  session  Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exercise Exercise      @relation(fields: [exerciseId], references: [id])
+  sets     StrengthSet[]
+
+  @@index([sessionId])
+  @@index([exerciseId])
+}
+
+model StrengthSet {
+  id              String  @id @default(cuid())
+  strengthEntryId String
+  order           Int
+  reps            Int
+  weightKg        Float
+  tempo           String?
+  rpe             Int?
+
+  strengthEntry StrengthEntry @relation(fields: [strengthEntryId], references: [id], onDelete: Cascade)
+
+  @@index([strengthEntryId])
+}
+
+// Todos los campos numéricos son opcionales individualmente (SPEC §3: no
+// todos los relojes miden todo).
+model CardioEntry {
+  id                    String  @id @default(cuid())
+  sessionId             String
+  exerciseId            String
+  durationSeconds       Int?
+  distanceKm            Float?
+  avgSpeedKmh           Float?
+  avgPaceSecPerKm       Int?
+  avgHeartRate          Int?
+  maxHeartRate          Int?
+  steps                 Int?
+  stepFrequency         Float?
+  kcal                  Int?
+  rpe                   Int?
+  notes                 String?
+
+  session  Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id])
+
+  @@index([sessionId])
+  @@index([exerciseId])
+}
