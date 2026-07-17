@@ -13,3 +13,6 @@ Proyecto sin versión publicada todavía.
   series de fuerza, entradas de cardio) y migración inicial, seed del catálogo de ejercicios,
   Vitest + Testing Library, ESLint + Prettier, endpoint `/api/health`, y CI en GitHub Actions
   (format, lint, typecheck, test en cada push).
+- Login con usuario/contraseña (Auth.js v5 + bcrypt), protección de todas las rutas vía
+  `proxy.ts`, formulario mobile-first en `/login`, y script `hash-password` para generar el
+  hash de la contraseña del único usuario del MVP.

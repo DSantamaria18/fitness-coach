@@ -34,6 +34,24 @@ async function main() {
       create: exercise,
     });
   }
+
+  // Usuario único del MVP (SPEC §2), sembrado desde variables de entorno en
+  // vez de tener un flujo de registro público. ADMIN_PASSWORD_HASH ya debe
+  // venir hasheado (ver `npm run hash-password`) — nunca se guarda el
+  // password en claro ni en el .env.
+  const adminUsername = process.env.ADMIN_USERNAME;
+  const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH;
+  if (adminUsername && adminPasswordHash) {
+    await prisma.user.upsert({
+      where: { username: adminUsername },
+      update: { passwordHash: adminPasswordHash },
+      create: { username: adminUsername, passwordHash: adminPasswordHash },
+    });
+  } else {
+    console.warn(
+      "ADMIN_USERNAME/ADMIN_PASSWORD_HASH no definidos: se omite la siembra del usuario admin.",
+    );
+  }
 }
 
 main()

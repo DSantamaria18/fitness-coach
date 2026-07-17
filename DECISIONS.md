@@ -68,4 +68,35 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-17
+- **Decisión:** Login (fase 2 del roadmap) con Auth.js (NextAuth) v5, provider Credentials +
+  bcryptjs (no `bcrypt` nativo, para evitar compilación con node-gyp además de la ya existente
+  de `better-sqlite3`). Config dividida en `auth.config.ts` (edge-safe: página de login +
+  callback `authorized`, sin providers) y `auth.ts` (añade el provider Credentials, que usa
+  bcrypt/Prisma y solo corre en runtime Node). `src/proxy.ts` crea su propia instancia de
+  NextAuth a partir de `authConfig` para poder proteger rutas desde el runtime Edge sin
+  arrastrar módulos nativos. Usuario único sembrado por `prisma/seed.ts` desde
+  `ADMIN_USERNAME`/`ADMIN_PASSWORD_HASH`, con `scripts/hash-password.ts` como utilidad para
+  generar el hash sin escribir el password en claro en ningún fichero.
+- **Alternativas consideradas:** `bcrypt` nativo (descartado, añadiría un segundo módulo con
+  compilación nativa en Windows), guardar el password sembrado en claro en `.env` y hashearlo
+  en el propio seed (descartado: el hash es el artefacto que debe vivir en el secreto de
+  despliegue, no el password).
+- **Justificación:** separar la config edge-safe de la que depende de Node es el patrón
+  estándar de Auth.js v5 para que el middleware/proxy (que corre en Edge) no falle al empaquetar
+  dependencias nativas; permite además testear el callback `authorized` sin arrancar Auth.js
+  completo.
+- **Lecciones aprendidas:**
+  - Next.js 16 renombró la convención `middleware.ts` → `proxy.ts` (el build falla con un
+    error explícito si sigues usando `middleware.ts`). Además, el export debe ser una función
+    literal (`export default auth`) — un `export const { auth: proxy } = ...` con
+    desestructuración no lo reconoce el analizador estático del build aunque en runtime sea
+    una función válida.
+  - Si `src/proxy.ts` importa `auth` desde `src/auth.ts` (el que incluye el provider
+    Credentials), el build arrastra el cliente de Prisma y sus módulos nativos de Node al
+    runtime Edge y falla. Hay que construir una instancia de NextAuth separada solo con
+    `authConfig` para el proxy/middleware.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
