@@ -241,7 +241,12 @@ describe("listExercisesTool", () => {
   // list-exercises.ts es catálogo global: ignora userId e input.
   it("returns the exercise catalog, ignoring userId and input", async () => {
     listExercisesMock.mockResolvedValue([
-      { id: "ex-1", name: "Sentadilla", type: "STRENGTH", createdAt: new Date() },
+      {
+        id: "ex-1",
+        name: "Sentadilla",
+        type: "STRENGTH",
+        createdAt: new Date(),
+      },
     ]);
 
     const result = await listExercisesTool(USER_ID, { anything: true });

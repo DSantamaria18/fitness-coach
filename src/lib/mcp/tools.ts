@@ -8,8 +8,7 @@ import { getProgressReport } from "@/lib/get-progress-report";
 import { toMcpToolError, type McpToolError } from "./errors";
 
 export type McpToolResult =
-  | { success: true; data: unknown }
-  | { success: false; error: McpToolError };
+  { success: true; data: unknown } | { success: false; error: McpToolError };
 
 export type McpToolHandler = (
   userId: string,
@@ -73,10 +72,7 @@ export const editSessionTool: McpToolHandler = async (userId, input) => {
   return { success: true, data: result.data };
 };
 
-export const getSessionHistoryTool: McpToolHandler = async (
-  userId,
-  input,
-) => {
+export const getSessionHistoryTool: McpToolHandler = async (userId, input) => {
   const result = await getSessionHistory(userId, input);
   if (!result.success) {
     return { success: false, error: toMcpToolError(result.error) };
@@ -90,10 +86,7 @@ export const listExercisesTool: McpToolHandler = async () => {
   return { success: true, data };
 };
 
-export const getProgressReportTool: McpToolHandler = async (
-  userId,
-  input,
-) => {
+export const getProgressReportTool: McpToolHandler = async (userId, input) => {
   const result = await getProgressReport(userId, input);
   if (!result.success) {
     return { success: false, error: toMcpToolError(result.error) };

@@ -18,10 +18,7 @@ describe("resolveMcpUserId", () => {
   it("returns null when the username does not exist", async () => {
     const findUnique = vi.fn().mockResolvedValue(null);
 
-    const userId = await resolveMcpUserId(
-      { user: { findUnique } },
-      "unknown",
-    );
+    const userId = await resolveMcpUserId({ user: { findUnique } }, "unknown");
 
     expect(userId).toBeNull();
   });

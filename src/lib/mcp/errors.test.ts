@@ -6,12 +6,10 @@ describe("toMcpToolError", () => {
   // plano (a diferencia del resto de la capa de dominio): se normaliza a
   // VALIDATION_ERROR porque en la práctica es el único caso en que fallan.
   it("wraps a plain string error as a VALIDATION_ERROR", () => {
-    expect(toMcpToolError("Revisa el peso y la fecha introducidos.")).toEqual(
-      {
-        code: "VALIDATION_ERROR",
-        message: "Revisa el peso y la fecha introducidos.",
-      },
-    );
+    expect(toMcpToolError("Revisa el peso y la fecha introducidos.")).toEqual({
+      code: "VALIDATION_ERROR",
+      message: "Revisa el peso y la fecha introducidos.",
+    });
   });
 
   it("passes an already-structured {code,message} error through unchanged", () => {
