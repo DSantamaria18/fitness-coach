@@ -57,6 +57,18 @@ Proyecto sin versión publicada todavía.
   para compartir la validación de existencia/tipo de ejercicio contra el catálogo entre crear y
   editar una sesión. Todavía sin ruta API ni pantalla web — solo capa de dominio, a la espera
   del servidor MCP.
+- Servidor MCP (SPEC §5): endpoint único `POST /api/mcp` con las 7 tools completas (`log_weight`,
+  `get_weight_history`, `log_session`, `edit_session`, `get_session_history`, `list_exercises`,
+  `get_progress_report`) para que la skill "sesion-entrenamiento" (u otro chat con el conector
+  configurado) lea y escriba en la misma base de datos que la webapp. Protegido con token Bearer
+  (`MCP_BEARER_TOKEN`, comparación segura frente a timing attacks vía hash SHA-256 +
+  `crypto.timingSafeEqual`) verificado antes de tocar Prisma o el protocolo MCP; el `userId` se
+  resuelve del lado del servidor a partir de `ADMIN_USERNAME`, nunca desde el payload MCP.
+  Transporte `WebStandardStreamableHTTPServerTransport` del SDK oficial
+  `@modelcontextprotocol/sdk`, en modo stateless (sin sesión compartida entre peticiones, apto
+  para despliegue serverless). Capa de dominio del servidor MCP en `src/lib/mcp/` (`auth.ts`,
+  `resolve-user.ts`, `errors.ts`, `schemas.ts`, `tools.ts`), testeada por separado del transporte.
+  Ver ARCHITECTURE.md y DECISIONS.md 2026-07-18 para el detalle de la integración con Next.js.
 
 ### Fixed
 

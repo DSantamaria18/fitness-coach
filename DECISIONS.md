@@ -246,4 +246,61 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-18
+- **Decisión:** Fase 2 del servidor MCP (capa de transporte, sobre el dominio ya cerrado en la
+  fase 1 de esta misma ronda): ruta única `POST /api/mcp` montada con el SDK oficial
+  `@modelcontextprotocol/sdk` (v1.29.x), usando `WebStandardStreamableHTTPServerTransport`
+  (subpath `@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js`) en **modo
+  stateless** (`sessionIdGenerator: undefined`) + `enableJsonResponse: true`. Capa de dominio
+  del servidor MCP en `src/lib/mcp/` (`auth.ts`, `resolve-user.ts`, `errors.ts`, `schemas.ts`,
+  `tools.ts`), testeada por separado del transporte, que se mantiene lo más fino posible.
+- **Alternativas consideradas:** `StreamableHTTPServerTransport` (la variante del mismo SDK
+  pensada para `http.IncomingMessage`/`ServerResponse` de Node/Express clásico) envuelta en un
+  puente manual hacia `Request`/`Response` de Next.js — descartada tras inspeccionar
+  `node_modules/@modelcontextprotocol/sdk` y comprobar que la versión instalada ya trae
+  `WebStandardStreamableHTTPServerTransport`, pensada explícitamente para runtimes con Web
+  Standards (Next.js, Cloudflare Workers, Deno, Bun): no hacía falta escribir el puente que el
+  encargo anticipaba como posiblemente necesario. Modo con sesión
+  (`sessionIdGenerator: () => crypto.randomUUID()`) — descartado porque SPEC §5 y el encargo de
+  esta ronda piden explícitamente stateless, ya que cada invocación de este Route Handler puede
+  correr en una instancia serverless distinta sin estado compartido entre peticiones.
+- **Justificación:** el transporte Web-standard del propio SDK es una integración directa (cero
+  código de puente) con los Route Handlers de Next.js App Router, y el modo stateless es el
+  único compatible con un despliegue serverless donde no se puede asumir que dos peticiones
+  consecutivas las atienda el mismo proceso.
+- **Lecciones aprendidas:**
+  - Investigar el SDK ya instalado (`node_modules/@modelcontextprotocol/sdk/dist/esm/server/*.d.ts`)
+    antes de asumir que haría falta un adaptador manual: la versión 1.29 resuelve de fábrica el
+    caso "Web Standard Request/Response", evitando escribir y mantener un puente propio hacia el
+    protocolo JSON-RPC.
+  - En modo stateless, `WebStandardStreamableHTTPServerTransport.validateSession()` se salta
+    por completo (incluida la comprobación de "servidor no inicializado" que sí aplica en modo
+    con sesión), así que un cliente puede enviar directamente `tools/call` sin haber mandado antes
+    un `initialize` en esa misma petición — imprescindible para que esto funcione con una
+    instancia nueva de `McpServer`/transporte en cada invocación serverless, ya que de lo
+    contrario ningún `tools/call` llegaría nunca a completar el handshake previo que exige el
+    modo con sesión.
+  - `registerTool` de `McpServer` es un método genérico: extraer su firma con
+    `Parameters<typeof server.registerTool>` fuera de una llamada real colapsa los tipos a
+    `never` y rompe la inferencia de cada schema Zod concreto. Cada una de las 7 tools se
+    registra con una llamada literal independiente en `route.ts` en vez de a través de una
+    función auxiliar genérica.
+  - Al mockear `@/lib/prisma` completo en un test (a diferencia de pasarle a una función un
+    objeto ad-hoc que solo implementa su interfaz mínima, como ya hacía
+    `verify-credentials.test.ts`), TypeScript infiere el tipo de retorno de `findUnique` a partir
+    del cliente Prisma real completo (incluye todos los campos del modelo `User`, p. ej.
+    `createdAt`), no de la interfaz mínima (`{id,username,passwordHash}`) que usan internamente
+    `resolve-user.ts`/`verify-credentials.ts` — hay que rellenar el mock con el objeto completo
+    del modelo aunque la función bajo test solo lea un subconjunto de sus campos.
+  - Las tools MCP reutilizan literalmente los esquemas Zod ya exportados por la capa de dominio
+    (`bodyWeightSchema`, `sessionSchema`), que usan los nombres de campo reales que persiste la
+    base de datos (`weightKg`/`date` para peso; `fecha`/`ejercicios`/`peso_kg`/`tempo`/`RPE` para
+    sesión, en español, igual que ya consume la skill "sesion-entrenamiento") — no los nombres
+    ilustrativos en español de SPEC.md §5 (`log_weight(fecha, peso_kg)`), que ese mismo apartado
+    ya marca como "provisionales, a refinar en el plan de implementación". Se deja constancia
+    aquí para que no sorprenda al integrar la skill: el contrato real es el que exponen
+    `schemas.ts`/`tools.ts`, no la firma ilustrativa del SPEC.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

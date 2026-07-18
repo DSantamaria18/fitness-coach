@@ -163,6 +163,65 @@ avanza el roadmap de implementación (ver plan de fases acordado).
 - Errores estructurados con el mismo patrón que el resto de la capa de dominio:
   `{ success: false, error: { code: "VALIDATION_ERROR" | "NOT_FOUND", message } }`.
 
+## Servidor MCP
+
+- `src/app/api/mcp/route.ts` — única ruta del servidor MCP (SPEC §5 y §4 caso de uso 6):
+  expone las 7 tools sobre un solo endpoint (`POST /api/mcp`), en tres pasos, cada uno cortando
+  la petición antes de llegar al siguiente si falla:
+  1. **Autenticación**: verifica el header `Authorization: Bearer <token>` contra
+     `MCP_BEARER_TOKEN` (`src/lib/mcp/auth.ts`, `verifyBearerToken`) antes de tocar Prisma o el
+     protocolo MCP. Compara los tokens mediante el hash SHA-256 de ambos con
+     `crypto.timingSafeEqual` (no `===` directo) para evitar tanto un timing attack sobre el
+     contenido como una fuga de longitud si el token recibido y el esperado miden distinto;
+     nunca autentica si `MCP_BEARER_TOKEN` no está configurado. 401 si falla.
+  2. **Resolución de usuario**: la app es de un único usuario, así que el `userId` de cada
+     tool se resuelve una vez por petición a partir de `ADMIN_USERNAME` (misma variable que ya
+     usa el login web) contra Prisma real (`src/lib/mcp/resolve-user.ts`,
+     `resolveMcpUserId`) — nunca se deriva dentro de una tool ni se acepta desde el payload MCP.
+     500 si no existe: es un fallo de configuración del servidor, no un caso esperable en uso
+     normal.
+  3. **Servidor MCP**: monta un `McpServer` (SDK oficial `@modelcontextprotocol/sdk`) con las 7
+     tools ligadas al `userId` ya resuelto, y lo conecta a un
+     `WebStandardStreamableHTTPServerTransport` en **modo stateless**
+     (`sessionIdGenerator: undefined`) con `enableJsonResponse: true`.
+- **Transporte elegido y por qué**: `WebStandardStreamableHTTPServerTransport` (subpath
+  `@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js`) opera directamente sobre
+  `Request`/`Response` estándar de Web, compatible de fábrica con los Route Handlers de Next.js
+  App Router — a diferencia de `StreamableHTTPServerTransport` (pensado para
+  `http.IncomingMessage`/`ServerResponse` de Node/Express clásico), no hace falta ningún puente
+  manual. El modo stateless es obligado en este despliegue: cada invocación de este Route
+  Handler puede correr en una instancia serverless distinta, sin estado compartido entre
+  peticiones, así que no hay dónde persistir una sesión MCP entre llamadas. Ver DECISIONS.md
+  2026-07-18 para el detalle de la investigación del SDK y las implicaciones concretas del modo
+  stateless (en particular, que permite a un cliente llamar a una tool sin negociar antes un
+  `initialize` en esa misma petición).
+- **Estructura de `src/lib/mcp/`** — capa de dominio del servidor MCP, testeada por separado del
+  transporte (que se mantiene lo más fino posible):
+  - `auth.ts` — `verifyBearerToken(authorizationHeader, expectedToken)`.
+  - `resolve-user.ts` — `resolveMcpUserId(prismaLike, username)`, con la misma interfaz mínima
+    de Prisma inyectable que ya usa `verify-credentials.ts`.
+  - `errors.ts` — `toMcpToolError(error)`, normaliza los dos casos de la capa de dominio que
+    devuelven el error como string plano (`create-body-weight.ts`, `create-session.ts`) al
+    mismo contrato `{code, message}` que ya usa el resto de funciones de dominio.
+  - `schemas.ts` — esquemas Zod de entrada por tool: reutiliza directamente `bodyWeightSchema`
+    (peso) y `sessionSchema` (sesión, más `id` para `edit_session`) donde la capa de dominio ya
+    los exporta; para los filtros de historial/informe (que solo exportan el tipo, no el
+    esquema) declara una forma permisiva — la validación real de esos filtros (incluido el
+    refinamiento "desde ≤ hasta") sigue viviendo en la propia función de dominio, sin duplicarla.
+  - `tools.ts` — un handler `(userId, input) => Promise<{success:true,data} |
+    {success:false,error:{code,message}}>` por cada una de las 7 tools de SPEC §5, envolviendo
+    la función de dominio correspondiente y normalizando su error con `toMcpToolError`.
+    `edit_session` extrae `id` del input y delega en `updateSession(userId, id, resto)`,
+    rechazando con `VALIDATION_ERROR` sin llegar a llamar a Prisma si falta. `list_exercises`
+    ignora `userId` e input (catálogo global).
+- Cada resultado de tool se traduce a un `CallToolResult` de MCP con `content` (texto JSON, que
+  el propio protocolo espera de cualquier tool) y `structuredContent` — `{data: ...}` en éxito,
+  `{error: {code, message}, isError: true}` en fallo —, reflejando el contrato de error de
+  SPEC §5 dentro del propio protocolo MCP en vez de solo a nivel HTTP.
+- Seguridad: por ahora el servidor MCP se protege solo con el token Bearer (ver DECISIONS.md
+  2026-07-18, ronda anterior); la segunda capa de VPN Tailscale que especifica SPEC §7 queda
+  pendiente hasta migrar al NAS propio de David (ver BACKLOG.md).
+
 ## Estructura de carpetas relevante
 
 - `src/app/` — rutas y páginas (App Router de Next.js).
@@ -174,5 +233,6 @@ avanza el roadmap de implementación (ver plan de fases acordado).
 
 ## Pendiente de definir en fases futuras del roadmap
 
-- Servidor MCP, gráficos de progreso, Dockerfile/despliegue en Fly.io, backup diario — ver el
-  plan de fases y BACKLOG.md.
+- Gráficos de progreso, Dockerfile/despliegue en Fly.io — ver el plan de fases y BACKLOG.md.
+  El servidor MCP ya está implementado (ver sección "Servidor MCP" arriba); pendiente solo la
+  capa VPN Tailscale sobre él (ver BACKLOG.md).

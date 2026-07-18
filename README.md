@@ -7,8 +7,17 @@ app debe poder conectarse a la cuenta de Claude del usuario para que esa skill (
 lean y escriban datos directamente.
 
 > Estado: MVP en curso (iteración 1). Ya implementados: login, registro de peso corporal,
-> historial de peso (con edición/borrado) y registro de sesiones de entreno. Ver
-> [FEATURES.md](FEATURES.md) para el detalle y [BACKLOG.md](BACKLOG.md) para lo pendiente.
+> historial de peso (con edición/borrado), registro de sesiones de entreno y un conector MCP
+> para la skill "sesion-entrenamiento". Ver [FEATURES.md](FEATURES.md) para el detalle y
+> [BACKLOG.md](BACKLOG.md) para lo pendiente.
+
+## Conector MCP
+
+La app expone un servidor [MCP](https://modelcontextprotocol.io) en `POST /api/mcp` para que la
+skill de Claude "sesion-entrenamiento" (u otro chat con el conector configurado) pueda leer y
+escribir el historial de entreno directamente, en vez de depender de un archivo JSON local.
+Requiere configurar la variable de entorno `MCP_BEARER_TOKEN` (ver `.env.example`) antes de
+usarlo — sin ella, el endpoint no autentica ninguna petición.
 
 ## Alcance por iteraciones
 
