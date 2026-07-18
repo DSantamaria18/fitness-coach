@@ -26,19 +26,34 @@ dificultad estimada (baja/media/alta). Cuando algo se implementa, se mueve de aq
   bloquear el desarrollo en Fly.io mientras el NAS propio de David no esté montado. Hay que
   volver a esto en cuanto el NAS con Tailscale esté disponible. Dificultad: baja (es
   configuración de red del despliegue, no cambia el código del servidor MCP).
-- **UI web de historial y edición de sesiones de entreno** (paridad con `/historial`, que hoy
-  solo cubre peso corporal). Justificación: la capa de dominio (`get-session-history.ts`,
-  `update-session.ts`) ya existe desde esta ronda pensada para el servidor MCP, pero no hay
-  ninguna pantalla web que la use — el criterio de aceptación del SPEC §13 ("editar o borrar
-  cualquier registro existente, peso o sesión") no está cubierto en la web para sesiones
-  todavía. Dificultad: baja-media (reutiliza la capa de dominio ya hecha y testeada, patrón
-  similar a `/historial`).
 - **Explicar bien la "racha" en la futura UI de informe de progreso.** Justificación:
   `get-progress-report.ts` calcula `currentStreakWeeks` siempre respecto a la semana real actual
   (ignora el filtro `hasta`), así que si se consulta un rango de fechas pasado, la racha puede
   salir 0 aunque haya una racha larga dentro de ese rango — comportamiento intencionado (ver
   DECISIONS.md 2026-07-18) pero potencialmente confuso sin una nota en la interfaz. Dificultad:
   baja (es una aclaración de copy/UI cuando se construya la pantalla, no un cambio de lógica).
+- **`node_modules` compartido sin `@modelcontextprotocol/sdk` instalado.** Justificación:
+  detectado durante la ronda de UI de historial de sesiones — `package.json` declara la
+  dependencia y el código de `/api/mcp` la usa, pero el `node_modules` del repo raíz (compartido
+  por symlink entre todos los worktrees) no la tiene instalada. Esto rompe
+  `src/app/api/mcp/route.test.ts` (falla al resolver el import), añade ruido a `tsc --noEmit`, y
+  hace fallar `next build` por completo. No lo he corregido yo mismo porque tocar el
+  `node_modules` compartido con otros agentes/worktrees potencialmente activos en paralelo se
+  sale del alcance de esta rama — lo señalo para que el Tech Lead decida cuándo reinstalar
+  (`npm install` limpio en el repo raíz). Dificultad: baja (una vez se decida el momento).
+- **Orden de intercalado entre ejercicios de fuerza y cardio no se conserva al editar una
+  sesión.** Justificación: `StrengthEntry` tiene un campo `order`, pero `CardioEntry` no —
+  `update-session.ts` (capa de dominio ya existente antes de esta ronda) reconstruye el orden de
+  fuerza a partir de la posición en el array de ejercicios recibido, pero no hay forma de saber
+  en qué posición relativa iba cada `CardioEntry` respecto a los de fuerza. El nuevo formulario
+  de edición en `/historial` (`SessionEntriesEditor`) por tanto lista primero todos los
+  ejercicios de fuerza de la sesión y después todos los de cardio al pre-rellenar el formulario;
+  si se guarda sin tocar nada, una sesión que originalmente intercalaba cardio-fuerza-cardio
+  puede terminar reordenada a fuerza-cardio-cardio. No hay pérdida de datos (se conservan todos
+  los ejercicios con sus series/métricas), solo un reordenamiento visual. Arreglarlo exige un
+  campo `order` en `CardioEntry` (migración de esquema) y tocar `resolveSessionEntries`. Nivel
+  de riesgo bajo (nadie ha registrado sesiones reales todavía), pero lo anoto para no perderlo.
+  Dificultad: media (migración de esquema + lógica de resolución de entradas).
 
 ## Iteraciones futuras ya acordadas (no implementar todavía)
 

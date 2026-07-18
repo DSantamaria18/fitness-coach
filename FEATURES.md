@@ -71,9 +71,8 @@ cambio relevante.
 
 ## Historial y edición de sesión de entreno
 
-- Capa de dominio (`get-session-history.ts`, `update-session.ts`) para consultar y editar
-  sesiones de entreno ya registradas — todavía sin ruta API ni pantalla web, a la espera del
-  servidor MCP que se construirá encima.
+- Capa de dominio: `get-session-history.ts` (consulta), `update-session.ts` (edición) y
+  `delete-session.ts` (borrado) para las sesiones de entreno ya registradas.
 - Consulta de historial de sesiones (más recientes primero) con sus ejercicios de fuerza
   (series incluidas) y de cardio, cada uno con el nombre del ejercicio. Filtrable por rango de
   fechas (`desde`/`hasta`) y, opcionalmente, por nombre de ejercicio: devuelve las sesiones que
@@ -84,9 +83,36 @@ cambio relevante.
   nunca quede en un estado a medias si falla algo a mitad. Comprueba primero que la sesión
   pertenece al usuario autenticado — guarda de autorización a nivel de dominio, no delegable al
   caller.
+- Borrado de una sesión existente (`delete-session.ts`): misma guarda de pertenencia por
+  `userId` que la edición y que el borrado de peso corporal. No hace falta borrar a mano las
+  entradas de fuerza/cardio ni sus series: el esquema declara `onDelete: Cascade` en esas
+  relaciones, verificado empíricamente contra el adapter `@prisma/adapter-better-sqlite3` (no
+  deja registros huérfanos — ver DECISIONS.md).
 - Lógica de resolución de ejercicios contra el catálogo (`session-entries.ts`) extraída y
   compartida entre el registro y la edición de sesiones, para no duplicar esa validación entre
   ambos flujos.
+- **UI web en `/historial`**: `SessionHistorySection` lista las sesiones del usuario (fecha +
+  resumen legible de cada ejercicio — series para fuerza, métricas rellenas para cardio), con
+  acciones "Editar" (formulario in-place, prefilled) y "Borrar" (confirmación nativa del
+  navegador, mismo patrón que el historial de peso). El formulario de edición reutiliza el
+  mismo componente `SessionEntriesEditor` que `/sesion` usa para crear sesiones — ver
+  "Componente compartido de edición de sesión" más abajo. Server Actions
+  `updateSessionEntry`/`deleteSessionEntry` en `historial/actions.ts` resuelven el `userId`
+  desde la sesión de NextAuth, nunca del cliente. Cierra el criterio de aceptación de SPEC §13
+  "puede editar o borrar cualquier registro existente (peso o sesión)", que hasta ahora solo
+  cubría peso.
+
+## Componente compartido de edición de sesión
+
+- `src/components/session-entries-editor.tsx` (`SessionEntriesEditor`): extraído de
+  `session-form.tsx` para no duplicar la lógica de selección de ejercicio del catálogo, series
+  dinámicas de fuerza y campos de cardio (~480 líneas) entre el formulario de creación
+  (`/sesion`) y el de edición (`/historial`). Recibe `registros`/`onRegistrosChange` como prop
+  controlado por el componente padre (no como estado interno), para que tanto `SessionForm`
+  como el formulario de edición de `/historial` puedan conocer el número de ejercicios añadidos
+  y habilitar/deshabilitar su propio botón de guardar sin duplicar esa lógica tampoco. También
+  expone `buildInitialRegistros` para convertir una sesión ya guardada (formato de
+  `get-session-history.ts`) al estado de edición, usado solo por el formulario de edición.
 
 ## Backup manual
 

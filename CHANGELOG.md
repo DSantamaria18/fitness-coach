@@ -55,8 +55,8 @@ Proyecto sin versión publicada todavía.
   (borra las `StrengthEntry`/`CardioEntry` existentes y crea las nuevas), y comprueba antes que
   la sesión pertenece al `userId` dado. Se extrajo `session-entries.ts` de `create-session.ts`
   para compartir la validación de existencia/tipo de ejercicio contra el catálogo entre crear y
-  editar una sesión. Todavía sin ruta API ni pantalla web — solo capa de dominio, a la espera
-  del servidor MCP.
+  editar una sesión. En esta ronda era solo capa de dominio, sin ruta API ni pantalla web; la UI
+  web se añadió después, ver más abajo.
 - Servidor MCP (SPEC §5): endpoint único `POST /api/mcp` con las 7 tools completas (`log_weight`,
   `get_weight_history`, `log_session`, `edit_session`, `get_session_history`, `list_exercises`,
   `get_progress_report`) para que la skill "sesion-entrenamiento" (u otro chat con el conector
@@ -69,6 +69,18 @@ Proyecto sin versión publicada todavía.
   para despliegue serverless). Capa de dominio del servidor MCP en `src/lib/mcp/` (`auth.ts`,
   `resolve-user.ts`, `errors.ts`, `schemas.ts`, `tools.ts`), testeada por separado del transporte.
   Ver ARCHITECTURE.md y DECISIONS.md 2026-07-18 para el detalle de la integración con Next.js.
+- UI web de historial y edición de sesiones de entreno: `/historial` gana `SessionHistorySection`,
+  que lista las sesiones del usuario (fecha + resumen legible de sus ejercicios) con acciones
+  "Editar" (formulario in-place) y "Borrar" (confirmación nativa), mismo patrón que el historial
+  de peso. Nueva capa de dominio `delete-session.ts` (borra la sesión; las entradas de
+  fuerza/cardio y sus series se eliminan por cascada del esquema, verificado empíricamente).
+  Server Actions `updateSessionEntry`/`deleteSessionEntry` en `historial/actions.ts`. La lógica
+  de edición de ejercicios (selección del catálogo, series dinámicas de fuerza, campos de
+  cardio) se extrajo de `session-form.tsx` a un componente compartido
+  (`src/components/session-entries-editor.tsx`), reutilizado tanto para crear (`/sesion`) como
+  para editar (`/historial`) sin duplicar las ~480 líneas originales. Cierra el criterio de
+  aceptación de SPEC §13 "editar o borrar cualquier registro existente (peso o sesión)" para
+  sesiones, que hasta ahora solo estaba cubierto para peso.
 
 ### Fixed
 
