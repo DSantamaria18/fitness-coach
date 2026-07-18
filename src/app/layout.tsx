@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { NavBarGate } from "@/components/nav-bar-gate";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -27,7 +28,13 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {/* NavBarGate resuelve la sesión del lado del servidor y omite la
+            nav por completo si no hay usuario autenticado (estará en
+            /login). Ver src/components/nav-bar-gate.tsx. */}
+        <NavBarGate />
+        {children}
+      </body>
     </html>
   );
 }
