@@ -41,6 +41,16 @@ Proyecto sin versión publicada todavía.
   mostrar un aviso en `/ajustes` si han pasado más de 30 días sin hacer uno o si nunca se ha
   hecho ninguno.
 
+- Historial y edición de sesión de entreno: capa de dominio para consultar
+  (`get-session-history.ts`, con filtros opcionales de rango de fechas y de nombre de
+  ejercicio) y editar (`update-session.ts`) sesiones ya registradas. La edición sustituye por
+  completo la fecha y los ejercicios de la sesión dentro de una única transacción Prisma
+  (borra las `StrengthEntry`/`CardioEntry` existentes y crea las nuevas), y comprueba antes que
+  la sesión pertenece al `userId` dado. Se extrajo `session-entries.ts` de `create-session.ts`
+  para compartir la validación de existencia/tipo de ejercicio contra el catálogo entre crear y
+  editar una sesión. Todavía sin ruta API ni pantalla web — solo capa de dominio, a la espera
+  del servidor MCP.
+
 ### Fixed
 
 - `session.user` no incluía el `id` del usuario autenticado (faltaban los callbacks `jwt` y
