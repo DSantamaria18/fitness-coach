@@ -386,4 +386,47 @@ nueva.
 
 ---
 
+---
+
+- **Fecha:** 2026-07-18
+- **Decisión:** UI del informe de progreso (`/informe`, sobre el dominio ya cerrado de
+  `get-progress-report.ts`) implementada con `recharts` (ya elegido por el Tech Lead) montado en
+  un componente de cliente (`progress-charts.tsx`, `"use client"`) al que el Server Component
+  (`page.tsx`) le pasa los datos ya serializados (fechas como string ISO, nunca `Date` — mismo
+  criterio que el resto de la frontera server/client de la app). Cada métrica se dibuja en su
+  **propio gráfico de una sola serie con su propio eje** (peso corporal; peso máximo y volumen
+  total por separado para fuerza; distancia, duración y ritmo medio por separado para cardio) en
+  vez de combinar métricas de escala muy distinta en un único gráfico multi-línea (p.ej. peso
+  máximo ~50-150 kg frente a volumen total ~cientos/miles de kg aplastarían la serie más pequeña
+  en el mismo eje Y). Los campos opcionales de cardio (`distanceKm`/`durationSeconds`/
+  `avgPaceSecPerKm`, `number | null`) se pasan a recharts como `null` tal cual, con
+  `connectNulls={false}` explícito en `<Line>`, para que una sesión sin ese dato aparezca como un
+  hueco en la línea — nunca como un cero, que falsearía la evolución. Colores tomados del
+  catálogo categórico validado de la skill `dataviz` (azul/verde/naranja, evitando los tonos
+  claros de bajo contraste del catálogo).
+- **Alternativas consideradas:** un único gráfico de fuerza con dos líneas (peso máximo +
+  volumen total) tal y como sugería la redacción inicial del encargo — descartado al implementar
+  por violar la regla de "un solo eje" de la skill `dataviz` (dos magnitudes de escala muy
+  distinta combinadas en un mismo eje Y comprimen visualmente la serie menor); se documenta aquí
+  como desviación respecto al encargo literal para que el Tech Lead la revise en el code review.
+  Quitar los puntos `null` de cardio del array de datos en vez de dejarlos con valor `null` —
+  descartado porque desplazaría las fechas restantes entre sí, dando la falsa impresión de
+  sesiones consecutivas cuando en realidad hay una sesión de por medio sin ese dato medido.
+- **Justificación:** prioriza que el gráfico sea legible y no engañoso por encima de ceñirse a la
+  redacción literal del encargo, con la desviación documentada explícitamente para que quien
+  revisa la PR pueda vetarla si prefiere el diseño original.
+- **Lecciones aprendidas:**
+  - `ResponsiveContainer` de recharts mide su contenedor con `ResizeObserver` antes de decidir si
+    hay tamaño válido para renderizar el SVG interno; jsdom no implementa `ResizeObserver` ni
+    layout real (`getBoundingClientRect` siempre devuelve `0`), así que sin polyfill los tests de
+    componentes con recharts no renderizarían ningún SVG aunque el componente fuera correcto (el
+    `ResponsiveContainer` simplemente no pinta nada y no lanza ningún error, así que el fallo es
+    silencioso). Se añadió un polyfill mínimo (`ResizeObserver` no-op + `getBoundingClientRect`
+    con tamaño fijo) a `vitest.setup.ts`, global para todos los tests, porque `recharts` calcula
+    el tamaño síncronamente al crear el `ResizeObserver` (llama a `getBoundingClientRect` una vez
+    nada más construirlo, sin esperar a que dispare ningún evento), así que basta con que ambos
+    existan para que el gráfico completo se renderice de verdad en los tests.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
