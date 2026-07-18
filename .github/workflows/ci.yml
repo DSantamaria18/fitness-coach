@@ -32,3 +32,15 @@ jobs:
 
       - name: Tests
         run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          # Valores ficticios: solo para que el build pueda arrancar (p.ej.
+          # instanciar el cliente de Prisma), no son secretos reales ni se
+          # usan para desplegar. Detecta roturas como páginas protegidas que
+          # Next intenta prerenderizar en estático (ver DECISIONS.md).
+          DATABASE_URL: "file:./ci-build.db"
+          AUTH_SECRET: "ci-build-only-not-a-real-secret"
+          ADMIN_USERNAME: "ci"
+          ADMIN_PASSWORD_HASH: "$2b$10$ciciciciciciciciciciciOciciciciciciciciciciciciciciciO"
