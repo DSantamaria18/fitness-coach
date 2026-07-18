@@ -102,6 +102,41 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   descarga. `BackupStatus` es un componente síncrono y puro (recibe la fecha ya serializada),
   separado del Server Component para poder testear la lógica de aviso sin mockear `auth()`/BD.
 
+## Informe de progreso
+
+- `src/lib/get-progress-report.ts` — única función de dominio (`getProgressReport(userId,
+  filters)`) que cubre el caso de uso 5 de SPEC.md §4. Solo capa de dominio por ahora: sin ruta
+  API ni UI (llegan en fases futuras — servidor MCP y gráficos web — sobre esta misma función).
+  `filters` (`{ ejercicio?, desde?, hasta? }`) se valida con Zod con el mismo criterio de fecha
+  ISO opcional que `get-body-weight-history.ts`; `ejercicio` es el nombre del catálogo (no un
+  id), igual que en el resto de la capa de dominio.
+- Forma de salida (`ProgressReportData`, tipos exportados desde el propio fichero):
+  - `bodyWeight: { date, weightKg }[]` — evolución del peso corporal, ordenada ascendente por
+    fecha (a diferencia de `/historial`, que muestra lo más reciente primero: aquí alimenta una
+    serie temporal/gráfico).
+  - `frequency: { totalSessions, sessionsPerWeek, currentStreakWeeks }` — agregados **globales**
+    del usuario, nunca filtrados por `ejercicio` (solo por `desde`/`hasta`): SPEC.md §4 pide la
+    frecuencia/racha como vista global del entrenamiento, no por ejercicio. `sessionsPerWeek` es
+    la media sobre el periodo filtrado si se indica `desde`/`hasta`, o si no sobre el rango
+    cubierto por las propias sesiones existentes (evita dividir por un periodo arbitrario
+    cuando no hay filtro).
+  - `exercise?: { exercise, type, points }` — solo presente si se filtra por `ejercicio` (tras
+    comprobar su existencia en `prisma.exercise`, devolviendo `NOT_FOUND` si no existe). Para
+    fuerza (`type: "STRENGTH"`), `points` es `{ sessionId, date, maxWeightKg, totalVolumeKg }[]`
+    (volumen = Σ reps×peso de las series de ese ejercicio en la sesión). Para cardio
+    (`type: "CARDIO"`), `points` es `{ sessionId, date, distanceKm, durationSeconds,
+    avgPaceSecPerKm }[]` (paso directo de los campos de `CardioEntry`, todos anulables).
+- **Criterio de racha (`currentStreakWeeks`)**: número de semanas ISO 8601 consecutivas —
+  empezando por la semana actual (según la fecha real del sistema, no afectada por
+  `desde`/`hasta`) y yendo hacia atrás — con al menos una sesión registrada en el conjunto
+  filtrado. Se corta en la primera semana sin sesiones, incluida la propia semana actual: si no
+  hay sesión esta semana, la racha es 0 aunque hubiera entrenado ininterrumpidamente hasta la
+  semana pasada. Implicación a tener en cuenta: si se filtra `hasta` con una fecha pasada, la
+  semana "actual" real queda fuera del rango filtrado y la racha da 0 salvo que esa semana esté
+  dentro del filtro — comportamiento documentado, no un bug.
+- Errores estructurados con el mismo patrón que el resto de la capa de dominio:
+  `{ success: false, error: { code: "VALIDATION_ERROR" | "NOT_FOUND", message } }`.
+
 ## Estructura de carpetas relevante
 
 - `src/app/` — rutas y páginas (App Router de Next.js).
