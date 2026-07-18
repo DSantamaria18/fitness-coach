@@ -83,6 +83,32 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   intentaría prerenderizarla como página estática en build time y fallaría al llamar a la
   base de datos.
 
+## Historial y edición de sesión de entreno
+
+- `src/lib/session-entries.ts` — helper extraído de `create-session.ts` (`resolveSessionEntries`):
+  valida existencia del ejercicio en el catálogo y que su tipo coincida (contra la base de
+  datos, no en Zod) y construye los datos de creación anidada de `StrengthEntry`/`CardioEntry`
+  a partir de los ejercicios ya validados por Zod. Compartido entre `create-session.ts` y
+  `update-session.ts` porque ambos necesitan exactamente la misma lógica de "ejercicios
+  validados → entradas listas para Prisma".
+- `src/lib/get-session-history.ts` — consulta las sesiones de un usuario (más recientes
+  primero) con sus `strengthEntries` (+ `sets`, ordenadas por `order`) y `cardioEntries`
+  incluidos, cada uno con su `exercise` para poder mostrar el nombre sin consultas
+  adicionales. Acepta filtros opcionales `desde`/`hasta` (mismo patrón Zod que
+  `get-body-weight-history.ts`) y `ejercicio` (nombre del catálogo): una sesión "contiene" el
+  ejercicio si aparece en cualquiera de sus entradas de fuerza o de cardio (SPEC §4 caso de
+  uso 4) — el filtro actúa a nivel de sesión completa, no recorta las entradas devueltas.
+- `src/lib/update-session.ts` — edita una sesión existente: valida forma (Zod), comprueba con
+  un `findFirst({ id, userId })` que la sesión pertenece al usuario antes de escribir (mismo
+  patrón de guarda de autorización que `update-body-weight.ts`), resuelve los ejercicios contra
+  el catálogo vía `resolveSessionEntries`, y sustituye por completo las entradas de la sesión
+  dentro de una única transacción Prisma: `deleteMany` de `StrengthEntry`/`CardioEntry` de esa
+  sesión (cascada a `StrengthSet`) seguido de `session.update` con `create` de las nuevas
+  entradas — igual que `create-session.ts`, para que la sesión nunca quede en un estado a
+  medias si falla algo a mitad.
+- Ninguna de las dos funciones expone todavía ruta API ni UI web — solo la capa de dominio,
+  a la espera del servidor MCP.
+
 ## Backup manual
 
 - `src/lib/create-backup.ts` — usa la API de backup online de `better-sqlite3` (`db.backup()`,
