@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { getProgressReport } from "@/lib/get-progress-report";
 import { listExercises } from "@/lib/list-exercises";
+import { getProgressComment } from "@/lib/progress-comment/get-progress-comment";
 import { ExerciseSelector } from "./exercise-selector";
 import { ProgressCharts, type ExerciseProgressData } from "./progress-charts";
+import { ProgressComment } from "./progress-comment";
 
 export const metadata: Metadata = {
   title: "Informe de progreso — Fitness Coach",
@@ -50,9 +52,10 @@ export default async function InformePage({
 
   const { ejercicio } = await searchParams;
 
-  const [reportResult, exercises] = await Promise.all([
+  const [reportResult, exercises, progressComment] = await Promise.all([
     getProgressReport(userId, ejercicio ? { ejercicio } : {}),
     listExercises(),
+    getProgressComment(userId),
   ]);
 
   // Un `ejercicio` en el query param que ya no existe en el catálogo
@@ -146,6 +149,17 @@ export default async function InformePage({
         // selector vuelve a mostrar "Todos" en vez del valor obsoleto de
         // la URL.
         selected={data.exercise?.exercise ?? ""}
+      />
+
+      <ProgressComment
+        initial={
+          progressComment
+            ? {
+                texto: progressComment.texto,
+                generadoEn: progressComment.generadoEn.toISOString(),
+              }
+            : null
+        }
       />
 
       <ProgressCharts bodyWeight={bodyWeight} exercise={exerciseProgress} />
