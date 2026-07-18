@@ -32,15 +32,6 @@ dificultad estimada (baja/media/alta). Cuando algo se implementa, se mueve de aq
   salir 0 aunque haya una racha larga dentro de ese rango — comportamiento intencionado (ver
   DECISIONS.md 2026-07-18) pero potencialmente confuso sin una nota en la interfaz. Dificultad:
   baja (es una aclaración de copy/UI cuando se construya la pantalla, no un cambio de lógica).
-- **`node_modules` compartido sin `@modelcontextprotocol/sdk` instalado.** Justificación:
-  detectado durante la ronda de UI de historial de sesiones — `package.json` declara la
-  dependencia y el código de `/api/mcp` la usa, pero el `node_modules` del repo raíz (compartido
-  por symlink entre todos los worktrees) no la tiene instalada. Esto rompe
-  `src/app/api/mcp/route.test.ts` (falla al resolver el import), añade ruido a `tsc --noEmit`, y
-  hace fallar `next build` por completo. No lo he corregido yo mismo porque tocar el
-  `node_modules` compartido con otros agentes/worktrees potencialmente activos en paralelo se
-  sale del alcance de esta rama — lo señalo para que el Tech Lead decida cuándo reinstalar
-  (`npm install` limpio en el repo raíz). Dificultad: baja (una vez se decida el momento).
 - **Orden de intercalado entre ejercicios de fuerza y cardio no se conserva al editar una
   sesión.** Justificación: `StrengthEntry` tiene un campo `order`, pero `CardioEntry` no —
   `update-session.ts` (capa de dominio ya existente antes de esta ronda) reconstruye el orden de

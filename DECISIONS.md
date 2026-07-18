@@ -369,4 +369,21 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-18
+- **Decisión:** El Tech Lead corrigió (`npm install` en el repo raíz) un `node_modules`
+  compartido por symlink entre worktrees que no tenía instalado `@modelcontextprotocol/sdk`
+  pese a estar en `package.json` desde la fase del servidor MCP — rompía `next build` y un
+  archivo de test en cualquier worktree que arrancara después de ese punto. El Developer de esta
+  ronda lo detectó pero no lo tocó (correctamente: tocar `node_modules` compartido desde una
+  rama de feature concreta puede pisar a otros agentes trabajando en paralelo en otro worktree).
+- **Lecciones aprendidas:** el patrón de `node_modules` compartido por symlink entre worktrees
+  (ver DECISIONS.md, ronda del servidor MCP) ahorra tiempo de instalación pero puede quedar
+  desincronizado con `package.json` si una dependencia se añadió en una rama que aún no se había
+  fusionado cuando se creó el symlink, o si algo limpió el `node_modules` raíz entre medias. Es
+  responsabilidad del Tech Lead, no de los Developers, decidir cuándo reinstalar — evita que dos
+  agentes reinstalen a la vez o que un Developer "arregle" el entorno compartido desde su propia
+  rama sin visibilidad de qué más depende de ese estado.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
