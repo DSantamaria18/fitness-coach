@@ -187,20 +187,22 @@ Ver [BACKLOG.md](BACKLOG.md) para detalle y justificación de cada uno:
 Dos integraciones deliberadamente separadas y de complejidad distinta — no comparten
 maquinaria para no sobre-diseñar la más simple:
 
-1. **Propuesta de sesión**: el backend usa el **Claude Agent SDK**, cargando la skill
-   "sesion-entrenamiento" (copiada en `skills/sesion-entrenamiento/`, contiene datos
-   personales de salud de David — nunca debe exponerse por ninguna ruta pública ni loguearse)
-   y usando el propio servidor MCP de esta app como fuente de tools **en proceso** (no HTTP
-   saliente), para que el agente lea `get_session_history`/`list_exercises` reales al decidir
-   la rotación — reutilizando la lógica de la skill, sin reimplementarla en el backend. La
-   salida se parsea a la misma forma que ya consume `SessionEntriesEditor` y pasa por
+1. **Propuesta de sesión**: el backend usa `@anthropic-ai/sdk` (el cliente estándar de la API
+   de Mensajes, no el Claude Agent SDK — ver DECISIONS.md 2026-07-19 para por qué) y su
+   `client.beta.messages.toolRunner()`, con el contenido de la skill "sesion-entrenamiento"
+   (copiada en `skills/sesion-entrenamiento/`, contiene datos personales de salud de David —
+   nunca debe exponerse por ninguna ruta pública ni loguearse) inyectado como `system` prompt, y
+   un par de tools en proceso que envuelven las funciones de dominio ya existentes
+   (`get_session_history`/`list_exercises`) para que el modelo lea historial real al decidir la
+   rotación — reutilizando la lógica de la skill, sin reimplementarla en el backend. La salida
+   se parsea a la misma forma que ya consume `SessionEntriesEditor` y pasa por
    `validate-session.ts` antes de poder guardarse — la salida de la IA es siempre entrada no
    confiable, igual que un formulario. Si falla (timeout ~30s, JSON inválido, red), el
    formulario cae a vacío/manual — nunca bloquea el flujo existente.
-2. **Comentario de progreso**: llamada directa y simple a la API de Mensajes de Claude (sin
-   Agent SDK, sin skill, sin tools), con la salida de `get_progress_report` serializada como
-   contexto. El resultado sustituye siempre al `ComentarioProgreso` anterior (fila única por
-   usuario, no histórico).
+2. **Comentario de progreso**: llamada directa y simple a la API de Mensajes de Claude con
+   `@anthropic-ai/sdk` (sin tools, sin toolRunner), con la salida de `get_progress_report`
+   serializada como contexto. El resultado sustituye siempre al `ComentarioProgreso` anterior
+   (fila única por usuario, no histórico).
 
 **Autenticación/coste**: `ANTHROPIC_API_KEY` (pago por token, vía Fly.io secrets — nunca en
 código ni logs), no autenticación por suscripción/OAuth (los términos de consumidor de

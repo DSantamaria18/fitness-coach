@@ -469,4 +469,32 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-19
+- **Decisión:** Corrección de SPEC.md §14: la "propuesta de sesión" usa `@anthropic-ai/sdk`
+  (cliente estándar de la API de Mensajes) con `client.beta.messages.toolRunner()`, no el
+  paquete `@anthropic-ai/claude-agent-sdk`. La skill se inyecta como texto plano en el `system`
+  prompt (leyendo `skills/sesion-entrenamiento/SKILL.md` en el propio proceso), no vía la
+  convención de filesystem `.claude/skills/` que exige el Agent SDK.
+- **Alternativas consideradas:** `@anthropic-ai/claude-agent-sdk` (la opción original de
+  SPEC.md) — descartada tras investigar su documentación: es el motor de Claude Code, lanza un
+  subproceso (`claude` CLI) por invocación con un binario nativo empaquetado, y su modelo de
+  despliegue documentado son contenedores efímeros con `SessionStore` para persistir estado —
+  pensado para agentes de código autónomos, no para una llamada puntual de "generar un JSON con
+  un par de tools de solo lectura" desde un Route Handler. Habría añadido el binario nativo a la
+  imagen Docker y arranque de subproceso por request sin aportar nada que esta tarea necesite.
+- **Justificación:** `toolRunner()` da el mismo patrón funcional (bucle de tool-use
+  multi-turno automático sobre tools propios) sin subproceso ni convención de filesystem —
+  es solo un cliente HTTP, coherente con el resto del despliegue (mismo Dockerfile, sin
+  dependencias nativas nuevas) y con el "comentario de progreso", que ya usaba la misma familia
+  de SDK sin tools.
+- **Lecciones aprendidas:** el nombre "Claude Agent SDK" es ambiguo en la documentación pública
+  de Anthropic — no se corresponde con "SDK ligero para dar tools a Claude", sino específicamente
+  con el motor de Claude Code. Antes de fijar en SPEC.md el nombre de una librería concreta para
+  una integración de IA, conviene verificar con la documentación oficial (o un agente de
+  investigación) qué es exactamente el paquete, no solo si "encaja conceptualmente" con lo que se
+  necesita — evitó aquí comprometerse a un plan de implementación con una dependencia de
+  despliegue pesada e innecesaria.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
