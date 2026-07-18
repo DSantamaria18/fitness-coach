@@ -109,6 +109,31 @@ Reglas adicionales de funcionamiento del equipo:
   tras otra. El Tech Lead resuelve ese conflicto directamente al hacer el merge (conservando el
   contenido de ambas aportaciones), sin devolver la PR al Developer — no es un bug de código, es
   una consecuencia esperable de documentar en paralelo.
+- **El Tech Lead fija el modelo de Claude en cualquier encargo con llamadas de pago a la API de
+  Anthropic**: cuando una tarea implica que el código llame a la API de Claude (no el propio
+  equipo de agentes), el encargo al Developer debe especificar explícitamente qué modelo usar,
+  nunca dejarlo a su discreción. Pasó en la ronda de generación asistida por IA: dos Developers
+  en paralelo, sin esa indicación, eligieron por defecto el modelo más potente disponible
+  (Opus), inconsistente con la estimación de coste ya comunicada a David y detectado solo en el
+  code review del Tech Lead — una vuelta completa evitable si el encargo original hubiera sido
+  explícito.
+- **Verificar contra documentación oficial qué es realmente un SDK/librería antes de
+  comprometerlo en SPEC.md**: antes de fijar en el documento de especificaciones el nombre de un
+  paquete concreto para una integración nueva, confirmar qué hace exactamente (con la
+  documentación oficial o un agente de investigación), no solo si el nombre encaja
+  conceptualmente con lo que se necesita. Pasó con "Claude Agent SDK" en la ronda de generación
+  asistida por IA: sonaba como el SDK ligero adecuado, pero resultó ser el motor de Claude Code
+  (subproceso + binario nativo, pensado para agentes de código autónomos) — se corrigió a
+  tiempo, antes de asignar trabajo a ningún Developer, pero solo porque se verificó durante la
+  planificación en vez de asumirlo.
+- **Pedir las credenciales externas necesarias antes de la fase de QA, no descubrir su ausencia
+  al final**: si una feature necesita una credencial real de un servicio externo de pago (p. ej.
+  una API key) para verificarse de punta a punta, el Tech Lead la solicita a David antes de
+  despachar a QA (idealmente antes incluso de despachar a los Developers), para que la
+  verificación manual en navegador real (exigida por CLAUDE.md para cambios de UI/flujo) pueda
+  completarse dentro de la misma ronda. Pasó en la ronda de generación asistida por IA: la falta
+  de `ANTHROPIC_API_KEY` se descubrió ya en la QA de la primera PR, dejando el camino de éxito
+  sin verificar y la ronda con un cierre pendiente en vez de completo.
 </equipo_de_agentes>
 
 <primer_paso>
