@@ -2,6 +2,11 @@
 
 import { auth } from "@/auth";
 import { createSession } from "@/lib/create-session";
+import { generateSessionProposal } from "@/lib/session-proposal/generate-session-proposal";
+import {
+  buildInitialRegistros,
+  type RegistroState,
+} from "@/components/session-entries-editor";
 
 export type RegisterSessionState =
   { error: string } | { success: true } | undefined;
@@ -44,4 +49,41 @@ export async function registerSession(
   }
 
   return { success: true };
+}
+
+export type GenerateSessionProposalState =
+  | { success: true; fecha: string; registros: RegistroState[] }
+  | { success: false; message: string };
+
+// Botón "Generar propuesta con IA" (SPEC §14 punto 1): invoca la skill real
+// vía generateSessionProposal(userId), userId siempre desde la sesión
+// autenticada (nunca del cliente, mismo criterio que registerSession de
+// arriba). En éxito, reutiliza buildInitialRegistros — el mismo conversor
+// que ya usa /historial para prellenar SessionEntriesEditor con una sesión
+// guardada — para no duplicar esa lógica: la forma de ValidatedSession.
+// ejercicios es estructuralmente compatible con SessionEntryInitialData. En
+// cualquier fallo (timeout, red, salida inválida) se devuelve un aviso
+// discreto y el formulario manual sigue disponible tal cual — nunca rompe el
+// flujo existente.
+export async function generateSessionProposalAction(): Promise<GenerateSessionProposalState> {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) {
+    return { success: false, message: "No autenticado." };
+  }
+
+  const result = await generateSessionProposal(userId);
+  if (!result.success) {
+    return {
+      success: false,
+      message:
+        "No se pudo generar la propuesta con IA. Puedes registrar la sesión manualmente.",
+    };
+  }
+
+  return {
+    success: true,
+    fecha: result.data.fecha.slice(0, 10),
+    registros: buildInitialRegistros(result.data.ejercicios),
+  };
 }

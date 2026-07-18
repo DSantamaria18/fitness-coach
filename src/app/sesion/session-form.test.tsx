@@ -1,11 +1,17 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useActionState } from "react";
 import { SessionForm } from "./session-form";
+import { generateSessionProposalAction } from "./actions";
+
+const mockedGenerateSessionProposalAction = vi.mocked(
+  generateSessionProposalAction,
+);
 
 vi.mock("./actions", () => ({
   registerSession: vi.fn(),
+  generateSessionProposalAction: vi.fn(),
 }));
 
 vi.mock("react", async (importOriginal) => {
@@ -21,13 +27,20 @@ const exercises = [
 ];
 
 describe("SessionForm", () => {
-  it("renderiza el campo de fecha, el selector de ejercicios y el botón de guardar", () => {
+  beforeEach(() => {
+    mockedGenerateSessionProposalAction.mockReset();
+  });
+
+  it("renderiza el campo de fecha, el selector de ejercicios, el botón de IA y el botón de guardar", () => {
     render(<SessionForm exercises={exercises} />);
 
     expect(screen.getByLabelText(/fecha/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/añadir ejercicio/i)).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /guardar/i }),
+      screen.getByRole("button", { name: /generar propuesta con ia/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^guardar$/i }),
     ).toBeInTheDocument();
   });
 
@@ -122,5 +135,63 @@ describe("SessionForm", () => {
     render(<SessionForm exercises={exercises} />);
 
     expect(screen.getByText(/sesión guardada/i)).toBeInTheDocument();
+  });
+
+  it("precarga el editor (editable) con la propuesta de IA cuando la generación tiene éxito", async () => {
+    mockedGenerateSessionProposalAction.mockResolvedValue({
+      success: true,
+      fecha: "2026-01-15",
+      registros: [
+        {
+          key: "registro-ia-1",
+          tipo: "fuerza",
+          ejercicio: "Sentadilla",
+          notas: "",
+          series: [{ reps: "10", peso_kg: "10", tempo: "", RPE: "7" }],
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<SessionForm exercises={exercises} />);
+
+    await user.click(
+      screen.getByRole("button", { name: /generar propuesta con ia/i }),
+    );
+
+    // Precargado pero editable: sigue siendo el mismo SessionEntriesEditor
+    // (inputs normales), no un resumen de solo lectura.
+    expect(
+      await screen.findByRole("heading", { name: "Sentadilla" }),
+    ).toBeInTheDocument();
+    const repsInput = screen.getByLabelText(/reps/i);
+    expect(repsInput).toHaveValue(10);
+    await user.clear(repsInput);
+    await user.type(repsInput, "12");
+    expect(repsInput).toHaveValue(12);
+
+    // El botón de guardar ya no está deshabilitado: hay ejercicios cargados.
+    expect(screen.getByRole("button", { name: /^guardar$/i })).toBeEnabled();
+  });
+
+  it("muestra un aviso discreto y deja el formulario manual intacto cuando la generación falla", async () => {
+    mockedGenerateSessionProposalAction.mockResolvedValue({
+      success: false,
+      message:
+        "No se pudo generar la propuesta con IA. Puedes registrar la sesión manualmente.",
+    });
+    const user = userEvent.setup();
+    render(<SessionForm exercises={exercises} />);
+
+    await user.click(
+      screen.getByRole("button", { name: /generar propuesta con ia/i }),
+    );
+
+    expect(
+      await screen.findByText(/no se pudo generar la propuesta con ia/i),
+    ).toBeInTheDocument();
+    // El flujo manual sigue disponible tal cual: sin ejercicios precargados,
+    // el botón de guardar sigue deshabilitado como antes de pulsar IA.
+    expect(screen.getByRole("button", { name: /^guardar$/i })).toBeDisabled();
+    expect(screen.getByLabelText(/añadir ejercicio/i)).toBeInTheDocument();
   });
 });
