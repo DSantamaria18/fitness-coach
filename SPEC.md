@@ -18,6 +18,11 @@ arranca en limpio.
 Quedan fuera del MVP (ver [sección 12](#12-fuera-de-alcance-del-mvp-backlog)): wearables,
 fotos/medidas/comidas, login con huella (passkey), gamificación, comparativas avanzadas.
 
+A partir de esta ampliación (2026-07-19), la app también puede generar contenido asistido por
+IA en dos puntos concretos: una propuesta de sesión editable (reutilizando la skill
+"sesion-entrenamiento" ya existente) y un comentario de progreso bajo demanda. Ver
+[sección 14](#14-generación-asistida-por-ia).
+
 ## 2. Usuarios y contexto de uso
 
 Un único usuario. Acceso principal desde el navegador del móvil. La infraestructura vive en un
@@ -41,6 +46,8 @@ nunca abierta directamente a internet.
 - Todo registro (peso o sesión) es **editable y borrable**, y puede crearse con **fecha
   retroactiva** (registro manual de un día pasado).
 - Fechas almacenadas en UTC, mostradas en Europe/Madrid (CEST/CET).
+- **ComentarioProgreso**: `userId` (único — un solo registro por usuario, se sobrescribe),
+  `texto`, `generadoEn`. No lleva histórico: cada generación nueva reemplaza a la anterior.
 
 ## 4. Casos de uso
 
@@ -56,6 +63,12 @@ nunca abierta directamente a internet.
    - Frecuencia de entrenamiento (sesiones por semana / racha).
 6. (Vía MCP) Leer y escribir estos mismos datos desde la skill "sesion-entrenamiento" o
    cualquier chat de Claude con el conector configurado.
+7. Generar una propuesta de sesión con IA (botón en `/sesion`, junto al registro manual): la
+   app invoca la skill "sesion-entrenamiento" con el historial real, y el resultado precarga el
+   formulario de sesión — editable antes de guardar, nunca se guarda directamente.
+8. Generar (o regenerar) un comentario de progreso con IA (botón en `/informe`, bajo demanda,
+   nunca automático): resume la evolución reciente a partir del informe de progreso ya
+   calculado. Sustituye al comentario anterior si existía.
 
 ## 5. API y contrato MCP
 
@@ -80,6 +93,10 @@ nunca abierta directamente a internet.
   fuerza/cardio, campo de notas).
 - Historial (listado editable/borrable, filtrable).
 - Informe de progreso (gráficos).
+- `/sesion`: botón "Generar propuesta con IA", que precarga `SessionEntriesEditor` con el
+  resultado (editable) sin sustituir la opción de registro manual.
+- `/informe`: botón "Generar comentario de progreso", que muestra el texto generado (o el
+  último guardado, si lo hay) sobre los gráficos existentes.
 - Diseño mobile-first (uso principal desde el navegador del móvil).
 
 ## 7. Seguridad
@@ -93,6 +110,13 @@ nunca abierta directamente a internet.
 - **Secretos** (token MCP, credenciales de login, claves de backup) vía variables de
   entorno/Fly.io secrets — nunca committeados a git.
 - HTTPS en todo momento (certificados de Tailscale, y de Fly.io en el despliegue inicial).
+- Nuevo secreto `ANTHROPIC_API_KEY` (Fly.io secrets, nunca committeado). Límite de gasto
+  mensual configurado en la consola de Anthropic.
+- La skill "sesion-entrenamiento" contiene datos personales de salud de David: vive en el
+  repo pero fuera de cualquier ruta servible públicamente, y su contenido nunca se loguea.
+- Todo output generado por IA (propuesta de sesión, comentario de progreso) se trata como
+  entrada no confiable: la propuesta de sesión pasa por la misma validación de dominio
+  (`validate-session.ts`) que el registro manual antes de poder guardarse.
 
 ## 8. Persistencia
 
@@ -154,3 +178,32 @@ Ver [BACKLOG.md](BACKLOG.md) para detalle y justificación de cada uno:
   puede leer y escribir estos datos de forma segura (VPN + token).
 - La app está desplegada en Fly.io, con CI corriendo tests antes de cada cambio, y con el
   backup manual desde `/ajustes` funcionando (verificado con al menos un restore de prueba).
+- Puede generar una propuesta de sesión con IA desde `/sesion`, editarla, y guardarla como
+  cualquier sesión manual.
+- Puede generar (o regenerar) un comentario de progreso con IA desde `/informe`.
+
+## 14. Generación asistida por IA
+
+Dos integraciones deliberadamente separadas y de complejidad distinta — no comparten
+maquinaria para no sobre-diseñar la más simple:
+
+1. **Propuesta de sesión**: el backend usa el **Claude Agent SDK**, cargando la skill
+   "sesion-entrenamiento" (copiada en `skills/sesion-entrenamiento/`, contiene datos
+   personales de salud de David — nunca debe exponerse por ninguna ruta pública ni loguearse)
+   y usando el propio servidor MCP de esta app como fuente de tools **en proceso** (no HTTP
+   saliente), para que el agente lea `get_session_history`/`list_exercises` reales al decidir
+   la rotación — reutilizando la lógica de la skill, sin reimplementarla en el backend. La
+   salida se parsea a la misma forma que ya consume `SessionEntriesEditor` y pasa por
+   `validate-session.ts` antes de poder guardarse — la salida de la IA es siempre entrada no
+   confiable, igual que un formulario. Si falla (timeout ~30s, JSON inválido, red), el
+   formulario cae a vacío/manual — nunca bloquea el flujo existente.
+2. **Comentario de progreso**: llamada directa y simple a la API de Mensajes de Claude (sin
+   Agent SDK, sin skill, sin tools), con la salida de `get_progress_report` serializada como
+   contexto. El resultado sustituye siempre al `ComentarioProgreso` anterior (fila única por
+   usuario, no histórico).
+
+**Autenticación/coste**: `ANTHROPIC_API_KEY` (pago por token, vía Fly.io secrets — nunca en
+código ni logs), no autenticación por suscripción/OAuth (los términos de consumidor de
+Anthropic restringen esos tokens a Claude Code/claude.ai). Coste estimado con uso diario:
+~1€/mes típico, ~3-6€/mes en el peor caso — se configura un límite de gasto mensual en la
+consola de Anthropic como red de seguridad adicional.

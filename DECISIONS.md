@@ -429,4 +429,44 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-19
+- **Decisión:** Ampliación de SPEC.md (nueva §14 "Generación asistida por IA" + tocas en §1,
+  §3, §4, §6, §7, §13): la app incorpora dos generaciones asistidas por IA antes del despliegue
+  en Fly.io (David eligió "esto ahora, Fly.io después"). (1) *Propuesta de sesión* en `/sesion`:
+  Claude Agent SDK cargando la skill "sesion-entrenamiento" (copiada en
+  `skills/sesion-entrenamiento/SKILL.md`) con el servidor MCP propio de la app como fuente de
+  tools en proceso; salida editable, nunca se guarda sin pasar por `validate-session.ts`. (2)
+  *Comentario de progreso* en `/informe`, bajo demanda (botón, nunca automático): llamada
+  directa a la API de Mensajes de Claude con el `get_progress_report` ya calculado como
+  contexto; nuevo modelo `ComentarioProgreso` (una fila por usuario, se sobrescribe, sin
+  histórico). Autenticación: `ANTHROPIC_API_KEY` de pago por token (Fly.io secrets).
+- **Alternativas consideradas:** reimplementar la lógica de la skill directamente en el backend
+  (descartado: duplicaría y desincronizaría con la skill que David sigue usando fuera de la
+  app); guardar el comentario de progreso automáticamente en cada sesión, como campo de
+  `Session` (descartado tras aclarar David que quiere generarlo bajo demanda, no en cada
+  guardado — un campo en `Session` habría implicado o regenerarlo en cada sesión sin pedirlo, o
+  dejarlo `null` la mayoría de las veces; un modelo aparte y sobrescribible encaja mejor);
+  histórico de comentarios de progreso en vez de sobrescritura (descartado, David solo quiere
+  el más reciente); autenticación por suscripción/OAuth del plan Pro/Max de David en vez de
+  `ANTHROPIC_API_KEY` (investigado a fondo y descartado: los términos de consumidor de
+  Anthropic restringen esos tokens a Claude Code/claude.ai, no están pensados para un servidor
+  desatendido; el coste real con clave de API es marginal, ~1-6€/mes con uso diario, así que no
+  compensaba el riesgo de incumplimiento de ToS).
+- **Justificación:** reutilizar la skill ya validada por David en vez de reimplementar su
+  lógica evita divergencia entre "lo que hace la app" y "lo que hace la skill en otros chats de
+  Claude". Separar las dos integraciones por complejidad (Agent SDK+skill+tools vs. llamada
+  simple a Mensajes) sigue el principio de no sobre-diseñar la pieza más simple (regla 4 de
+  CLAUDE.md, SOLID). Tratar la salida de la IA como entrada no confiable (misma validación que
+  el registro manual) evita que un fallo o alucinación del modelo corrompa el historial, que es
+  la fuente de verdad.
+- **Lecciones aprendidas:**
+  - La secuencia de preguntas de producto sobre esta feature cambió de forma no trivial a
+    mitad de negociación (el comentario de progreso pasó de "automático, guardado en cada
+    sesión" a "bajo demanda, sobrescribible"): confirma el valor de la regla 2 de CLAUDE.md de
+    no escribir SPEC.md hasta cerrar el diseño en conversación — de haber escrito el modelo de
+    datos (`Session.aiComment`) en la primera pasada, habría hecho falta una migración
+    destructiva de esquema para corregirlo.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
