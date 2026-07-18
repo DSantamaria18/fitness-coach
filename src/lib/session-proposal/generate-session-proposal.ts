@@ -8,11 +8,12 @@ import {
   SUBMIT_SESSION_PROPOSAL_TOOL_NAME,
 } from "./tools";
 
-// Modelo por defecto de Claude Code/la skill claude-api para cualquier tarea
-// que no pida explícitamente otro modelo. Sin `thinking` explícito: Opus 4.8
-// corre sin extended thinking por defecto, lo que mantiene la latencia baja
-// para un botón interactivo con un presupuesto de ~30s (SPEC §14).
-const MODEL = "claude-opus-4-8";
+// Sonnet 5: buen equilibrio razonamiento/uso de tools/coste para esta tarea.
+// La estimación de coste dada a David (~1-6€/mes con uso diario, ver
+// DECISIONS.md 2026-07-18) se calculó con precios de Sonnet 5/Haiku 4.5, no
+// de Opus — que además se dispara aquí al hacer varias llamadas por turno de
+// exploración del toolRunner (hasta MAX_EXPLORATION_ITERATIONS).
+const MODEL = "claude-sonnet-5";
 const MAX_TOKENS = 4096;
 const DEFAULT_TIMEOUT_MS = 30_000;
 // Límite de turnos de exploración (lectura de historial/catálogo) antes de
