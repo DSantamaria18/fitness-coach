@@ -101,5 +101,19 @@ cambio relevante.
   DECISIONS.md): al ser una app de un único usuario, un recordatorio en la UI es suficiente y
   evita depender de una cuenta/credenciales de un proveedor cloud.
 
-Aún no hay informe de progreso ni conexión MCP con la cuenta de Claude — llega en las
-siguientes fases del roadmap.
+## Informe de progreso (capa de dominio)
+
+- `src/lib/get-progress-report.ts` — función `getProgressReport(userId, filters)` que calcula,
+  sobre datos ya persistidos, la evolución del peso corporal, la frecuencia de entrenamiento
+  (sesiones totales, media semanal y racha de semanas ISO consecutivas con al menos una
+  sesión) y, si se filtra por un ejercicio del catálogo, su serie temporal específica: peso
+  máximo y volumen total por sesión (fuerza), o distancia/duración/ritmo medio (cardio).
+  Filtro opcional de rango de fechas (`desde`/`hasta`), mismo criterio de validación que el
+  resto de la capa de dominio; devuelve `NOT_FOUND` si el ejercicio filtrado no existe en el
+  catálogo.
+- Todavía sin ruta API ni interfaz web: solo la capa de dominio, pensada para reutilizarse tanto
+  desde el futuro servidor MCP (`get_progress_report`, SPEC.md §5) como desde los gráficos de
+  progreso de la interfaz web.
+
+Aún no hay ruta/UI de informe de progreso ni conexión MCP con la cuenta de Claude — llegan en
+las siguientes fases del roadmap.
