@@ -57,6 +57,13 @@ Proyecto sin versión publicada todavía.
   representan como huecos en la línea, nunca como cero. Estados vacíos explícitos cuando no
   hay datos, y tolerancia a un `ejercicio` en la URL que ya no exista en el catálogo (se
   ignora el filtro en vez de romper la página).
+- Comentario de progreso con IA: botón bajo demanda en `/informe` que genera, mediante una
+  llamada simple a la API de Mensajes de Claude (`@anthropic-ai/sdk`, sin tools) con el informe
+  de progreso ya calculado como contexto, un comentario breve en español sobre las tendencias
+  del usuario. Se guarda en el nuevo modelo `ComentarioProgreso` (fila única por usuario,
+  sobrescribible — `generate-progress-comment.ts`, `save-progress-comment.ts`,
+  `get-progress-comment.ts`) y se muestra ya cargado al entrar en la página. Un fallo (red,
+  API) se refleja como aviso discreto, sin afectar a los gráficos de progreso existentes.
 
 - Historial y edición de sesión de entreno: capa de dominio para consultar
   (`get-session-history.ts`, con filtros opcionales de rango de fechas y de nombre de

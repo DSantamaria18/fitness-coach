@@ -168,6 +168,17 @@ cambio relevante.
     ninguna sesión tiene ese dato se muestra un aviso en vez de un gráfico vacío.
   - Si el ejercicio del query param ya no existe en el catálogo, la página ignora el filtro y
     muestra el informe general en vez de romperse.
+- **Comentario de progreso con IA** (SPEC.md §14 punto 2): botón "Generar comentario de
+  progreso" en `/informe`, bajo demanda (nunca automático). Llama a un Server Action que
+  encadena `getProgressReport(userId, {})` (informe global, sin filtro de ejercicio) →
+  `generateProgressComment` (llamada simple a `client.messages.create()` de
+  `@anthropic-ai/sdk`, sin tools ni toolRunner — el informe serializado viaja como contexto de
+  la llamada) → `saveProgressComment` (upsert en el modelo `ComentarioProgreso`, fila única por
+  usuario: cada generación sobrescribe la anterior, sin histórico). El comentario guardado se
+  carga y se muestra ya al entrar en `/informe`, antes de pulsar el botón
+  (`getProgressComment`). En fallo (red, API, respuesta vacía) se muestra un aviso discreto sin
+  tocar los gráficos existentes, y el último comentario visible (guardado o generado en esta
+  misma sesión de navegador) se mantiene.
 
 ## Servidor MCP
 
