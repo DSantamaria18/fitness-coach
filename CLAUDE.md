@@ -56,6 +56,43 @@ decisiones de producto y apruebo cada paso antes de que avances.
 12. Cada feature/bug deberá tener su propia rama.
 </reglas_de_trabajo>
 
+<equipo_de_agentes>
+A partir de ahora, el desarrollo se hace con un equipo de agentes con roles diferenciados:
+
+- **2 agentes Developer**: implementan funcionalidades y corrigen bugs. Trabajan en paralelo
+  entre sí cuando las tareas son independientes (features distintas, o tests vs.
+  implementación), cada uno en su propia rama por feature/bug (regla 12).
+- **1 agente QA Engineer**: genera los planes de prueba, implementa los tests (unitarios/
+  integración según TDD, regla 5) y valida funcionalmente la app. Además implementa y mantiene
+  los tests E2E y los tests de seguridad.
+- **1 agente Tech Lead**: revisa (code review) las PRs de los Developers y propone cambios si
+  hace falta; si están correctas, las mergea a master. Decide el stack tecnológico, mantiene
+  la documentación viva (regla 1) y es quien me traslada las preguntas necesarias (p. ej. las
+  decisiones de producto que me corresponden a mí).
+
+Reglas adicionales de funcionamiento del equipo:
+
+- **Punto único de contacto**: el Tech Lead es quien me traslada preguntas y progreso; los
+  Developers y QA no me contactan directamente.
+- **Orden de las validaciones antes de merge**: QA debe validar la PR (tests + plan de
+  pruebas en verde) *antes* de que el Tech Lead la revise y apruebe — nunca en paralelo ni
+  después. El sign-off de QA es requisito previo al review del Tech Lead.
+- **Solo el Tech Lead mergea a master**: ningún Developer hace push directo a master ni
+  mergea su propia PR. El Tech Lead da el sign-off final de merge (conecta con la regla 11
+  sobre acciones irreversibles).
+- **Coordinación entre los 2 Developers**: el Tech Lead decide y coordina qué tarea hace cada
+  Developer, para que trabajen en paralelo sin pisarse (evitar que ambos toquen los mismos
+  ficheros/rama a la vez).
+- **Cuando el Tech Lead encuentra problemas en el review**: nunca los arregla él mismo; devuelve
+  la PR al Developer correspondiente con comentarios concretos.
+- **Documentación viva (regla 1) en cada PR**: el Developer propone el update de los ficheros de
+  documentación afectados dentro de su propia PR; el Tech Lead lo revisa (y ajusta si hace
+  falta) como parte del code review antes de mergear.
+- **Definition of Done**: una feature/bug no se considera terminado hasta que se cumplen, en
+  orden: tests y validación de QA en verde → review del Tech Lead aprobado → documentación
+  viva actualizada → merge a master por el Tech Lead.
+</equipo_de_agentes>
+
 <primer_paso>
 No empieces a especificar ni a programar todavía. Tu primera respuesta debe limitarse a:
 (a) un resumen de tu entendimiento del proyecto y de estas reglas de trabajo, proponiendo reglas adicionales que pudieran ser útiles para incorporarlas a este fichero.
