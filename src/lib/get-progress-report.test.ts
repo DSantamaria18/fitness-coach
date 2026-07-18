@@ -197,6 +197,29 @@ describe("getProgressReport", () => {
         expect(result.data.frequency.currentStreakWeeks).toBe(0);
       }
     });
+
+    // Comportamiento documentado en ARCHITECTURE.md: currentStreakWeeks pivota
+    // siempre sobre la semana ISO actual real (fecha del sistema), ignorando
+    // `hasta`. Aquí `hasta` apunta a 2026-06-15 (dentro de una racha larga de
+    // 3 semanas consecutivas en los datos filtrados), pero NOW real es
+    // 2026-07-17 (semana W29), sin sesión ninguna: la racha debe salir 0 pese
+    // a la racha larga dentro del rango filtrado.
+    it("ignora el filtro hasta al decidir cuál es la semana actual: da 0 si la semana real de hoy no tiene sesión, aunque haya una racha larga dentro del rango filtrado", async () => {
+      sessionFindManyMock.mockResolvedValue([
+        { date: new Date("2026-06-01T00:00:00.000Z") }, // W22
+        { date: new Date("2026-06-08T00:00:00.000Z") }, // W23
+        { date: new Date("2026-06-15T00:00:00.000Z") }, // W24 (= hasta)
+      ] as never);
+
+      const result = await getProgressReport("user-1", {
+        hasta: "2026-06-15T00:00:00.000Z",
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.frequency.currentStreakWeeks).toBe(0);
+      }
+    });
   });
 
   describe("progreso de un ejercicio de fuerza", () => {
@@ -313,6 +336,58 @@ describe("getProgressReport", () => {
         });
       }
       expect(strengthEntryFindManyMock).not.toHaveBeenCalled();
+    });
+
+    // SPEC.md §3: no todos los relojes miden todo, así que distancia/duración/
+    // ritmo (los únicos campos que expone el punto de cardio) también deben
+    // poder venir a null de forma individual sin que el cálculo falle.
+    it("no rompe cuando distancia, duración y ritmo medio son null", async () => {
+      exerciseFindFirstMock.mockResolvedValue({
+        id: "ex-2",
+        name: "Carrera",
+        type: "CARDIO",
+        createdAt: new Date(),
+      } as never);
+      cardioEntryFindManyMock.mockResolvedValue([
+        {
+          id: "ce-2",
+          sessionId: "s-3",
+          exerciseId: "ex-2",
+          durationSeconds: null,
+          distanceKm: null,
+          avgSpeedKmh: null,
+          avgPaceSecPerKm: null,
+          avgHeartRate: 145,
+          maxHeartRate: 170,
+          steps: null,
+          stepFrequency: null,
+          kcal: null,
+          rpe: null,
+          notes: null,
+          session: { id: "s-3", date: new Date("2026-06-03T00:00:00.000Z") },
+        },
+      ] as never);
+
+      const result = await getProgressReport("user-1", {
+        ejercicio: "Carrera",
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.exercise).toEqual({
+          exercise: "Carrera",
+          type: "CARDIO",
+          points: [
+            {
+              sessionId: "s-3",
+              date: new Date("2026-06-03T00:00:00.000Z"),
+              distanceKm: null,
+              durationSeconds: null,
+              avgPaceSecPerKm: null,
+            },
+          ],
+        });
+      }
     });
   });
 
