@@ -95,6 +95,20 @@ Reglas adicionales de funcionamiento del equipo:
   corregir un problema que QA encontró, QA no debe darlo por bueno solo con el resumen del
   Developer — debe repetir por su cuenta la verificación que detectó el problema original
   (especialmente en bugs de seguridad/autenticación), antes de dar su sign-off definitivo.
+- **Worktrees temporales excluidos de lint/test**: los worktrees de agentes (`.claude/worktrees/`)
+  deben estar excluidos explícitamente de cualquier configuración de lint/test (ESLint, Vitest,
+  etc.) desde el momento en que se empiezan a usar en el proyecto. Al vivir dentro del árbol del
+  repo (aunque gitignored), estas herramientas no respetan `.gitignore` por sí solas: un run en
+  la raíz con dos o más worktrees activos puede relintar/reejecutar también el código de cada
+  worktree como si fuera parte del árbol principal, dando falsos positivos masivos (pasó en la
+  ronda del informe de progreso: 656 errores de lint y 639 tests fantasma con dos worktrees
+  vivos en el momento del merge).
+- **Conflictos triviales de documentación entre PRs paralelas los resuelve el Tech Lead**: si dos
+  Developers trabajando en paralelo documentan en el mismo punto de un `.md` (típicamente el
+  final de una sección o lista), es normal que sus PRs entren en conflicto ahí al mergear una
+  tras otra. El Tech Lead resuelve ese conflicto directamente al hacer el merge (conservando el
+  contenido de ambas aportaciones), sin devolver la PR al Developer — no es un bug de código, es
+  una consecuencia esperable de documentar en paralelo.
 </equipo_de_agentes>
 
 <primer_paso>
