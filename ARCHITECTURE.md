@@ -176,6 +176,39 @@ avanza el roadmap de implementación (ver plan de fases acordado).
 - Errores estructurados con el mismo patrón que el resto de la capa de dominio:
   `{ success: false, error: { code: "VALIDATION_ERROR" | "NOT_FOUND", message } }`.
 
+### Comentario de progreso con IA (SPEC.md §14 punto 2)
+
+Segunda integración de IA del proyecto, deliberadamente más simple que la propuesta de sesión
+de `/sesion` (ver DECISIONS.md 2026-07-19: son dos integraciones de complejidad distinta a
+propósito — no sobre-diseñar la más simple, regla 4 CLAUDE.md).
+
+- `src/lib/progress-comment/generate-progress-comment.ts` — llamada directa a
+  `client.messages.create()` de `@anthropic-ai/sdk` (`claude-opus-4-8`), **sin tools ni
+  toolRunner**. El `system` es un prompt fijo de coach de fitness; el `ProgressReportData` ya
+  calculado por `getProgressReport` viaja serializado como `JSON.stringify` en el mensaje de
+  usuario. Nunca lanza hacia quien la llama: cualquier fallo (red, API, respuesta sin bloque de
+  texto) se traduce en `{ success: false, error }`.
+- `src/lib/progress-comment/save-progress-comment.ts` — `prisma.comentarioProgreso.upsert`
+  por `userId`, sobrescribe siempre el comentario anterior (sin histórico).
+- `src/lib/progress-comment/get-progress-comment.ts` — lectura simple del comentario guardado,
+  usada por `/informe` para mostrarlo ya cargado al entrar en la página.
+- Modelo `ComentarioProgreso` (`prisma/schema.prisma`): `userId` único (una fila por usuario),
+  `texto`, `generadoEn`. Relación `onDelete: Cascade` con `User`, igual que el resto de modelos
+  de un único usuario.
+- `src/app/informe/actions.ts` (`generateAndSaveProgressComment`) — Server Action que encadena
+  `getProgressReport(userId, {})` (siempre el informe global, sin el filtro de ejercicio que sí
+  respetan los gráficos de la misma página) → `generateProgressComment` →
+  `saveProgressComment`. `userId` sale siempre de `auth()`, nunca del cliente.
+- `src/app/informe/progress-comment.tsx` (`ProgressComment`, componente de cliente con
+  `useActionState`) — botón "Generar comentario de progreso" bajo demanda; en éxito muestra el
+  comentario recién generado, en fallo un aviso discreto (`role="alert"`) sin sustituir el
+  comentario que ya hubiera visible. `src/app/informe/progress-comment-display.tsx`
+  (`ProgressCommentDisplay`) es un componente puramente presentacional (recibe `generadoEn` ya
+  serializado a ISO string, mismo criterio que `ProgressCharts` de no cruzar `Date` por la
+  frontera server/client).
+- Autenticación/coste: `ANTHROPIC_API_KEY` (variable de entorno, pago por token — ver
+  `.env.example`), nunca en código ni logs. En producción se configura como secret de Fly.io.
+
 ## Servidor MCP
 
 - `src/app/api/mcp/route.ts` — única ruta del servidor MCP (SPEC §5 y §4 caso de uso 6):
