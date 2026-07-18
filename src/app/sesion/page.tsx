@@ -6,6 +6,11 @@ export const metadata: Metadata = {
   title: "Registrar sesión — Fitness Coach",
 };
 
+// Ruta protegida por src/proxy.ts: nunca debe servirse como página estática
+// generada en build time (Next intentaría prerenderizarla y fallaría al
+// llamar a la base de datos sin conexión disponible en ese momento).
+export const dynamic = "force-dynamic";
+
 export default async function SesionPage() {
   const exercises = await listExercises();
 
