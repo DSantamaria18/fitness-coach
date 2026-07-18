@@ -195,4 +195,55 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-18
+- **Decisión:** Arranca la construcción del servidor MCP (SPEC §5) con alcance completo (las 7
+  tools) en dos rondas: esta ronda (fase 1) cierra los huecos de dominio que faltaban —
+  `get-session-history.ts` y `update-session.ts` (Developer A, rama `feature/historial-sesiones`)
+  y `get-progress-report.ts` (Developer B, rama `feature/informe-progreso`) — antes de construir
+  en una fase 2 la capa de transporte MCP en sí, que depende de ambas. Despliegue del servidor
+  MCP: integrado en la app Next.js actual (Fly.io), protegido solo por token Bearer por ahora;
+  la segunda capa de seguridad (VPN Tailscale) se añade cuando se migre al NAS propio de David
+  (ver BACKLOG.md).
+- **Alternativas consideradas:** acotar esta ronda a las 4 tools que ya tenían lógica de dominio
+  (`log_weight`, `get_weight_history`, `log_session`, `list_exercises`) y posponer
+  `edit_session`/`get_session_history`/`get_progress_report`; posponer el servidor MCP entero
+  hasta tener el NAS+Tailscale montado. Ambas descartadas explícitamente por David a favor del
+  alcance completo y del despliegue solo-token por ahora.
+- **Justificación:** el SPEC ya aprobado especifica las 7 tools; construirlas todas de una vez
+  evita una segunda ronda de "completar lo que falta" más adelante. El despliegue solo-token es
+  una brecha de seguridad temporal asumida conscientemente (ver BACKLOG.md para el recordatorio
+  de añadir Tailscale al migrar), no un descuido.
+- **Decisiones de diseño de los Developers, revisadas y aprobadas por el Tech Lead sin bloquear
+  la ronda** (no requerían decisión de producto, se documentan aquí por su impacto):
+  - El filtro `ejercicio` de `get-session-history.ts` actúa a nivel de sesión completa: si una
+    sesión contiene el ejercicio buscado, se devuelve la sesión entera (todos sus ejercicios),
+    no solo las entradas que coinciden.
+  - `get-progress-report.ts`: `currentStreakWeeks` se calcula siempre respecto a la semana ISO
+    real (fecha del sistema), ignorando el filtro `hasta` — si `hasta` deja fuera la semana
+    actual real, la racha sale 0 aunque haya una racha larga dentro del rango filtrado. Confirmado
+    por QA con test explícito. Pendiente: cuando se construya la UI del informe de progreso, la
+    racha debe explicarse bien para que no confunda a David (anotado en BACKLOG.md).
+  - `sessionsPerWeek` promedia sobre el rango explícito `desde`/`hasta` si se indica, o si no
+    sobre el span de las sesiones existentes (mínimo 1 semana).
+  - Se extrajo `src/lib/session-entries.ts` (`resolveSessionEntries`) de `create-session.ts`
+    para reutilizar en `update-session.ts` la validación de catálogo y construcción de datos
+    anidados — duplicación real detectada por el propio Developer A antes de escribir el
+    segundo caso, no después (a diferencia de la lección de la fase 3).
+- **Lecciones aprendidas:**
+  - Al lanzar un agente Developer con `isolation: "worktree"` además de indicarle por prompt un
+    worktree ya preparado manualmente, el agente puede acabar trabajando en el worktree aislado
+    que crea la propia herramienta (rama con nombre generado) en vez del indicado — pasó con el
+    Developer del informe de progreso. Se detectó al revisar `git worktree list` tras recibir su
+    resultado (la rama destino seguía en el commit base) y se corrigió moviendo los commits a la
+    rama correcta (`git merge --ff-only`, ya que los commits partían del mismo punto). Para la
+    próxima ronda con contratos de dominio ya cerrados: no combinar `isolation: "worktree"` con
+    instrucciones explícitas de `cd` a un worktree ya preparado — o bien uno, o bien otro, no
+    ambos a la vez.
+  - Ambos Developers en paralelo esta vez NO duplicaron lógica entre sí (a diferencia de la fase
+    3): sus dos piezas de dominio (sesiones vs. informe de progreso) no compartían ningún código,
+    así que no hubo fricción de integración más allá de un merge limpio en
+    `integration/ronda-2`.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

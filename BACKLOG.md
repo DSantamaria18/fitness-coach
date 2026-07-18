@@ -20,6 +20,26 @@ dificultad estimada (baja/media/alta). Cuando algo se implementa, se mueve de aq
   credenciales, y decidir el disparador — cron interno choca con el auto-stop de Fly.io free
   tier, así que probablemente un GitHub Actions programado contra un endpoint propio).
 
+- **Añadir la capa VPN Tailscale al servidor MCP.** Justificación: el servidor MCP (en
+  construcción, ver DECISIONS.md 2026-07-18) se despliega por ahora protegido solo por token
+  Bearer, sin la segunda capa de VPN que especifica SPEC.md §7 — decisión consciente para no
+  bloquear el desarrollo en Fly.io mientras el NAS propio de David no esté montado. Hay que
+  volver a esto en cuanto el NAS con Tailscale esté disponible. Dificultad: baja (es
+  configuración de red del despliegue, no cambia el código del servidor MCP).
+- **UI web de historial y edición de sesiones de entreno** (paridad con `/historial`, que hoy
+  solo cubre peso corporal). Justificación: la capa de dominio (`get-session-history.ts`,
+  `update-session.ts`) ya existe desde esta ronda pensada para el servidor MCP, pero no hay
+  ninguna pantalla web que la use — el criterio de aceptación del SPEC §13 ("editar o borrar
+  cualquier registro existente, peso o sesión") no está cubierto en la web para sesiones
+  todavía. Dificultad: baja-media (reutiliza la capa de dominio ya hecha y testeada, patrón
+  similar a `/historial`).
+- **Explicar bien la "racha" en la futura UI de informe de progreso.** Justificación:
+  `get-progress-report.ts` calcula `currentStreakWeeks` siempre respecto a la semana real actual
+  (ignora el filtro `hasta`), así que si se consulta un rango de fechas pasado, la racha puede
+  salir 0 aunque haya una racha larga dentro de ese rango — comportamiento intencionado (ver
+  DECISIONS.md 2026-07-18) pero potencialmente confuso sin una nota en la interfaz. Dificultad:
+  baja (es una aclaración de copy/UI cuando se construya la pantalla, no un cambio de lógica).
+
 ## Iteraciones futuras ya acordadas (no implementar todavía)
 
 - **Integración con wearable** (pasos, sueño, frecuencia cardiaca). Justificación: ampliar el
