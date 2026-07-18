@@ -127,7 +127,7 @@ cambio relevante.
   DECISIONS.md): al ser una app de un único usuario, un recordatorio en la UI es suficiente y
   evita depender de una cuenta/credenciales de un proveedor cloud.
 
-## Informe de progreso (capa de dominio)
+## Informe de progreso
 
 - `src/lib/get-progress-report.ts` — función `getProgressReport(userId, filters)` que calcula,
   sobre datos ya persistidos, la evolución del peso corporal, la frecuencia de entrenamiento
@@ -136,10 +136,23 @@ cambio relevante.
   máximo y volumen total por sesión (fuerza), o distancia/duración/ritmo medio (cardio).
   Filtro opcional de rango de fechas (`desde`/`hasta`), mismo criterio de validación que el
   resto de la capa de dominio; devuelve `NOT_FOUND` si el ejercicio filtrado no existe en el
-  catálogo.
-- Todavía sin ruta API ni interfaz web: solo la capa de dominio, pensada para reutilizarse tanto
-  desde el futuro servidor MCP (`get_progress_report`, SPEC.md §5) como desde los gráficos de
-  progreso de la interfaz web.
+  catálogo. Reutilizada tanto por la UI web como (pendiente) por el futuro servidor MCP
+  (`get_progress_report`, SPEC.md §5).
+- **UI web en `/informe`**: cabecera con tarjetas de frecuencia (sesiones totales, sesiones/
+  semana y racha actual, con una nota aclaratoria de que la racha cuenta hacia atrás desde hoy
+  — ver DECISIONS.md), un selector de ejercicio (`ExerciseSelector`, componente de cliente
+  controlado por la URL vía `?ejercicio=`, sin estado de formulario propio) y los gráficos de
+  progreso (`ProgressCharts`, con [recharts](https://recharts.org/)):
+  - Evolución del peso corporal (línea temporal), con mensaje de estado vacío si no hay
+    registros todavía.
+  - Filtrando por un ejercicio de fuerza: peso máximo y volumen total por sesión, cada métrica
+    en su propio gráfico de una sola serie (no combinadas en un único eje — ver DECISIONS.md).
+  - Filtrando por un ejercicio de cardio: distancia, duración y ritmo medio por sesión, cada
+    métrica en su propio gráfico; los campos no medidos en una sesión concreta (`null`, no
+    todos los relojes miden todo) se representan como huecos en la línea, nunca como cero, y si
+    ninguna sesión tiene ese dato se muestra un aviso en vez de un gráfico vacío.
+  - Si el ejercicio del query param ya no existe en el catálogo, la página ignora el filtro y
+    muestra el informe general en vez de romperse.
 
 ## Servidor MCP
 
@@ -170,5 +183,3 @@ cambio relevante.
   (validación, "no encontrado") como los normalizados desde la capa de dominio.
 - Pendiente (ver BACKLOG.md): añadir la segunda capa de seguridad (VPN Tailscale) que especifica
   SPEC §7, cuando se migre al NAS propio de David.
-
-Aún no hay ruta/UI de informe de progreso en la web — llega en una fase posterior del roadmap.

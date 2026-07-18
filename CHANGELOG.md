@@ -47,6 +47,16 @@ Proyecto sin versión publicada todavía.
   (peso máximo y volumen total por sesión para fuerza; distancia, duración y ritmo medio para
   cardio). Aún sin ruta API ni UI — la usarán el futuro servidor MCP
   (`get_progress_report`, SPEC.md §5) y los gráficos web de una fase posterior.
+- UI web de informe de progreso (`/informe`): tarjetas de frecuencia de entreno (sesiones
+  totales, sesiones/semana, racha actual con nota aclaratoria de su criterio de cálculo —
+  cierra parcialmente el punto de BACKLOG.md sobre explicar bien la racha), selector de
+  ejercicio controlado por la URL (`ExerciseSelector`) y gráficos de evolución con
+  [recharts](https://recharts.org/) (`ProgressCharts`): peso corporal, y — filtrando por
+  ejercicio — peso máximo/volumen total (fuerza) o distancia/duración/ritmo medio (cardio),
+  cada métrica en su propio gráfico de una sola serie. Los campos de cardio no medidos se
+  representan como huecos en la línea, nunca como cero. Estados vacíos explícitos cuando no
+  hay datos, y tolerancia a un `ejercicio` en la URL que ya no exista en el catálogo (se
+  ignora el filtro en vez de romper la página).
 
 - Historial y edición de sesión de entreno: capa de dominio para consultar
   (`get-session-history.ts`, con filtros opcionales de rango de fechas y de nombre de
