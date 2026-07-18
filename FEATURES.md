@@ -115,5 +115,34 @@ cambio relevante.
   desde el futuro servidor MCP (`get_progress_report`, SPEC.md §5) como desde los gráficos de
   progreso de la interfaz web.
 
-Aún no hay ruta/UI de informe de progreso ni conexión MCP con la cuenta de Claude — llegan en
-las siguientes fases del roadmap.
+## Servidor MCP
+
+- Endpoint único `POST /api/mcp` que expone 7 tools para que la skill de Claude
+  "sesion-entrenamiento" (u otro chat con el conector MCP configurado) lea y escriba
+  directamente en la misma base de datos que la webapp, en vez de depender de un JSON local
+  (SPEC §4 caso de uso 6):
+  - `log_weight` — registra el peso corporal de una fecha (hoy u otra pasada).
+  - `get_weight_history` — consulta el historial de peso, con filtro opcional de rango de
+    fechas.
+  - `log_session` — registra una sesión de entreno con uno o varios ejercicios de fuerza y/o
+    cardio (mismo esquema serie/reps/tempo/peso/RPE que ya usa la skill).
+  - `edit_session` — edita una sesión existente (sustituye por completo su fecha y ejercicios).
+  - `get_session_history` — consulta el historial de sesiones, con filtro opcional de fechas
+    y/o ejercicio.
+  - `list_exercises` — lista el catálogo cerrado de ejercicios disponibles.
+  - `get_progress_report` — informe de progreso (peso corporal, frecuencia de entreno y,
+    filtrando por ejercicio, su evolución específica).
+- Seguridad: cada petición exige un token Bearer válido (`MCP_BEARER_TOKEN`), comparado de
+  forma segura frente a timing attacks (hash SHA-256 + `crypto.timingSafeEqual`), verificado
+  antes de tocar cualquier otra cosa. El `userId` de cada tool se resuelve del lado del
+  servidor a partir de `ADMIN_USERNAME` (la app es de un único usuario) — nunca se acepta desde
+  el payload MCP.
+- Transporte **stateless**: cada petición HTTP es independiente, sin sesión MCP compartida
+  entre llamadas — apto para un despliegue serverless donde no se puede asumir continuidad de
+  proceso entre peticiones (ver ARCHITECTURE.md y DECISIONS.md 2026-07-18 para el detalle).
+- Errores estructurados `{ code, message }` en todos los casos, tanto los propios de cada tool
+  (validación, "no encontrado") como los normalizados desde la capa de dominio.
+- Pendiente (ver BACKLOG.md): añadir la segunda capa de seguridad (VPN Tailscale) que especifica
+  SPEC §7, cuando se migre al NAS propio de David.
+
+Aún no hay ruta/UI de informe de progreso en la web — llega en una fase posterior del roadmap.
