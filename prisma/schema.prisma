@@ -20,6 +20,7 @@ model User {
 
   bodyWeights BodyWeight[]
   sessions    Session[]
+  backups     Backup[]
 }
 
 model BodyWeight {
@@ -120,4 +121,17 @@ model CardioEntry {
 
   @@index([sessionId])
   @@index([exerciseId])
+}
+
+// Registra cuándo se descargó un backup manual (SPEC §11): no guarda el
+// fichero en sí (se sirve y se descarta al vuelo), solo la fecha, para poder
+// avisar en /ajustes si han pasado más de 30 días sin uno.
+model Backup {
+  id        String   @id @default(cuid())
+  userId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }

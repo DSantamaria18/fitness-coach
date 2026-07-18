@@ -121,10 +121,15 @@ nunca abierta directamente a internet.
 
 ## 11. Backup y restore
 
-- Copia diaria del fichero SQLite mediante el comando `.backup` de SQLite (seguro con
-  escrituras concurrentes), subida a almacenamiento externo barato/gratuito (a concretar en el
-  plan de implementación: Backblaze B2, S3 free tier, o similar).
-- Restore manual: sustituir el fichero del volumen por el backup elegido.
+- Backup **manual bajo demanda**, no automático: un botón "Descargar backup" en `/ajustes` de
+  la webapp genera al momento una copia consistente del fichero SQLite (API de backup online de
+  `better-sqlite3`, segura con escrituras concurrentes) y la sirve como descarga del navegador,
+  sin subirla a ningún almacenamiento externo ni conservar copia en el servidor. Revisado el
+  2026-07-18 (ver DECISIONS.md): al ser un único usuario, se prioriza simplicidad operativa
+  (sin cuenta cloud adicional) sobre automatización.
+- `/ajustes` avisa si han pasado más de 30 días desde el último backup, o si nunca se ha hecho
+  ninguno — red de seguridad mínima frente al olvido.
+- Restore manual: sustituir el fichero del volumen por el backup descargado.
 
 ## 12. Fuera de alcance del MVP (backlog)
 
@@ -147,5 +152,5 @@ Ver [BACKLOG.md](BACKLOG.md) para detalle y justificación de cada uno:
 - Puede consultar su historial y un informe de progreso básico con gráficos.
 - La skill "sesion-entrenamiento" (u otro chat de Claude con el conector MCP configurado)
   puede leer y escribir estos datos de forma segura (VPN + token).
-- La app está desplegada en Fly.io, con CI corriendo tests antes de cada cambio, y con backups
-  diarios automáticos funcionando (verificados con al menos un restore de prueba).
+- La app está desplegada en Fly.io, con CI corriendo tests antes de cada cambio, y con el
+  backup manual desde `/ajustes` funcionando (verificado con al menos un restore de prueba).

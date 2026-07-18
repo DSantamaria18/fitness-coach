@@ -69,5 +69,18 @@ cambio relevante.
   por estar protegida por `proxy.ts`: nunca puede servirse como contenido estático generado en
   build time.
 
+## Backup manual
+
+- Página `/ajustes` con un botón "Descargar backup" que genera al vuelo una copia consistente
+  del fichero SQLite (usando la API de backup online de `better-sqlite3`, segura incluso con
+  escrituras concurrentes) y la sirve como descarga del navegador — no se conserva ninguna
+  copia en el servidor.
+- Cada descarga se registra con su fecha (`create-backup.ts`, modelo `Backup`), y `/ajustes`
+  muestra un aviso si han pasado más de 30 días desde el último backup o si nunca se ha hecho
+  ninguno (`get-last-backup.ts`).
+- Sustituye al plan original de backup diario automático a almacenamiento externo (ver
+  DECISIONS.md): al ser una app de un único usuario, un recordatorio en la UI es suficiente y
+  evita depender de una cuenta/credenciales de un proveedor cloud.
+
 Aún no hay informe de progreso ni conexión MCP con la cuenta de Claude — llega en las
 siguientes fases del roadmap.

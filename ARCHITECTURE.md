@@ -83,6 +83,25 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   intentaría prerenderizarla como página estática en build time y fallaría al llamar a la
   base de datos.
 
+## Backup manual
+
+- `src/lib/create-backup.ts` — usa la API de backup online de `better-sqlite3` (`db.backup()`,
+  añadido como dependencia directa junto a `@types/better-sqlite3`) contra una conexión
+  read-only separada de la de Prisma, para obtener una copia consistente del fichero SQLite
+  incluso con escrituras concurrentes. Tras copiar, registra una fila en el modelo `Backup`
+  (`userId` + `createdAt`) — no guarda el fichero, solo la fecha. El path de origen es
+  inyectable (parámetro opcional, por defecto derivado de `DATABASE_URL`) para poder testear
+  contra un fichero SQLite temporal real en vez de mockear la operación de fichero.
+- `src/lib/get-last-backup.ts` — devuelve la fecha del backup más reciente del usuario (o
+  `null` si nunca se ha hecho ninguno).
+- `src/app/api/backup/route.ts` (`GET`) — genera el backup en un fichero temporal
+  (`os.tmpdir()`), lo sirve como descarga (`Content-Disposition: attachment`) y lo borra del
+  disco en un `finally`, para no dejar copias residuales en el servidor.
+- `src/app/ajustes/page.tsx` + `backup-status.tsx` — página que muestra cuánto hace del último
+  backup y un aviso si han pasado 30 días o más (o nunca se ha hecho uno), con el enlace de
+  descarga. `BackupStatus` es un componente síncrono y puro (recibe la fecha ya serializada),
+  separado del Server Component para poder testear la lógica de aviso sin mockear `auth()`/BD.
+
 ## Estructura de carpetas relevante
 
 - `src/app/` — rutas y páginas (App Router de Next.js).
