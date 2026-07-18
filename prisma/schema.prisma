@@ -18,9 +18,10 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now())
 
-  bodyWeights BodyWeight[]
-  sessions    Session[]
-  backups     Backup[]
+  bodyWeights        BodyWeight[]
+  sessions           Session[]
+  backups            Backup[]
+  comentarioProgreso ComentarioProgreso?
 }
 
 model BodyWeight {
@@ -101,20 +102,20 @@ model StrengthSet {
 // Todos los campos numéricos son opcionales individualmente (SPEC §3: no
 // todos los relojes miden todo).
 model CardioEntry {
-  id                    String  @id @default(cuid())
-  sessionId             String
-  exerciseId            String
-  durationSeconds       Int?
-  distanceKm            Float?
-  avgSpeedKmh           Float?
-  avgPaceSecPerKm       Int?
-  avgHeartRate          Int?
-  maxHeartRate          Int?
-  steps                 Int?
-  stepFrequency         Float?
-  kcal                  Int?
-  rpe                   Int?
-  notes                 String?
+  id              String  @id @default(cuid())
+  sessionId       String
+  exerciseId      String
+  durationSeconds Int?
+  distanceKm      Float?
+  avgSpeedKmh     Float?
+  avgPaceSecPerKm Int?
+  avgHeartRate    Int?
+  maxHeartRate    Int?
+  steps           Int?
+  stepFrequency   Float?
+  kcal            Int?
+  rpe             Int?
+  notes           String?
 
   session  Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   exercise Exercise @relation(fields: [exerciseId], references: [id])
@@ -134,4 +135,17 @@ model Backup {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+}
+
+// Comentario de progreso generado por IA a partir de get_progress_report
+// (SPEC.md §14, punto 2). Fila única por usuario (userId @unique): cada
+// generación sobrescribe la anterior, no hay histórico (decisión de
+// producto — ver DECISIONS.md 2026-07-19).
+model ComentarioProgreso {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  texto      String
+  generadoEn DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
