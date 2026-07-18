@@ -163,4 +163,36 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-18
+- **Decisión:** Se sustituye el plan de backup diario automático (SPEC §11 original: `.backup`
+  + subida a Backblaze B2/S3/GCS vía cron) por un backup **manual**: un botón en `/ajustes` que
+  descarga al momento una copia consistente del SQLite (`db.backup()` de `better-sqlite3`), con
+  un aviso en la propia UI si han pasado más de 30 días sin descargar uno o si nunca se ha hecho
+  ninguno. No se sube a ningún almacenamiento externo — la descarga queda en el dispositivo de
+  David (o donde él decida moverla, p.ej. Google Drive manualmente).
+- **Alternativas consideradas:** cron dentro del propio contenedor (descartado: Fly.io free
+  tier suspende la máquina sin tráfico — "auto stop" — y un cron interno no se dispararía si la
+  máquina está dormida a esa hora); GitHub Actions programado llamando a un endpoint HTTP
+  propio (descartado por ahora: añade un secret más que gestionar y una integración con Fly.io
+  para automatizar un paso que, siendo un único usuario, es igual de fiable hecho a mano con un
+  recordatorio); integración nativa con Google Drive vía OAuth (descartada: exige pantalla de
+  consentimiento y gestión de tokens de refresco para automatizar un paso que ya es trivial
+  reenviando manualmente el fichero descargado).
+- **Justificación:** proyecto de un único usuario (David) sin obligación de continuidad ante
+  terceros — el coste de que se le olvide hacer un backup ocasional es bajo, y el aviso a los
+  30 días es red de seguridad suficiente sin la complejidad operativa de gestionar una cuenta
+  cloud adicional (Backblaze/S3/GCS) solo para este propósito. Puede revisitarse si en el futuro
+  se decide automatizarlo (ver BACKLOG.md).
+- **Lecciones aprendidas:**
+  - `@prisma/adapter-better-sqlite3` no expone la conexión nativa de `better-sqlite3`
+    subyacente, así que generar un backup online requiere abrir una segunda conexión
+    `better-sqlite3` de solo lectura directamente contra el fichero de `DATABASE_URL`, en
+    paralelo a la que usa Prisma — no hay forma de reutilizar la conexión del ORM para esto.
+  - Añadir un import directo de `better-sqlite3` en código propio (más allá de la dependencia
+    transitiva que ya traía el adapter) exige declararlo como dependencia directa en
+    `package.json` (y `@types/better-sqlite3` para el typecheck) — depender solo del hoisting
+    de npm sin declararlo habría sido frágil ante cambios futuros del adapter.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

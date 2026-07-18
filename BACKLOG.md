@@ -12,6 +12,14 @@ dificultad estimada (baja/media/alta). Cuando algo se implementa, se mueve de aq
   navegador real como lo usará David desde el móvil. Dificultad: baja-media (configuración
   estándar, pero exige mantener los tests al día con la UI).
 
+- **Automatizar el backup manual actual** (subida periódica a almacenamiento externo, p.ej.
+  Google Drive o Backblaze B2, en vez de depender de que David pulse "Descargar backup").
+  Justificación: hoy el aviso de 30 días en `/ajustes` es la única red de seguridad (ver
+  DECISIONS.md 2026-07-18); si en el futuro se quiere eliminar la dependencia de que alguien se
+  acuerde, esto lo resolvería. Dificultad: media (requiere elegir proveedor, gestionar
+  credenciales, y decidir el disparador — cron interno choca con el auto-stop de Fly.io free
+  tier, así que probablemente un GitHub Actions programado contra un endpoint propio).
+
 ## Iteraciones futuras ya acordadas (no implementar todavía)
 
 - **Integración con wearable** (pasos, sueño, frecuencia cardiaca). Justificación: ampliar el

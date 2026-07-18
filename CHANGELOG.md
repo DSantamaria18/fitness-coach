@@ -34,6 +34,12 @@ Proyecto sin versión publicada todavía.
   `StrengthEntry`/`StrengthSet` o `CardioEntry`) para que no quede una sesión a medias si
   falla la escritura. Endpoint `POST /api/sessions` comparte la misma lógica que la Server
   Action del formulario.
+- Backup manual: página `/ajustes` con un botón "Descargar backup" (`GET /api/backup`) que
+  genera un snapshot consistente del SQLite en el momento (`db.backup()` de `better-sqlite3`,
+  válido incluso con escrituras concurrentes) y lo sirve como descarga sin conservar copia en
+  el servidor. Se registra la fecha de cada descarga (`create-backup.ts`, modelo `Backup`) para
+  mostrar un aviso en `/ajustes` si han pasado más de 30 días sin hacer uno o si nunca se ha
+  hecho ninguno.
 
 ### Fixed
 
