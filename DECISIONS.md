@@ -132,4 +132,35 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-18
+- **Decisión:** Historial de peso corporal y registro de sesión de entreno (fases 4 y 5 del
+  roadmap) implementados en paralelo con dos agentes en ramas independientes
+  (`feature/historial-peso`, `feature/registro-sesion`), cada uno en su propio `git worktree`
+  bajo `.claude/worktrees/`, integrados después en una rama `integration/ronda-1` antes de
+  fusionar a `master`.
+- **Alternativas consideradas:** implementar ambas features en serie en una sola rama
+  (descartado, regla 9 de CLAUDE.md pide paralelizar cuando las features son independientes,
+  y estas no comparten código de dominio entre sí).
+- **Justificación:** ambas features son independientes entre sí (una opera sobre `BodyWeight`,
+  la otra sobre `Session`/`StrengthEntry`/`CardioEntry`) y ya existía el precedente de la fase
+  3 de paralelizar UI/API con un contrato de dominio cerrado de antemano.
+- **Lecciones aprendidas:**
+  - La CI solo ejecutaba format/lint/typecheck/test, nunca `next build`. `/sesion` no forzaba
+    renderizado dinámico (a diferencia de `/historial`, que lo consigue indirectamente al
+    llamar a `auth()` dentro del Server Component) y Next intentaba prerenderizarla como
+    página estática en build time, fallando al llamar a la base de datos — un fallo que habría
+    llegado a `master` sin que nadie se enterase. Se añadió un paso de `build` a la CI
+    (`.github/workflows/ci.yml`) con variables de entorno ficticias solo para que el proceso
+    pueda arrancar. Regla general: cualquier página de Server Component bajo una ruta
+    protegida por `proxy.ts` que haga I/O (BD, `auth()`, etc.) debe o bien llamar a una API
+    dinámica de Next (como `auth()`), o bien declarar explícitamente
+    `export const dynamic = "force-dynamic"` — no asumir que Next lo infiere siempre
+    correctamente.
+  - El reinicio del IDE a mitad de la ronda dejó un `git stash` (un fichero
+    `.code-workspace` sin importancia) y varios `git worktree`/ramas a medio integrar, pero
+    nada de código sin commitear: confirma que trabajar con commits atómicos por paso (regla
+    11 de CLAUDE.md) permite recuperar el estado exacto tras una caída sin pérdida de trabajo.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

@@ -6,7 +6,9 @@ sustituyendo al archivo JSON local que hoy usa la skill de Claude "sesion-entren
 app debe poder conectarse a la cuenta de Claude del usuario para que esa skill (u otros chats)
 lean y escriban datos directamente.
 
-> Estado: en fase de especificación. Aún no hay stack técnico ni código definidos.
+> Estado: MVP en curso (iteración 1). Ya implementados: login, registro de peso corporal,
+> historial de peso (con edición/borrado) y registro de sesiones de entreno. Ver
+> [FEATURES.md](FEATURES.md) para el detalle y [BACKLOG.md](BACKLOG.md) para lo pendiente.
 
 ## Alcance por iteraciones
 

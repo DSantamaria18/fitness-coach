@@ -9,7 +9,7 @@ cambio relevante.
   SPEC.md §3 y migración inicial aplicada.
 - Catálogo de ejercicios sembrado (`npm run prisma:seed`).
 - Suite de tests (Vitest) y pipeline de CI (GitHub Actions) verificando formato, lint,
-  typecheck y tests en cada push.
+  typecheck, tests y build en cada push.
 - Endpoint `/api/health` para verificar que el servidor está vivo (uso interno/CI, no es un
   caso de uso de producto).
 
@@ -38,5 +38,36 @@ cambio relevante.
 - El `userId` de cada registro sale siempre de la sesión autenticada, nunca del cuerpo de la
   petición ni del formulario.
 
-Aún no hay funcionalidad de registro de sesiones de entreno, historial, informe de progreso ni
-MCP — llega en las siguientes fases del roadmap.
+## Historial de peso corporal
+
+- Página `/historial` que lista los registros de peso corporal del usuario autenticado
+  (más reciente primero), con edición y borrado in-place.
+- Capa de dominio (`get-body-weight-history.ts`, `update-body-weight.ts`,
+  `delete-body-weight.ts`) que reutiliza la validación de `validate-body-weight.ts` y comprueba
+  siempre que el registro pertenece al `userId` dado antes de editarlo o borrarlo — guarda de
+  autorización a nivel de dominio, no delegable al caller.
+- Endpoints `GET /api/body-weight` (con filtro opcional de rango `desde`/`hasta`),
+  `PATCH /api/body-weight/[id]` y `DELETE /api/body-weight/[id]`, pensados para el futuro
+  servidor MCP igual que el resto de la API.
+
+## Registro de sesión de entreno
+
+- Formulario mobile-first en `/sesion` para registrar una sesión con uno o varios ejercicios,
+  cada uno de tipo fuerza o cardio, con el mismo esquema que ya usa la skill
+  "sesion-entrenamiento": series/reps/tempo/peso/RPE para fuerza; duración, distancia,
+  velocidad/ritmo medio, frecuencia cardiaca media/máxima, pasos, frecuencia de paso y kcal
+  (todos opcionales) para cardio.
+- Validación de forma con Zod (`validate-session.ts`) y de existencia del ejercicio en el
+  catálogo, incluyendo que su tipo (fuerza/cardio) coincida (`create-session.ts`) — la
+  existencia se valida contra la base de datos, no en el esquema Zod puro.
+- Persistencia en una única transacción Prisma (`Session` junto con sus `StrengthEntry` +
+  `StrengthSet`, o `CardioEntry`), para que nunca quede una sesión huérfana si falla la
+  escritura de algún ejercicio a mitad.
+- Endpoint `POST /api/sessions` comparte la misma lógica de dominio que la Server Action del
+  formulario `/sesion` (mismo patrón que peso: una sola fuente de verdad).
+- La página `/sesion` fuerza renderizado dinámico (`export const dynamic = "force-dynamic"`)
+  por estar protegida por `proxy.ts`: nunca puede servirse como contenido estático generado en
+  build time.
+
+Aún no hay informe de progreso ni conexión MCP con la cuenta de Claude — llega en las
+siguientes fases del roadmap.

@@ -17,7 +17,8 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   documentación (`*.md`) están excluidos del autoformateo (`.prettierignore`) porque se editan
   a mano y Prettier reescribe su estructura de forma indeseada.
 - **CI**: GitHub Actions (`.github/workflows/ci.yml`) — en cada push/PR: instala dependencias,
-  genera el cliente Prisma, y corre `format:check`, `lint`, `typecheck` y `test`.
+  genera el cliente Prisma, y corre `format:check`, `lint`, `typecheck`, `test` y `build` (con
+  variables de entorno ficticias, solo para que el build pueda arrancar).
 - **Autenticación**: Auth.js (NextAuth) v5, provider Credentials + bcrypt. Usuario único
   sembrado desde `ADMIN_USERNAME`/`ADMIN_PASSWORD_HASH` (ver `prisma/seed.ts` y
   `scripts/hash-password.ts`). Sesión JWT en cookie httpOnly (`AUTH_SECRET`), sin adapter de
@@ -50,6 +51,37 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   - `src/app/api/body-weight/route.ts` (`POST`, pensado para el futuro servidor MCP).
   - `src/app/peso/actions.ts` (Server Action del formulario `/peso`).
   Ambos derivan el `userId` de la sesión (`auth()`), nunca del cuerpo de la petición.
+
+## Historial de peso corporal
+
+- `src/lib/get-body-weight-history.ts`, `update-body-weight.ts`, `delete-body-weight.ts` —
+  capa de dominio para consultar (con filtro opcional de rango de fechas), editar y borrar
+  registros. Las mutaciones comprueban primero, con un `findFirst({ userId, id })`, que el
+  registro pertenece al usuario antes de escribir — guarda de autorización a nivel de dominio.
+- `src/app/api/body-weight/route.ts` (`GET`) y `src/app/api/body-weight/[id]/route.ts`
+  (`PATCH`/`DELETE`) — expuestos igual que el resto de la API, pensados para el futuro
+  servidor MCP.
+- `src/app/historial/page.tsx` — Server Component que llama a `auth()` y a la capa de dominio
+  directamente (sin pasar por la API HTTP), igual que `/peso`. Esto además vuelve la página
+  dinámica automáticamente (ver nota de `/sesion` más abajo).
+
+## Registro de sesión de entreno
+
+- `src/lib/validate-session.ts` — esquema Zod (unión discriminada por `tipo`: `fuerza` o
+  `cardio`) que valida solo la forma del dato, con el mismo esquema fuerza/reps/tempo/peso/RPE
+  y cardio (duración, distancia, velocidad/ritmo medio, frecuencia cardiaca, pasos, kcal —
+  todos opcionales) que ya usa la skill "sesion-entrenamiento".
+- `src/lib/create-session.ts` — valida forma (Zod), valida existencia del ejercicio en el
+  catálogo y que su tipo coincida (contra la base de datos, no en Zod), y persiste `Session`
+  junto con sus `StrengthEntry`/`StrengthSet` o `CardioEntry` en una única transacción Prisma
+  (`prisma.$transaction`) para evitar sesiones huérfanas si falla la escritura a mitad.
+- `src/app/api/sessions/route.ts` (`POST`) y `src/app/sesion/actions.ts` (Server Action)
+  comparten `create-session.ts` — mismo patrón que peso/historial de una sola fuente de verdad.
+- `src/app/sesion/page.tsx` declara `export const dynamic = "force-dynamic"` explícitamente:
+  a diferencia de `/historial`, no llama a `auth()` en el propio Server Component (solo
+  necesita el catálogo de ejercicios, no el `userId`), así que sin esta declaración Next
+  intentaría prerenderizarla como página estática en build time y fallaría al llamar a la
+  base de datos.
 
 ## Estructura de carpetas relevante
 
