@@ -127,6 +127,21 @@ cambio relevante.
   DECISIONS.md): al ser una app de un único usuario, un recordatorio en la UI es suficiente y
   evita depender de una cuenta/credenciales de un proveedor cloud.
 
+## Navegación global
+
+- Barra de navegación (`src/components/nav-bar.tsx`, client component) con enlaces a Peso,
+  Sesión, Historial, Informe y Ajustes, visible en todas las páginas vía `layout.tsx`. Resalta
+  la ruta activa con `aria-current="page"` (comparando con `usePathname()`).
+- Solo se muestra con sesión iniciada: `src/components/nav-bar-gate.tsx` (Server Component,
+  separado de `layout.tsx` para poder testearse con Testing Library sin arrastrar la envoltura
+  `<html>/<body>`) comprueba `auth()` del lado del servidor y omite la nav por completo si no
+  hay usuario autenticado, para no mostrar la estructura de navegación en `/login`.
+- Diseño mobile-first: fila horizontal de enlaces con altura de toque de 44px cada uno (uso
+  principal desde el móvil, ver SPEC.md §2/§6).
+- `/` deja de ser el scaffold por defecto de `create-next-app`: ahora redirige server-side a
+  `/historial` si hay sesión, o a `/login` si no la hay (defensa en profundidad además de la
+  protección ya existente en `src/proxy.ts`).
+
 ## Informe de progreso (capa de dominio)
 
 - `src/lib/get-progress-report.ts` — función `getProgressReport(userId, filters)` que calcula,

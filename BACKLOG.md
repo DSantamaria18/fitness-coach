@@ -46,6 +46,28 @@ dificultad estimada (baja/media/alta). Cuando algo se implementa, se mueve de aq
   de riesgo bajo (nadie ha registrado sesiones reales todavía), pero lo anoto para no perderlo.
   Dificultad: media (migración de esquema + lógica de resolución de entradas).
 
+- **Botón de cerrar sesión visible en la interfaz.** Justificación: hoy no existe ningún punto
+  de la UI desde el que cerrar sesión (`signOut` de Auth.js está exportado en `src/auth.ts`
+  pero no se usa en ningún componente) — la única forma de salir es borrar la cookie a mano.
+  Detectado al implementar la navegación global (`feature/nav-global`): encajaría de forma
+  natural como un elemento más de la barra de navegación, pero dónde colocarlo y si pedir
+  confirmación antes de cerrar sesión son decisiones de producto, así que lo dejo para que las
+  apruebe David en vez de añadirlo por mi cuenta. Dificultad: baja (Server Action que llama a
+  `signOut()`).
+
+- **Menú hamburguesa o navegación colapsable para cuando crezca el número de secciones.**
+  Justificación: la barra de navegación actual (`feature/nav-global`) reparte 5 enlaces en una
+  fila horizontal a partes iguales, que ya queda ajustada en pantallas de móvil pequeñas; si se
+  añaden más secciones en iteraciones futuras (wearable, fotos/medidas, comidas) dejará de
+  caber sin reducir demasiado el texto de cada enlace. Dificultad: media (patrón de menú
+  desplegable, gestión de estado abierto/cerrado y accesibilidad de foco).
+
+- **Breadcrumbs o indicador de sección dentro de cada página.** Justificación: la navegación
+  global resalta la ruta activa en la propia barra fija, pero puede no ser obvio en qué sección
+  está el usuario sin mirar arriba (p. ej. tras recargar la página o llegar desde un enlace
+  externo). Dificultad: baja (es un indicador adicional en cada página, no cambia la
+  navegación en sí).
+
 ## Iteraciones futuras ya acordadas (no implementar todavía)
 
 - **Integración con wearable** (pasos, sueño, frecuencia cardiaca). Justificación: ampliar el
