@@ -36,4 +36,16 @@ describe("verifyBearerToken", () => {
     expect(verifyBearerToken(`Bearer ${TOKEN}x`, TOKEN)).toBe(false);
     expect(verifyBearerToken("Bearer short", TOKEN)).toBe(false);
   });
+
+  // Un atacante que conozca (o adivine) la longitud exacta del token real no
+  // debe tener ninguna ventaja: la comparación debe fallar igual de "plano"
+  // que con longitudes distintas, precisamente lo que justifica hashear antes
+  // de comparar en vez de solo usar timingSafeEqual sobre los bytes crudos.
+  it("returns false when the wrong token has exactly the same length as the expected one", () => {
+    const sameLengthWrongToken = "x".repeat(TOKEN.length);
+    expect(sameLengthWrongToken.length).toBe(TOKEN.length);
+    expect(verifyBearerToken(`Bearer ${sameLengthWrongToken}`, TOKEN)).toBe(
+      false,
+    );
+  });
 });
