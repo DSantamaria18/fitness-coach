@@ -69,6 +69,25 @@ cambio relevante.
   por estar protegida por `proxy.ts`: nunca puede servirse como contenido estático generado en
   build time.
 
+## Historial y edición de sesión de entreno
+
+- Capa de dominio (`get-session-history.ts`, `update-session.ts`) para consultar y editar
+  sesiones de entreno ya registradas — todavía sin ruta API ni pantalla web, a la espera del
+  servidor MCP que se construirá encima.
+- Consulta de historial de sesiones (más recientes primero) con sus ejercicios de fuerza
+  (series incluidas) y de cardio, cada uno con el nombre del ejercicio. Filtrable por rango de
+  fechas (`desde`/`hasta`) y, opcionalmente, por nombre de ejercicio: devuelve las sesiones que
+  contienen ese ejercicio en cualquiera de sus entradas de fuerza o cardio.
+- Edición de una sesión existente: sustituye por completo su fecha y sus ejercicios (mismo
+  esquema de validación que al crearla, incluyendo la comprobación de que cada ejercicio existe
+  en el catálogo y su tipo coincide), dentro de una única transacción Prisma para que la sesión
+  nunca quede en un estado a medias si falla algo a mitad. Comprueba primero que la sesión
+  pertenece al usuario autenticado — guarda de autorización a nivel de dominio, no delegable al
+  caller.
+- Lógica de resolución de ejercicios contra el catálogo (`session-entries.ts`) extraída y
+  compartida entre el registro y la edición de sesiones, para no duplicar esa validación entre
+  ambos flujos.
+
 ## Backup manual
 
 - Página `/ajustes` con un botón "Descargar backup" que genera al vuelo una copia consistente
@@ -82,5 +101,19 @@ cambio relevante.
   DECISIONS.md): al ser una app de un único usuario, un recordatorio en la UI es suficiente y
   evita depender de una cuenta/credenciales de un proveedor cloud.
 
-Aún no hay informe de progreso ni conexión MCP con la cuenta de Claude — llega en las
-siguientes fases del roadmap.
+## Informe de progreso (capa de dominio)
+
+- `src/lib/get-progress-report.ts` — función `getProgressReport(userId, filters)` que calcula,
+  sobre datos ya persistidos, la evolución del peso corporal, la frecuencia de entrenamiento
+  (sesiones totales, media semanal y racha de semanas ISO consecutivas con al menos una
+  sesión) y, si se filtra por un ejercicio del catálogo, su serie temporal específica: peso
+  máximo y volumen total por sesión (fuerza), o distancia/duración/ritmo medio (cardio).
+  Filtro opcional de rango de fechas (`desde`/`hasta`), mismo criterio de validación que el
+  resto de la capa de dominio; devuelve `NOT_FOUND` si el ejercicio filtrado no existe en el
+  catálogo.
+- Todavía sin ruta API ni interfaz web: solo la capa de dominio, pensada para reutilizarse tanto
+  desde el futuro servidor MCP (`get_progress_report`, SPEC.md §5) como desde los gráficos de
+  progreso de la interfaz web.
+
+Aún no hay ruta/UI de informe de progreso ni conexión MCP con la cuenta de Claude — llegan en
+las siguientes fases del roadmap.

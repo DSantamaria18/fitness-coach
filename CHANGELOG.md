@@ -40,6 +40,23 @@ Proyecto sin versión publicada todavía.
   el servidor. Se registra la fecha de cada descarga (`create-backup.ts`, modelo `Backup`) para
   mostrar un aviso en `/ajustes` si han pasado más de 30 días sin hacer uno o si nunca se ha
   hecho ninguno.
+- Informe de progreso (capa de dominio): `src/lib/get-progress-report.ts`
+  (`getProgressReport(userId, filters)`) calcula la evolución del peso corporal, la frecuencia
+  de entrenamiento (total de sesiones, media semanal y racha de semanas ISO consecutivas con al
+  menos una sesión) y, si se filtra por un ejercicio del catálogo, su serie temporal específica
+  (peso máximo y volumen total por sesión para fuerza; distancia, duración y ritmo medio para
+  cardio). Aún sin ruta API ni UI — la usarán el futuro servidor MCP
+  (`get_progress_report`, SPEC.md §5) y los gráficos web de una fase posterior.
+
+- Historial y edición de sesión de entreno: capa de dominio para consultar
+  (`get-session-history.ts`, con filtros opcionales de rango de fechas y de nombre de
+  ejercicio) y editar (`update-session.ts`) sesiones ya registradas. La edición sustituye por
+  completo la fecha y los ejercicios de la sesión dentro de una única transacción Prisma
+  (borra las `StrengthEntry`/`CardioEntry` existentes y crea las nuevas), y comprueba antes que
+  la sesión pertenece al `userId` dado. Se extrajo `session-entries.ts` de `create-session.ts`
+  para compartir la validación de existencia/tipo de ejercicio contra el catálogo entre crear y
+  editar una sesión. Todavía sin ruta API ni pantalla web — solo capa de dominio, a la espera
+  del servidor MCP.
 
 ### Fixed
 

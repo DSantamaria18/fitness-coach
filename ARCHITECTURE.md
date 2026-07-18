@@ -83,6 +83,32 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   intentaría prerenderizarla como página estática en build time y fallaría al llamar a la
   base de datos.
 
+## Historial y edición de sesión de entreno
+
+- `src/lib/session-entries.ts` — helper extraído de `create-session.ts` (`resolveSessionEntries`):
+  valida existencia del ejercicio en el catálogo y que su tipo coincida (contra la base de
+  datos, no en Zod) y construye los datos de creación anidada de `StrengthEntry`/`CardioEntry`
+  a partir de los ejercicios ya validados por Zod. Compartido entre `create-session.ts` y
+  `update-session.ts` porque ambos necesitan exactamente la misma lógica de "ejercicios
+  validados → entradas listas para Prisma".
+- `src/lib/get-session-history.ts` — consulta las sesiones de un usuario (más recientes
+  primero) con sus `strengthEntries` (+ `sets`, ordenadas por `order`) y `cardioEntries`
+  incluidos, cada uno con su `exercise` para poder mostrar el nombre sin consultas
+  adicionales. Acepta filtros opcionales `desde`/`hasta` (mismo patrón Zod que
+  `get-body-weight-history.ts`) y `ejercicio` (nombre del catálogo): una sesión "contiene" el
+  ejercicio si aparece en cualquiera de sus entradas de fuerza o de cardio (SPEC §4 caso de
+  uso 4) — el filtro actúa a nivel de sesión completa, no recorta las entradas devueltas.
+- `src/lib/update-session.ts` — edita una sesión existente: valida forma (Zod), comprueba con
+  un `findFirst({ id, userId })` que la sesión pertenece al usuario antes de escribir (mismo
+  patrón de guarda de autorización que `update-body-weight.ts`), resuelve los ejercicios contra
+  el catálogo vía `resolveSessionEntries`, y sustituye por completo las entradas de la sesión
+  dentro de una única transacción Prisma: `deleteMany` de `StrengthEntry`/`CardioEntry` de esa
+  sesión (cascada a `StrengthSet`) seguido de `session.update` con `create` de las nuevas
+  entradas — igual que `create-session.ts`, para que la sesión nunca quede en un estado a
+  medias si falla algo a mitad.
+- Ninguna de las dos funciones expone todavía ruta API ni UI web — solo la capa de dominio,
+  a la espera del servidor MCP.
+
 ## Backup manual
 
 - `src/lib/create-backup.ts` — usa la API de backup online de `better-sqlite3` (`db.backup()`,
@@ -101,6 +127,41 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   backup y un aviso si han pasado 30 días o más (o nunca se ha hecho uno), con el enlace de
   descarga. `BackupStatus` es un componente síncrono y puro (recibe la fecha ya serializada),
   separado del Server Component para poder testear la lógica de aviso sin mockear `auth()`/BD.
+
+## Informe de progreso
+
+- `src/lib/get-progress-report.ts` — única función de dominio (`getProgressReport(userId,
+  filters)`) que cubre el caso de uso 5 de SPEC.md §4. Solo capa de dominio por ahora: sin ruta
+  API ni UI (llegan en fases futuras — servidor MCP y gráficos web — sobre esta misma función).
+  `filters` (`{ ejercicio?, desde?, hasta? }`) se valida con Zod con el mismo criterio de fecha
+  ISO opcional que `get-body-weight-history.ts`; `ejercicio` es el nombre del catálogo (no un
+  id), igual que en el resto de la capa de dominio.
+- Forma de salida (`ProgressReportData`, tipos exportados desde el propio fichero):
+  - `bodyWeight: { date, weightKg }[]` — evolución del peso corporal, ordenada ascendente por
+    fecha (a diferencia de `/historial`, que muestra lo más reciente primero: aquí alimenta una
+    serie temporal/gráfico).
+  - `frequency: { totalSessions, sessionsPerWeek, currentStreakWeeks }` — agregados **globales**
+    del usuario, nunca filtrados por `ejercicio` (solo por `desde`/`hasta`): SPEC.md §4 pide la
+    frecuencia/racha como vista global del entrenamiento, no por ejercicio. `sessionsPerWeek` es
+    la media sobre el periodo filtrado si se indica `desde`/`hasta`, o si no sobre el rango
+    cubierto por las propias sesiones existentes (evita dividir por un periodo arbitrario
+    cuando no hay filtro).
+  - `exercise?: { exercise, type, points }` — solo presente si se filtra por `ejercicio` (tras
+    comprobar su existencia en `prisma.exercise`, devolviendo `NOT_FOUND` si no existe). Para
+    fuerza (`type: "STRENGTH"`), `points` es `{ sessionId, date, maxWeightKg, totalVolumeKg }[]`
+    (volumen = Σ reps×peso de las series de ese ejercicio en la sesión). Para cardio
+    (`type: "CARDIO"`), `points` es `{ sessionId, date, distanceKm, durationSeconds,
+    avgPaceSecPerKm }[]` (paso directo de los campos de `CardioEntry`, todos anulables).
+- **Criterio de racha (`currentStreakWeeks`)**: número de semanas ISO 8601 consecutivas —
+  empezando por la semana actual (según la fecha real del sistema, no afectada por
+  `desde`/`hasta`) y yendo hacia atrás — con al menos una sesión registrada en el conjunto
+  filtrado. Se corta en la primera semana sin sesiones, incluida la propia semana actual: si no
+  hay sesión esta semana, la racha es 0 aunque hubiera entrenado ininterrumpidamente hasta la
+  semana pasada. Implicación a tener en cuenta: si se filtra `hasta` con una fecha pasada, la
+  semana "actual" real queda fuera del rango filtrado y la racha da 0 salvo que esa semana esté
+  dentro del filtro — comportamiento documentado, no un bug.
+- Errores estructurados con el mismo patrón que el resto de la capa de dominio:
+  `{ success: false, error: { code: "VALIDATION_ERROR" | "NOT_FOUND", message } }`.
 
 ## Estructura de carpetas relevante
 
