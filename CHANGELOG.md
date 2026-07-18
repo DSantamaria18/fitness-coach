@@ -108,6 +108,20 @@ Proyecto sin versión publicada todavía.
   de `create-next-app` y ahora redirige server-side a `/historial` (con sesión) o a `/login`
   (sin ella).
 
+- Propuesta de sesión con IA (SPEC §14 punto 1): botón "Generar propuesta con IA" en
+  `/sesion`, junto al registro manual (nunca lo sustituye). Nueva capa de dominio
+  `src/lib/session-proposal/` con `@anthropic-ai/sdk` (`toolRunner`, no el Claude Agent SDK —
+  ver DECISIONS.md 2026-07-19): lee la skill "sesion-entrenamiento" real como `system` prompt
+  (`read-skill.ts`), envuelve `getSessionHistory`/`listExercises` como tools de solo lectura
+  con el `userId` cerrado sobre el closure (nunca aceptado del modelo) y fuerza un tercer tool
+  `submit_session_proposal` — que reutiliza literalmente `sessionSchema` como su
+  `input_schema` — con `tool_choice` en un turno final aparte para garantizar salida
+  estructurada (`tools.ts`). `generate-session-proposal.ts` orquesta ambas fases con un
+  timeout de 30s (`AbortController`), valida siempre la salida con `validateSession()` antes
+  de devolverla, y nunca lanza una excepción. En éxito, la Server Action
+  `generateSessionProposalAction` precarga `SessionEntriesEditor` (editable, sin guardar
+  directamente); en cualquier fallo muestra un aviso discreto sin romper el formulario manual.
+
 ### Fixed
 
 - `session.user` no incluía el `id` del usuario autenticado (faltaban los callbacks `jwt` y

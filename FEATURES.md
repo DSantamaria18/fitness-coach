@@ -180,6 +180,39 @@ cambio relevante.
   tocar los gráficos existentes, y el último comentario visible (guardado o generado en esta
   misma sesión de navegador) se mantiene.
 
+## Propuesta de sesión con IA
+
+- Botón "Generar propuesta con IA" en `/sesion`, junto al formulario manual (nunca lo
+  sustituye — SPEC §4 caso de uso 7): invoca `generateSessionProposal(userId)` vía Server
+  Action y, en éxito, precarga `SessionEntriesEditor` (fecha + ejercicios) con el resultado —
+  sigue siendo editable antes de guardar, y el guardado real sigue pasando por el flujo de
+  creación de sesión ya existente sin cambios.
+- `src/lib/session-proposal/read-skill.ts` — lee `skills/sesion-entrenamiento/SKILL.md` del
+  filesystem del servidor y separa el frontmatter YAML del cuerpo Markdown; solo el cuerpo se
+  usa como `system` prompt. Es el único punto del código que toca ese fichero (contiene datos
+  personales de salud de David): no se sirve crudo por ningún endpoint ni se loguea.
+- `src/lib/session-proposal/tools.ts` — tres tools de `@anthropic-ai/sdk`
+  (`betaZodTool`/`toolRunner`, no el Claude Agent SDK — ver DECISIONS.md 2026-07-19):
+  `get_session_history` y `list_exercises`, de solo lectura, envuelven las funciones de
+  dominio ya existentes; `submit_session_proposal` reutiliza literalmente `sessionSchema` de
+  `validate-session.ts` como su `input_schema` (no un esquema "equivalente" redefinido a
+  mano) y es el mecanismo de salida estructurada, forzado con `tool_choice` en un turno
+  final aparte — nunca se confía en que el modelo devuelva JSON en texto libre. El `userId`
+  se cierra sobre el closure de cada tool en el momento de construirla: ningún input_schema
+  lo declara, así que el modelo no puede rellenarlo (mismo patrón que
+  `src/lib/mcp/resolve-user.ts`).
+- `src/lib/session-proposal/generate-session-proposal.ts` — orquesta la llamada en dos fases:
+  una exploración con `client.beta.messages.toolRunner()` (tool_choice automático, hasta 6
+  turnos) sobre los dos tools de solo lectura, y una única llamada final
+  (`client.beta.messages.create()`) con la conversación acumulada, forzando `tool_choice` al
+  tool de salida. Timeout de 30s vía `AbortController` compartido entre ambas llamadas. La
+  salida se valida siempre con `validateSession()` antes de devolverse — se trata como
+  entrada no confiable, igual que un formulario manual. Devuelve un resultado discriminado
+  (`{success:true,data}` / `{success:false,error:{code,message}}`), nunca lanza una excepción
+  salvo bug real.
+- Cualquier fallo (timeout, salida inválida, sin propuesta, error de red/API) se traduce en un
+  aviso discreto en `/sesion` sin romper el flujo manual, que sigue disponible tal cual.
+
 ## Servidor MCP
 
 - Endpoint único `POST /api/mcp` que expone 7 tools para que la skill de Claude

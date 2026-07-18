@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { registerSession } from "./actions";
+import { useActionState, useState, useTransition } from "react";
+import { registerSession, generateSessionProposalAction } from "./actions";
 import {
   SessionEntriesEditor,
   type ExerciseOption,
@@ -14,11 +14,50 @@ export function SessionForm({ exercises }: { exercises: ExerciseOption[] }) {
     undefined,
   );
   const [registros, setRegistros] = useState<RegistroState[]>([]);
+  const [initialDate, setInitialDate] = useState<string | undefined>(undefined);
+  // SessionEntriesEditor usa defaultValue (input no controlado) para la
+  // fecha: cambiar la key fuerza un remount para que una fecha nueva
+  // precargada por la IA se aplique de verdad (defaultValue solo se lee al
+  // montar) sin tener que tocar ese componente compartido con /historial.
+  const [editorKey, setEditorKey] = useState(0);
+  const [isGeneratingProposal, startGeneratingProposal] = useTransition();
+  const [proposalMessage, setProposalMessage] = useState<string | null>(null);
+
+  function handleGenerateProposal() {
+    setProposalMessage(null);
+    startGeneratingProposal(async () => {
+      const result = await generateSessionProposalAction();
+      if (!result.success) {
+        setProposalMessage(result.message);
+        return;
+      }
+      setInitialDate(result.fecha);
+      setRegistros(result.registros);
+      setEditorKey((key) => key + 1);
+    });
+  }
 
   return (
     <form action={formAction} className="flex w-full max-w-sm flex-col gap-4">
+      <button
+        type="button"
+        onClick={handleGenerateProposal}
+        disabled={isGeneratingProposal}
+        className="rounded-md border border-black/20 px-4 py-2 text-sm font-medium disabled:opacity-60 dark:border-white/25"
+      >
+        {isGeneratingProposal ? "Generando…" : "Generar propuesta con IA"}
+      </button>
+
+      {proposalMessage ? (
+        <p role="status" className="text-sm text-amber-700 dark:text-amber-400">
+          {proposalMessage}
+        </p>
+      ) : null}
+
       <SessionEntriesEditor
+        key={editorKey}
         exercises={exercises}
+        initialDate={initialDate}
         registros={registros}
         onRegistrosChange={setRegistros}
       />
