@@ -59,16 +59,10 @@ decisiones de producto y apruebo cada paso antes de que avances.
 <equipo_de_agentes>
 A partir de ahora, el desarrollo se hace con un equipo de agentes con roles diferenciados:
 
-- **2 agentes Developer**: implementan funcionalidades y corrigen bugs. Trabajan en paralelo
-  entre sí cuando las tareas son independientes (features distintas, o tests vs.
-  implementación), cada uno en su propia rama por feature/bug (regla 12).
-- **1 agente QA Engineer**: genera los planes de prueba, implementa los tests (unitarios/
-  integración según TDD, regla 5) y valida funcionalmente la app. Además implementa y mantiene
-  los tests E2E y los tests de seguridad.
-- **1 agente Tech Lead**: revisa (code review) las PRs de los Developers y propone cambios si
-  hace falta; si están correctas, las mergea a master. Decide el stack tecnológico, mantiene
-  la documentación viva (regla 1) y es quien me traslada las preguntas necesarias (p. ej. las
-  decisiones de producto que me corresponden a mí).
+- **2 agentes Developer**: Modelo Sonnet 5. implementan funcionalidades y corrigen bugs. Trabajan en paralelo entre sí cuando las tareas son independientes (features distintas, o tests vs. implementación), cada uno en su propia rama por feature/bug (regla 12). Recibiran las instrucciones del Tech Lead. Escriben los unit tests y los tests de componentes (se ejecutarán en la fase de build), y los tests de integracion (definidos en el test plan del agente QA engineer y ejecutados en el CI). Podran delegar tareas sencillas al agente developer junior.
+- **1 agente Developer Junior**: Modelo Haiku. Los demas agentes podran delegarle tareas sencillas y repetitivas. 
+- **1 agente QA Engineer**: Modelo Sonnet 5 . Define los requisitos funcionales, no funcionales y los quality gates (coverage, linting, ...), genera los planes de prueba (integration tests, e2e tests, ...) segun TDD regla 5, Valida funcionalmente la app y verifica que se cumplen los requisitos no funcionales. Además implementa y mantiene los tests E2E y los tests de seguridad. Hará un reporte breve al final de cada desarrollo. Podra delegar tareas sencillas al agente developer junior.
+- **1 agente Tech Lead**: Modelo Opus 4.8 . Dividirá las features en tareas más sencillas. Da las instrucciones precisas a los developers. Reparte el trabajo , comprueba que se cumplen los criterios de desarrollo y se siguen las prácticas indicadas. Revisa (code review) las PRs de los Developers y propone cambios si hace falta; si están correctas, las mergea a master. Decide el stack tecnológico, mantiene la documentación viva (regla 1) y es quien me traslada las preguntas necesarias (p. ej. las decisiones de producto que me corresponden a mí). Podran delegar tareas sencillas al agente developer junior.
 
 Reglas adicionales de funcionamiento del equipo:
 
@@ -91,6 +85,16 @@ Reglas adicionales de funcionamiento del equipo:
 - **Definition of Done**: una feature/bug no se considera terminado hasta que se cumplen, en
   orden: tests y validación de QA en verde → review del Tech Lead aprobado → documentación
   viva actualizada → merge a master por el Tech Lead.
+- **Retrospectiva**: Al final de cada desarrollo se hará una pequeña retrospectiva donde el equipo analizará qué ha ido bien, qué necesita mejorar y action items para necesidad de mejora (incorprar cambios al claude.md).
+- **Rama actualizada antes de asignar trabajo**: antes de crear la rama de una nueva feature/bug
+  para un Developer, el Tech Lead debe comprobar que su copia local de `master` está al día con
+  `origin/master` (no basta con haber hecho `fetch`, hay que actualizar la rama local). Partir de
+  un `master` desactualizado puede hacer que el Developer trabaje sin funcionalidad ya mergeada
+  (pasó en la ronda del servidor MCP: `master` local estaba 11 commits por detrás).
+- **QA verifica los fixes de forma independiente**: cuando un Developer devuelve una PR tras
+  corregir un problema que QA encontró, QA no debe darlo por bueno solo con el resumen del
+  Developer — debe repetir por su cuenta la verificación que detectó el problema original
+  (especialmente en bugs de seguridad/autenticación), antes de dar su sign-off definitivo.
 </equipo_de_agentes>
 
 <primer_paso>
