@@ -16,6 +16,11 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Código generado por Prisma, no se lintea.
     "src/generated/**",
+    // Worktrees temporales de los agentes del equipo (viven dentro del
+    // árbol del repo, gitignored, pero eslint no respeta .gitignore por
+    // sí solo): sin esto, un run en la raíz relinta también el código de
+    // cada worktree activo como si fuera parte de este árbol.
+    ".claude/worktrees/**",
   ]),
 ]);
 

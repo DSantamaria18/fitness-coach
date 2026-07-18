@@ -92,6 +92,15 @@ Proyecto sin versión publicada todavía.
   aceptación de SPEC §13 "editar o borrar cualquier registro existente (peso o sesión)" para
   sesiones, que hasta ahora solo estaba cubierto para peso.
 
+- Navegación global: barra de navegación (`src/components/nav-bar.tsx`) con enlaces a Peso,
+  Sesión, Historial, Informe y Ajustes, visible en todas las páginas mediante `layout.tsx`.
+  Resalta la ruta activa (`aria-current="page"`) y solo se muestra con sesión iniciada
+  (`src/components/nav-bar-gate.tsx`, comprobación de `auth()` del lado del servidor en un
+  Server Component separado de `layout.tsx` para poder testearlo con Testing Library). Diseño
+  mobile-first con altura de toque de 44px por enlace. `/` deja de ser el scaffold por defecto
+  de `create-next-app` y ahora redirige server-side a `/historial` (con sesión) o a `/login`
+  (sin ella).
+
 ### Fixed
 
 - `session.user` no incluía el `id` del usuario autenticado (faltaban los callbacks `jwt` y
