@@ -303,4 +303,87 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-18
+- **Decisión:** `delete-session.ts` borra una sesión con una única llamada
+  `prisma.session.delete({ where: { id } })`, sin `deleteMany` explícito de
+  `StrengthEntry`/`CardioEntry`/`StrengthSet` — se confía en el `onDelete: Cascade` ya declarado
+  en `schema.prisma` para esas relaciones. Antes de asumirlo, se verificó empíricamente (no solo
+  leyendo el esquema): un script puntual creó una sesión con una `StrengthEntry` + `StrengthSet`
+  reales contra un fichero SQLite temporal, usando el mismo cliente/adapter que la app
+  (`@prisma/adapter-better-sqlite3`), borró la sesión con `prisma.session.delete`, y confirmó
+  que las filas hijas desaparecían (`strengthEntry.findMany`/`strengthSet.findMany` devolvían 0
+  registros tras el borrado).
+- **Alternativas consideradas:** replicar el patrón de `update-session.ts` (`deleteMany`
+  explícito de `StrengthEntry`/`CardioEntry` dentro de una transacción antes de borrar la
+  sesión) — descartada tras la comprobación empírica por ser código redundante que no aporta
+  nada si la cascada ya lo hace, y porque además tendría que borrar `StrengthSet` a mano (no
+  cubierto por ese patrón, que solo borra un nivel).
+- **Justificación:** SQLite solo aplica claves foráneas (y por tanto `ON DELETE CASCADE`) si la
+  conexión tiene `PRAGMA foreign_keys = ON`; que el `.sql` de la migración declare la cascada no
+  garantiza por sí solo que se aplique en runtime con un driver/adapter concreto. Verificarlo con
+  datos reales antes de escribir el borrado explícito evita tanto el riesgo de dejar registros
+  huérfanos (si la cascada no funcionara y no se hubiera comprobado) como el de escribir código
+  muerto/redundante (si funciona, como fue el caso).
+- **Lecciones aprendidas:**
+  - Cuando el esquema Prisma declara `onDelete: Cascade` sobre SQLite, no dar por hecho que se
+    aplica solo por estar en `schema.prisma`/la migración: comprobarlo con una escritura real
+    contra el adapter que usa la app en producción (aquí, un script desechable con
+    `@prisma/adapter-better-sqlite3` contra un fichero temporal) antes de decidir si hace falta
+    borrado en cascada manual. En este proyecto sí se aplica (confirmado), pero el mismo problema
+    puede no ser cierto en otro adapter/versión, así que conviene repetir la comprobación si
+    cambia alguno de los dos en el futuro, en vez de asumir que sigue siendo válida.
+
+---
+
+- **Fecha:** 2026-07-18
+- **Decisión:** Se extrae `SessionEntriesEditor` (selección de ejercicio del catálogo, series
+  dinámicas de fuerza, campos de cardio) de `session-form.tsx` a un componente compartido en una
+  carpeta nueva, `src/components/` — hasta ahora el proyecto solo tenía componentes colocados
+  dentro de su propia ruta en `src/app/<ruta>/`, sin ningún caso de componente usado por más de
+  una ruta. El componente recibe `registros`/`onRegistrosChange` como prop controlado por el
+  padre (`SessionForm` en `/sesion`, el formulario de edición nuevo en `/historial`), en vez de
+  gestionar ese estado internamente, porque ambos padres necesitan conocer el número de
+  ejercicios añadidos para su propio botón de guardar (`disabled={... || registros.length ===
+  0}`, comportamiento ya existente en `/sesion` que había que preservar sin tests que lo
+  cubrieran explícitamente).
+- **Alternativas consideradas:** mantener el estado (`registros`) interno al componente
+  compartido y exponer el conteo vía un callback `onEntriesChange` disparado desde un
+  `useEffect` — descartada porque introduce una vuelta de renderizado adicional (el padre se
+  entera del cambio un ciclo después) para resolver algo que un prop controlado resuelve de
+  forma síncrona y más idiomática en React. Colocar el componente dentro de `src/app/sesion/` y
+  que `/historial` lo importe desde ahí ("cross-import" entre rutas) — descartada por violar la
+  convención ya establecida de que lo que vive dentro de `src/app/<ruta>/` es propio de esa
+  ruta; una carpeta `src/components/` explícita dice más claramente "esto es compartido" que un
+  import que cruza de una ruta a otra.
+- **Justificación:** un prop controlado evita re-renders adicionales y mantiene el conteo de
+  ejercicios siempre sincrónico con la interacción del usuario (relevante para no dejar enviar
+  un formulario vacío ni un instante). Separar `src/components/` de `src/app/` dentro dice
+  explícitamente qué código es infraestructura de UI compartida entre rutas, distinto de lo que
+  es propio de una sola ruta — sienta el patrón a seguir si aparecen más componentes
+  compartidos en fases futuras (wearables, fotos/medidas/comidas).
+- **Lecciones aprendidas:** al refactorizar un componente ya cubierto por tests de
+  comportamiento (`session-form.test.tsx`), verificar que la refactorización no obliga a tocar
+  ni un solo test existente antes de darla por terminada (aquí, los 7 tests de
+  `session-form.test.tsx` pasaron sin cambios) — es la señal de que el comportamiento externo
+  no varió, solo la estructura interna (CLAUDE.md regla 5).
+
+---
+
+- **Fecha:** 2026-07-18
+- **Decisión:** El Tech Lead corrigió (`npm install` en el repo raíz) un `node_modules`
+  compartido por symlink entre worktrees que no tenía instalado `@modelcontextprotocol/sdk`
+  pese a estar en `package.json` desde la fase del servidor MCP — rompía `next build` y un
+  archivo de test en cualquier worktree que arrancara después de ese punto. El Developer de esta
+  ronda lo detectó pero no lo tocó (correctamente: tocar `node_modules` compartido desde una
+  rama de feature concreta puede pisar a otros agentes trabajando en paralelo en otro worktree).
+- **Lecciones aprendidas:** el patrón de `node_modules` compartido por symlink entre worktrees
+  (ver DECISIONS.md, ronda del servidor MCP) ahorra tiempo de instalación pero puede quedar
+  desincronizado con `package.json` si una dependencia se añadió en una rama que aún no se había
+  fusionado cuando se creó el symlink, o si algo limpió el `node_modules` raíz entre medias. Es
+  responsabilidad del Tech Lead, no de los Developers, decidir cuándo reinstalar — evita que dos
+  agentes reinstalen a la vez o que un Developer "arregle" el entorno compartido desde su propia
+  rama sin visibilidad de qué más depende de ese estado.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

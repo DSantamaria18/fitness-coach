@@ -106,8 +106,21 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   sesión (cascada a `StrengthSet`) seguido de `session.update` con `create` de las nuevas
   entradas — igual que `create-session.ts`, para que la sesión nunca quede en un estado a
   medias si falla algo a mitad.
-- Ninguna de las dos funciones expone todavía ruta API ni UI web — solo la capa de dominio,
-  a la espera del servidor MCP.
+- `src/lib/delete-session.ts` — borra una sesión existente: misma guarda `findFirst({ id,
+  userId })` que `update-session.ts`, seguida de un único `prisma.session.delete`. A diferencia
+  de `update-session.ts` (que sustituye entradas y por eso necesita `deleteMany` explícito), el
+  borrado no toca `StrengthEntry`/`CardioEntry`/`StrengthSet` directamente: el esquema declara
+  `onDelete: Cascade` en esas relaciones, y se comprobó empíricamente (no solo leyendo
+  `schema.prisma`) que el adapter `@prisma/adapter-better-sqlite3` aplica esas cascadas en
+  runtime — ver DECISIONS.md.
+- **UI web (`/historial`)**: `session-history-section.tsx` (`SessionHistorySection`) lista las
+  sesiones del usuario (fecha + resumen legible de sus ejercicios), con acciones "Editar"
+  (formulario in-place) y "Borrar" (confirmación nativa) — mismo patrón estructural que
+  `weight-history-section.tsx`. `historial/page.tsx` llama a `getSessionHistory` y
+  `listExercises` (además de `getBodyWeightHistory`) y serializa las `Date` de Prisma a ISO
+  string antes de pasarlas al Client Component, igual que ya hacía para peso. Server Actions
+  `updateSessionEntry`/`deleteSessionEntry` en `historial/actions.ts`, mismo patrón de
+  resolución de `userId` desde la sesión de NextAuth (nunca del cliente) que las de peso.
 
 ## Backup manual
 
@@ -248,6 +261,11 @@ avanza el roadmap de implementación (ver plan de fases acordado).
 ## Estructura de carpetas relevante
 
 - `src/app/` — rutas y páginas (App Router de Next.js).
+- `src/components/` — componentes de cliente compartidos entre más de una ruta (a diferencia de
+  los componentes colocados dentro de `src/app/<ruta>/`, que son propios de esa ruta). Primer
+  y único caso por ahora: `session-entries-editor.tsx` (`SessionEntriesEditor`), compartido
+  entre `/sesion` (crear) y `/historial` (editar) — ver DECISIONS.md para el porqué de esta
+  carpeta nueva en vez de otra ubicación.
 - `src/lib/prisma.ts` — instancia singleton del cliente Prisma (evita agotar conexiones SQLite
   por hot-reload en desarrollo).
 - `prisma/schema.prisma` — esquema de dominio (ver SPEC.md §3 para la definición funcional).
