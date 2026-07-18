@@ -221,6 +221,29 @@ avanza el roadmap de implementación (ver plan de fases acordado).
 - Seguridad: por ahora el servidor MCP se protege solo con el token Bearer (ver DECISIONS.md
   2026-07-18, ronda anterior); la segunda capa de VPN Tailscale que especifica SPEC §7 queda
   pendiente hasta migrar al NAS propio de David (ver BACKLOG.md).
+- **`/api/mcp` está intencionadamente excluido del middleware de sesión** (`src/proxy.ts`, cuyo
+  `matcher` incluye `api/mcp` en el negative lookahead junto a `api/auth`, `_next/static`,
+  `_next/image` y `favicon.ico`). Ningún cliente MCP (la skill "sesion-entrenamiento", un chat
+  con el conector configurado) tiene cookie de sesión de navegador, así que si esta ruta
+  pasara por el middleware, el callback `authorized()` de `auth.config.ts` la redirigiría
+  siempre con un 307 a `/login` antes de que `route.ts` llegara a comprobar el Bearer token —
+  bug real detectado por QA (confirmado con `curl` contra `next dev`: toda petición a
+  `/api/mcp`, con o sin token, recibía 307 en vez de 401/200) y corregido en esta misma ronda.
+  Su única capa de autenticación es el Bearer token verificado dentro de la propia ruta: no
+  añadir aquí una exigencia de sesión para `/api/mcp`, ni quitar el check de Bearer de
+  `route.ts` asumiendo que el middleware ya protege algo. Regresión cubierta por
+  `src/proxy.test.ts`, que testea el patrón del `matcher` directamente contra rutas de ejemplo
+  (anclado a inicio/fin, aproximando cómo Next.js lo aplica realmente) — `route.test.ts` por sí
+  solo no lo habría detectado porque llama a `POST()` directamente, sin pasar por el middleware.
+- **Límite conocido del SDK**: cuando el propio `McpServer` rechaza el input de una tool contra
+  su `inputSchema` (Zod) *antes* de invocar el handler (p. ej. `log_weight` con `weightKg` no
+  numérico), la respuesta es `{content:[...], isError:true}` con el error solo como texto
+  plano (`MCP error -32602: ...`) — no lleva `structuredContent.error.code/message` como sí
+  ocurre con los errores normalizados por `toMcpToolError` dentro de nuestros propios handlers
+  (`tools.ts`). Es un comportamiento del SDK anterior a que nuestro código se ejecute, no un bug
+  de esta app; un cliente MCP que dependa de `structuredContent.error` para errores de
+  validación de forma (no de negocio) debe tener en cuenta este caso. No se ha corregido por no
+  haber una forma trivial de interceptar la validación del propio SDK sin reimplementarla.
 
 ## Estructura de carpetas relevante
 

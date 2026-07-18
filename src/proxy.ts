@@ -9,8 +9,20 @@ const { auth } = NextAuth(authConfig);
 
 export default auth;
 
-// Protege todas las rutas salvo login, la API de NextAuth, y los assets
-// estáticos/internos de Next.js (que no deben requerir sesión).
+// Protege todas las rutas salvo login, la API de NextAuth, el servidor MCP
+// (api/mcp) y los assets estáticos/internos de Next.js (que no deben
+// requerir sesión).
+//
+// api/mcp queda fuera A PROPÓSITO: ningún cliente MCP (la skill
+// "sesion-entrenamiento", un chat con el conector configurado) tiene cookie
+// de sesión de navegador, así que si esta ruta pasara por aquí,
+// `authorized()` (auth.config.ts) la redirigiría siempre a /login con un 307
+// antes de que route.ts llegara a comprobar el Bearer token — el propio
+// código de verifyBearerToken quedaría inalcanzable. Su única capa de auth
+// es el Bearer token verificado dentro de la propia ruta (ver
+// ARCHITECTURE.md, sección "Servidor MCP"); no añadas aquí una exigencia de
+// sesión para esta ruta, y no quites el check de Bearer de route.ts
+// asumiendo que el middleware ya protege algo.
 export const config = {
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!api/auth|api/mcp|_next/static|_next/image|favicon.ico).*)"],
 };
