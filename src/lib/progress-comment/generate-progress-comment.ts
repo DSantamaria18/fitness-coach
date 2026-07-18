@@ -6,9 +6,13 @@ export type GenerateProgressCommentResult =
   | { success: false; error: string };
 
 // Modelo fijo (no configurable): esta es la integración de IA "simple" del
-// proyecto (SPEC.md §14 punto 2, DECISIONS.md 2026-07-19) — una única
-// llamada de texto, sin necesidad de elegir modelo por caso de uso.
-const MODEL = "claude-opus-4-8";
+// proyecto (SPEC.md §14 punto 2, DECISIONS.md 2026-07-19) — un resumen de
+// texto corto a partir de un informe ya calculado, sin tools. Haiku 4.5 es
+// el modelo más económico y encaja con ese criterio de "no sobre-diseñar
+// la parte simple" (regla 4 CLAUDE.md) — Opus rompería la estimación de
+// coste de ~1-6€/mes dada a David (DECISIONS.md 2026-07-18), calculada con
+// precios de Sonnet 5/Haiku 4.5, no de Opus.
+const MODEL = "claude-haiku-4-5-20251001";
 
 const SYSTEM_PROMPT = `Eres el asistente de fitness personal de David. Se te da su informe de progreso en formato JSON: evolución de peso corporal, frecuencia/racha de entrenamiento y, si se indica, progreso de un ejercicio concreto (peso máximo, volumen, distancia, ritmo...).
 
