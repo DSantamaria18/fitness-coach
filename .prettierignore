@@ -1,0 +1,7 @@
+.next/
+src/generated/
+node_modules/
+prisma/migrations/
+
+# Documentación viva del proyecto: formato editado a mano, no autoformatear.
+*.md
