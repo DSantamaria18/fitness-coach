@@ -241,6 +241,60 @@ consumidas desde `informe/page.tsx` (Server Component) y desde los componentes d
   `DateRangeFilter` vuelven a mostrar sus valores vacíos/por defecto en vez del valor obsoleto
   de la URL.
 
+### Comparar periodos en `/informe` (BL-006)
+
+- `src/app/informe/comparison-periods.ts`:
+  - `parseComparisonPreset(raw)` — valida `?comparar=` con `z.enum(["mes", "anio"])`; un valor
+    ausente o inválido se ignora, mismo criterio que el resto de filtros de la página.
+  - `computeComparisonPeriods(preset, now)` — calcula `{ actual, anterior }` (cada uno
+    `{ desde, hasta }` en límites de día ISO UTC, mismo criterio que `parse-date-range.ts`).
+    `actual` va desde el inicio del mes/año en curso hasta `now` (normalmente parcial);
+    `anterior` es el mes/año completo inmediatamente anterior. `now` es un parámetro explícito
+    (no `new Date()` interno) para que el cálculo sea determinista y testeable — mismo patrón
+    que `computeStreakWeeks` en `get-progress-report.ts`. Se apoya en que `Date.UTC` normaliza
+    automáticamente meses/días fuera de rango (`month=-1` → diciembre del año anterior, `day=0`
+    → último día del mes anterior) para no necesitar lógica especial en los cruces de año.
+- `src/app/informe/align-comparison-series.ts` (`alignComparisonSeries`) — fusiona los puntos
+  de los dos periodos en un único dataset indexado por **día relativo al inicio de cada
+  periodo** (`diaRelativo = floor((date - periodStart) / MS_PER_DAY) + 1`), no por fecha
+  absoluta: así el día 1 de "este mes" queda alineado con el día 1 de "el mes anterior" en el
+  mismo punto del eje X, aunque el periodo actual sea parcial (hasta hoy) y el anterior esté
+  completo. El eje resultante se extiende hasta el día relativo máximo de ambos periodos,
+  dejando huecos (`null`, sin conectar) donde un periodo no tiene dato ese día — mismo criterio
+  que `connectNulls={false}` en `SingleMetricChart`. Si hay más de un punto el mismo día
+  relativo (más de una sesión el mismo día), se queda con el último en orden de entrada (los
+  puntos de `getProgressReport` ya llegan ordenados ascendente por fecha) — ver DECISIONS.md.
+- `informe/page.tsx`: cuando `comparisonPreset` es válido, lanza dos llamadas adicionales a
+  `getProgressReport` (periodo actual + anterior) en paralelo, usando el ejercicio ya
+  **resuelto** por el informe general (`data.exercise?.exercise`, tras cualquier fallback) en
+  vez del `ejercicio` crudo de la URL — así estas dos llamadas nunca pueden fallar por
+  `NOT_FOUND`, ese caso ya se resolvió antes. Si por cualquier otro motivo alguna de las dos
+  falla, se ignora la comparación (se sigue mostrando el informe general sin comparar) en vez
+  de romper la página. El helper interno `buildMetricComparison` (en `page.tsx`) reduce a una
+  línea por métrica la combinación de "serializar a `{date, value}` + `alignComparisonSeries`".
+- `src/app/informe/comparison-period-selector.tsx` (`ComparisonPeriodSelector`) — mismo patrón
+  controlado-por-URL que `ExerciseSelector`/`DateRangeFilter` (usa `buildFilterUrl`). Solo
+  presets fijos en el `<select>` (decisión de producto ya cerrada: nada de rango libre para la
+  comparación).
+- `ComparisonChart` (en `progress-charts.tsx`) — mismo `LineChart` de Recharts que
+  `SingleMetricChart`, pero con `diaRelativo` en el eje X y dos `<Line>` superpuestas (decisión
+  de producto: gráfico superpuesto, no lado a lado ni tabla de deltas). Reutiliza el par
+  azul/verde ya validado del catálogo categórico (slots 1/2, ver skill dataviz y
+  `references/palette.md` — ya conviven adyacentes en `StrengthCharts`). El azul cambia entre
+  modo claro/oscuro y el verde no: en vez del truco `currentColor` + clase de color en el `<div>`
+  contenedor que usa `SingleMetricChart` (solo sirve para un color por gráfico), el azul se
+  define como variable CSS (`--series-actual-color`) en el `<div>` contenedor — la heredan tanto
+  la línea como el swatch de la leyenda de Recharts, que viven en nodos distintos del árbol y no
+  comparten el mismo `currentColor` — y el verde va como color literal (`#008300`, idéntico en
+  ambos modos). `BodyWeightChart`/`StrengthCharts`/`CardioCharts` aceptan un `comparison`
+  opcional: cuando está presente, sustituyen su `SingleMetricChart` por el `ComparisonChart`
+  correspondiente para esa métrica, en vez de mostrar ambos a la vez.
+- Mutua exclusión con el filtro de rango de fechas manual (BL-005): `ComparisonPeriodSelector`
+  borra `desde`/`hasta` de la URL al activarse, y `DateRangeFilter` borra `comparar` al cambiar
+  cualquier fecha (ambos vía `buildFilterUrl`). `page.tsx` además ignora `desde`/`hasta` a nivel
+  de filtros efectivos si `comparar` es válido, como defensa adicional ante una URL editada a
+  mano que combine ambos.
+
 ### Comentario de progreso con IA (SPEC.md §14 punto 2)
 
 Segunda integración de IA del proyecto, deliberadamente más simple que la propuesta de sesión

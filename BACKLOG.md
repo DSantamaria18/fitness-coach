@@ -21,11 +21,6 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   bloquear el desarrollo en Fly.io mientras el NAS propio de David no esté montado. Hay que
   volver a esto en cuanto el NAS con Tailscale esté disponible. Dificultad: baja (es
   configuración de red del despliegue, no cambia el código del servidor MCP).
-- **[BL-006]** **Comparar periodos en el informe de progreso** (p.ej. este mes vs. el anterior, o evolución
-  año contra año). Justificación: hoy el informe solo muestra una serie temporal continua; una
-  comparación directa ayudaría a ver progreso relativo sin tener que interpretar el gráfico a
-  ojo. Dificultad: media (requiere decidir la UX de comparación y duplicar/alinear series en
-  los gráficos existentes).
 - **[BL-007]** **Exportar el informe de progreso** (PDF o imagen descargable) para compartirlo o archivarlo
   fuera de la app. Justificación: propuesta razonable dado que ya existe un flujo de exportar
   datos (backup manual desde `/ajustes`), pero para el informe visual, no el fichero SQLite

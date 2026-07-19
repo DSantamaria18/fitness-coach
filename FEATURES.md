@@ -196,6 +196,15 @@ cambio relevante.
   misma URL sin pisarse entre sí. Como `currentStreakWeeks` siempre cuenta hacia atrás desde
   hoy e ignora `hasta` (ver DECISIONS.md 2026-07-18), la card "Racha actual" añade una nota
   explícita de ese comportamiento solo cuando `hasta` está realmente aplicado.
+- **[BL-006] Comparar periodos**: `ComparisonPeriodSelector` añade un desplegable ("Sin
+  comparar" / "Este mes vs. anterior" / "Este año vs. anterior" — solo presets fijos, sin
+  rango libre) controlado por la URL (`?comparar=mes|anio`). Al activarse, cada gráfico de
+  métrica individual actualmente visible (peso corporal, o las métricas del ejercicio
+  filtrado) se sustituye por un gráfico comparativo superpuesto con dos series (periodo actual
+  vs. periodo anterior), alineadas por "día relativo al inicio del periodo" en vez de por
+  fecha absoluta, para que el día 1 de un mes quede debajo del día 1 del otro aunque tengan
+  duraciones distintas (el mes en curso es parcial hasta hoy). Mutuamente excluyente con el
+  filtro de rango de fechas manual (BL-005): activar uno borra el otro de la URL.
 - **Comentario de progreso con IA** (SPEC.md §14 punto 2): botón "Generar comentario de
   progreso" en `/informe`, bajo demanda (nunca automático). Llama a un Server Action que
   encadena `getProgressReport(userId, {})` (informe global, sin filtro de ejercicio) →

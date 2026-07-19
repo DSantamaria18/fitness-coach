@@ -850,4 +850,69 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-19
+- **Decisión:** Comparar periodos en `/informe` (BL-006). Decisiones de producto ya cerradas
+  por David: gráfico superpuesto (dos series en el mismo `LineChart`, no lado a lado ni tabla
+  de deltas) y solo presets fijos ("Este mes vs. anterior" / "Este año vs. anterior", nada de
+  rango libre a medida). Decisiones de diseño no triviales dentro de ese alcance:
+  1. **Colisión de varios puntos el mismo día relativo**: si hay más de una sesión el mismo
+     día dentro de un periodo, `alignComparisonSeries` se queda con el último valor en orden
+     de entrada — literalmente, incluso si ese último valor fuera `null` y uno anterior el
+     mismo día tuviera un dato real (caso límite improbable con un único usuario: dos sesiones
+     de cardio el mismo día donde la segunda no midió un campo que la primera sí). No se
+     intentó "rellenar con el valor no nulo más reciente" para no añadir una regla de
+     precedencia adicional a un caso ya de por sí raro — si en la práctica llega a pasar y
+     resulta confuso, se revisita.
+  2. **Qué métrica comparar cuando hay varias visibles a la vez**: en vez de elegir una única
+     "métrica principal" (ambiguo para cardio, que tiene tres: distancia/duración/ritmo), la
+     comparación sustituye **cada** gráfico de métrica individual actualmente visible (peso
+     corporal si no hay ejercicio filtrado, o las 2-3 métricas del ejercicio filtrado) por su
+     propio `ComparisonChart`. Evita inventar un criterio de "métrica principal" que no pedía
+     el encargo y que sería arbitrario para cardio.
+  3. **Interacción con el rango de fechas manual (BL-005)**: mutuamente excluyentes. Activar la
+     comparación borra `desde`/`hasta` de la URL (y viceversa), tanto a nivel de UI
+     (`ComparisonPeriodSelector`/`DateRangeFilter`, vía `buildFilterUrl`) como de defensa
+     server-side en `page.tsx` (si ambos llegasen a coexistir en una URL editada a mano,
+     `comparar` gana y `desde`/`hasta` se ignoran). Alternativa descartada: dejar que
+     `desde`/`hasta` acoten además el periodo "actual" de la comparación — descartada por
+     ambigüedad de producto no resuelta (¿acotar solo el actual, o recalcular también el
+     anterior con el mismo desplazamiento?) que no merecía la pena resolver sin que David lo
+     pidiera explícitamente.
+  4. **Ejercicio de la comparación**: usa el ejercicio ya **resuelto** por el informe general
+     (`data.exercise?.exercise`, después de cualquier fallback por `ejercicio` inexistente en
+     el catálogo), no el `ejercicio` crudo de la URL — así las dos llamadas adicionales a
+     `getProgressReport` (periodo actual/anterior) nunca pueden fallar por `NOT_FOUND`, ese
+     caso ya quedó resuelto antes de llegar a la lógica de comparación.
+  5. **Color de la segunda serie del `ComparisonChart`**: se reutiliza el par azul/verde (slots
+     1/2 del catálogo categórico, `references/palette.md` de la skill dataviz) que ya conviven
+     adyacentes en `StrengthCharts` (peso máximo/volumen) — CVD-validado de antemano, no hace
+     falta re-ejecutar el validador. Con dos series en el mismo `<svg>` necesitando color propio
+     con soporte de modo oscuro, el truco `currentColor` + clase de color en el `<div>`
+     contenedor que ya usaba `SingleMetricChart` no basta (solo sirve para un color por
+     gráfico, y la leyenda de Recharts vive en un nodo del árbol distinto al de la línea, así
+     que no comparte el mismo `currentColor` heredado). Se sustituye por una variable CSS
+     (`--series-actual-color`, con su variante `dark:`) definida en el `<div>` contenedor: la
+     heredan tanto la línea como el swatch de la leyenda. El verde no cambia entre modo
+     claro/oscuro en la tabla de la skill, así que va como color literal sin necesidad de
+     variable.
+- **Alternativas consideradas:** ver cada punto arriba.
+- **Justificación:** en conjunto, todas las decisiones evitan introducir criterios nuevos y
+  ambiguos (métrica principal, precedencia de colisión, combinación de dos filtros de fecha a
+  la vez) que el encargo no pedía resolver, y reutilizan mecanismos ya existentes y verificados
+  del proyecto (fallback ante filtro inválido, paleta ya validada, patrón de filtro
+  controlado-por-URL) — mismo criterio que ya se siguió en BL-005.
+- **Verificación:** además de los tests unitarios (TDD, ciclo rojo→verde en cada pieza:
+  `comparison-periods.test.ts`, `align-comparison-series.test.ts`,
+  `comparison-period-selector.test.tsx`, casos nuevos en `date-range-filter.test.tsx` y
+  `progress-charts.test.tsx`), se verificó en navegador real con Playwright MCP contra un
+  usuario y datos de peso corporal sembrados a propósito (dos meses): los dos presets
+  renderizan el gráfico comparativo con leyenda y colores correctos (confirma que la variable
+  CSS del punto 5 funciona igual para la línea que para el swatch de la leyenda, algo que los
+  tests con jsdom no pueden comprobar al no renderizar CSS real), y la exclusión mutua con el
+  filtro de fechas manual se confirmó en ambas direcciones (activar la comparación borra
+  `desde`/`hasta` ya presentes en la URL, y rellenar una fecha borra `comparar` ya activo).
+  Cero errores de consola en ambos flujos.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
