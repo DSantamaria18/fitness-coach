@@ -62,8 +62,8 @@ jobs:
         run: npx prisma generate
 
       # Solo Chromium (el proyecto único de playwright.config.ts, emulación
-      # de iPhone 13): no hace falta descargar Firefox/WebKit para esta
-      # suite.
+      # de un móvil Android con devices["Pixel 7"]): no hace falta descargar
+      # Firefox/WebKit para esta suite.
       - name: Instalar navegador de Playwright
         run: npx playwright install --with-deps chromium
 
