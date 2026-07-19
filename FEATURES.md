@@ -226,6 +226,15 @@ cambio relevante.
 - Cualquier fallo (timeout, salida inválida, sin propuesta, error de red/API) se traduce en un
   aviso discreto en `/sesion` sin romper el flujo manual, que sigue disponible tal cual.
 
+## Regla ESLint: detección de imports "use client" en módulos "use server" (BL-001)
+
+- Regla ESLint custom local (`local/no-client-import-in-server-file`, activa en `npm run lint`
+  y en el editor) que detecta si un módulo `"use server"` importa algo exportado por un
+  fichero `"use client"` — la clase de bug de `buildInitialRegistros` (Runtime Error 500
+  determinista, ver DECISIONS.md 2026-07-19) que ni `npm test` ni `tsc` pueden detectar.
+  Detalle técnico completo (mecanismo de resolución de imports y por qué las alternativas del
+  ecosistema no servían) en ARCHITECTURE.md.
+
 ## Servidor MCP
 
 - Endpoint único `POST /api/mcp` que expone 7 tools para que la skill de Claude

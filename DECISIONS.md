@@ -656,4 +656,63 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-19
+- **Decisión:** Implementa BL-001 con una regla ESLint custom local,
+  `local/no-client-import-in-server-file` (`eslint-rules/no-client-import-in-server-file.mjs`,
+  registrada inline en `eslint.config.mjs`, sin publicar ningún paquete npm). Se activa en
+  cualquier fichero cuya primera sentencia sea la directiva `"use server"`; para cada
+  `ImportDeclaration`, resuelve el import (rutas relativas y el alias `@/*` vía `tsconfig.json`,
+  probando extensiones `.ts`/`.tsx`/`.js`/`.jsx` e `index.*` para directorios) a un fichero real
+  en disco y comprueba si SU primera sentencia es la directiva `"use client"`; si lo es, reporta
+  un error en el `ImportDeclaration`. Los imports que no resuelven a un fichero del proyecto
+  (paquetes de `node_modules`, alias sin configurar) se ignoran sin más. Referencia cruzada: el
+  bug real que motiva esto es la entrada de `buildInitialRegistros` de más arriba en este mismo
+  fichero (misma fecha).
+- **Alternativas descartadas** (investigadas antes de escribir código, no repetir la
+  investigación):
+  - `eslint-plugin-react-server-components` (candidato original en BACKLOG.md BL-001): su única
+    regla relevante (`use-client`) solo detecta si un fichero *debería* llevar `"use client"`
+    por su propio contenido (hooks, APIs de navegador, JSX con handlers) — no inspecciona lo
+    que un fichero importa de OTRO fichero marcado `"use client"`, que es justo el caso del bug
+    real. No sirve para este problema.
+  - `@next/eslint-plugin-next` (ya en uso vía `eslint-config-next`): no tiene ninguna regla
+    relacionada (solo existe `no-async-client-component`, sin relación con esto).
+  - Convención de carpetas + `no-restricted-imports` por directorio: descartada porque en este
+    proyecto ficheros `"use server"`/`"use client"` conviven deliberadamente en la misma
+    carpeta por ruta de Next.js App Router (p. ej. `src/app/sesion/actions.ts` junto a
+    componentes cliente en `src/components/`) — no hay separación de directorio que sirva de
+    proxy fiable.
+- **Justificación:** ninguna alternativa madura del ecosistema cubre "detectar si el import de
+  un módulo servidor resuelve a un fichero cliente"; escribir la regla es sencillo (resolución
+  de imports a disco + lectura de una directiva de cabecera) y no requiere publicar ni mantener
+  un paquete separado, solo un fichero pequeño dentro del propio repo.
+- **Verificación:** 5 casos con `RuleTester` de ESLint
+  (`eslint-rules/no-client-import-in-server-file.test.ts`, TDD — escritos y en rojo antes de
+  existir la regla): válido (import relativo a fichero sin directiva), válido (fichero `"use
+  client"` importando de otro `"use client"`, confirma que la regla no aplica fuera de `"use
+  server"`), válido (paquete externo de `node_modules`), inválido (import relativo a fichero
+  `"use client"`, el caso exacto del bug real), inválido (mismo caso vía alias `@/*`). Además,
+  verificado empíricamente reproduciendo el bug real: se reintrodujo temporalmente la directiva
+  `"use client"` en `build-initial-registros.ts` (ya importado por `app/sesion/actions.ts` vía
+  `@/lib/session-proposal/build-initial-registros`) y se confirmó que `npm run lint` lo
+  detecta, reportando ambos specifiers importados; el cambio se revirtió antes de commitear, sin
+  quedar en el diff final.
+- **Lecciones aprendidas:**
+  - `tsconfig.json` es JSONC (admite comentarios `//`, como el propio `tsconfig.json` de este
+    proyecto tras esta misma PR, que añade uno al excluir los fixtures de esta regla de
+    `tsc`) — la primera versión de la lectura del alias `@/*` usaba `JSON.parse` directo sobre
+    el contenido del fichero y fallaba silenciosamente (el `catch` de la función devolvía
+    `null`, así que el import simplemente no se resolvía) en cuanto el propio `tsconfig.json`
+    tuvo un comentario. Se detectó solo gracias al paso de verificación empírica de este mismo
+    encargo (la reproducción del bug real vía alias `@/*` no reportaba nada, pese a que los
+    tests con `RuleTester` — que usan fixtures con un `tsconfig.json` sin comentarios — sí
+    pasaban). Corregido añadiendo un stripper de comentarios JSONC antes del `JSON.parse`. Deja
+    constancia de que los tests aislados con fixtures "limpios" pueden no capturar cómo se
+    comporta una herramienta contra el fichero de configuración real del proyecto: la
+    verificación empírica de la ronda (ya exigida por el encargo para confirmar el fix del bug
+    original) también sirvió para atrapar un bug nuevo en la propia regla, no solo para
+    confirmar el caso ya conocido.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
