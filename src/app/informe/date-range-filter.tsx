@@ -22,13 +22,23 @@ export function DateRangeFilter({
 
   function handleDesdeChange(event: React.ChangeEvent<HTMLInputElement>) {
     router.push(
-      buildFilterUrl(searchParams, { desde: event.target.value || null }),
+      buildFilterUrl(searchParams, {
+        desde: event.target.value || null,
+        // La comparación de periodos (BL-006) y el rango manual son
+        // mutuamente excluyentes: fijar una fecha desactiva la comparación
+        // ya activa, en vez de dejar ambas conviviendo con un resultado
+        // ambiguo de cuál manda.
+        comparar: null,
+      }),
     );
   }
 
   function handleHastaChange(event: React.ChangeEvent<HTMLInputElement>) {
     router.push(
-      buildFilterUrl(searchParams, { hasta: event.target.value || null }),
+      buildFilterUrl(searchParams, {
+        hasta: event.target.value || null,
+        comparar: null,
+      }),
     );
   }
 

@@ -88,4 +88,21 @@ describe("DateRangeFilter", () => {
 
     expect(pushMock).toHaveBeenCalledWith("/informe");
   });
+
+  it("al cambiar una fecha, borra la comparación de periodos ya activa en la URL (mutuamente excluyentes, BL-005/BL-006)", async () => {
+    mockedUseSearchParams.mockReturnValue(
+      new URLSearchParams("comparar=mes") as unknown as ReturnType<
+        typeof useSearchParams
+      >,
+    );
+    const user = userEvent.setup();
+    render(<DateRangeFilter desde="" hasta="" />);
+
+    await user.type(screen.getByLabelText(/desde/i), "2026-06-01");
+
+    const lastUrl = pushMock.mock.calls.at(-1)?.[0] as string;
+    const params = new URLSearchParams(lastUrl.split("?")[1]);
+    expect(params.has("comparar")).toBe(false);
+    expect(params.get("desde")).toBe("2026-06-01");
+  });
 });

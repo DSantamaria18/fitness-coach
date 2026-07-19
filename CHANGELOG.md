@@ -170,6 +170,25 @@ Proyecto sin versión publicada todavía.
   vez de reconstruir la query desde cero, para que el filtro de ejercicio y el de fechas
   convivan sin que uno borre al otro.
 
+- **[BL-006]** Comparar periodos en `/informe`: nuevo selector `ComparisonPeriodSelector`
+  (`informe/comparison-period-selector.tsx`, mismo patrón controlado-por-URL vía
+  `?comparar=mes|anio`) con dos presets fijos ("Este mes vs. anterior" / "Este año vs.
+  anterior" — sin rango libre, decisión de producto). `computeComparisonPeriods`
+  (`informe/comparison-periods.ts`) calcula los límites de cada periodo en UTC (mismo
+  criterio que BL-005); `page.tsx` lanza dos llamadas extra a `getProgressReport` (periodo
+  actual + anterior) usando el ejercicio ya resuelto por el informe general. Los puntos de
+  cada periodo se fusionan por día relativo al inicio de su propio periodo (no por fecha
+  absoluta) con `alignComparisonSeries` (`informe/align-comparison-series.ts`), dejando huecos
+  explícitos donde un periodo no tiene dato ese día — así "este mes" (parcial) y "el mes
+  anterior" (completo) quedan alineados día 1 con día 1 aunque tengan duraciones distintas.
+  Nuevo componente `ComparisonChart` en `progress-charts.tsx`: mismo `LineChart` de Recharts
+  que `SingleMetricChart` pero con dos `<Line>` superpuestas en el mismo eje (decisión de
+  producto: gráfico superpuesto, no lado a lado) y leyenda — sustituye el gráfico simple de
+  cada métrica actualmente visible (peso corporal, o las métricas del ejercicio filtrado) en
+  vez de elegir arbitrariamente una única "métrica principal". La comparación de periodos y el
+  rango manual de fechas (BL-005) son mutuamente excluyentes: activar uno borra el otro de la
+  URL, tanto desde `ComparisonPeriodSelector` como desde `DateRangeFilter`.
+
 ### Fixed
 
 - `session.user` no incluía el `id` del usuario autenticado (faltaban los callbacks `jwt` y
