@@ -21,19 +21,6 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   bloquear el desarrollo en Fly.io mientras el NAS propio de David no esté montado. Hay que
   volver a esto en cuanto el NAS con Tailscale esté disponible. Dificultad: baja (es
   configuración de red del despliegue, no cambia el código del servidor MCP).
-- **[BL-004]** **Orden de intercalado entre ejercicios de fuerza y cardio no se conserva al editar una
-  sesión.** Justificación: `StrengthEntry` tiene un campo `order`, pero `CardioEntry` no —
-  `update-session.ts` (capa de dominio ya existente antes de esta ronda) reconstruye el orden de
-  fuerza a partir de la posición en el array de ejercicios recibido, pero no hay forma de saber
-  en qué posición relativa iba cada `CardioEntry` respecto a los de fuerza. El nuevo formulario
-  de edición en `/historial` (`SessionEntriesEditor`) por tanto lista primero todos los
-  ejercicios de fuerza de la sesión y después todos los de cardio al pre-rellenar el formulario;
-  si se guarda sin tocar nada, una sesión que originalmente intercalaba cardio-fuerza-cardio
-  puede terminar reordenada a fuerza-cardio-cardio. No hay pérdida de datos (se conservan todos
-  los ejercicios con sus series/métricas), solo un reordenamiento visual. Arreglarlo exige un
-  campo `order` en `CardioEntry` (migración de esquema) y tocar `resolveSessionEntries`. Nivel
-  de riesgo bajo (nadie ha registrado sesiones reales todavía), pero lo anoto para no perderlo.
-  Dificultad: media (migración de esquema + lógica de resolución de entradas).
 - **[BL-005]** **Elegir rango de fechas (`desde`/`hasta`) desde la UI de `/informe`.** Justificación:
   `getProgressReport` ya soporta filtrar por rango de fechas, pero la pantalla actual solo
   expone el filtro por ejercicio — David no puede acotar el informe a, por ejemplo, "el último

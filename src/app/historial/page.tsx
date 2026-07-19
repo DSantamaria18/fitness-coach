@@ -1,61 +1,15 @@
 import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { getBodyWeightHistory } from "@/lib/get-body-weight-history";
-import {
-  getSessionHistory,
-  type SessionHistoryEntry as DomainSessionHistoryEntry,
-} from "@/lib/get-session-history";
+import { getSessionHistory } from "@/lib/get-session-history";
+import { toSessionHistoryEntry } from "@/lib/to-session-history-entry";
 import { listExercises } from "@/lib/list-exercises";
 import { WeightHistorySection } from "./weight-history-section";
-import {
-  SessionHistorySection,
-  type SessionHistoryEntry,
-} from "./session-history-section";
+import { SessionHistorySection } from "./session-history-section";
 
 export const metadata: Metadata = {
   title: "Historial — Fitness Coach",
 };
-
-// Convierte una sesión tal como la devuelve Prisma (get-session-history.ts,
-// campos en inglés, `null` para lo no informado) a la forma en español que
-// espera SessionEntriesEditor (mismo contrato que valida validate-session.ts
-// al crear/editar) — ver session-entries-editor.tsx.
-function toSessionHistoryEntry(
-  session: DomainSessionHistoryEntry,
-): SessionHistoryEntry {
-  return {
-    id: session.id,
-    date: session.date.toISOString(),
-    ejercicios: [
-      ...session.strengthEntries.map((entry) => ({
-        tipo: "fuerza" as const,
-        ejercicio: entry.exercise.name,
-        notas: entry.notes,
-        series: entry.sets.map((set) => ({
-          reps: set.reps,
-          peso_kg: set.weightKg,
-          tempo: set.tempo,
-          RPE: set.rpe,
-        })),
-      })),
-      ...session.cardioEntries.map((entry) => ({
-        tipo: "cardio" as const,
-        ejercicio: entry.exercise.name,
-        notas: entry.notes,
-        duracion: entry.durationSeconds,
-        distancia_km: entry.distanceKm,
-        velocidad_media: entry.avgSpeedKmh,
-        ritmo_medio: entry.avgPaceSecPerKm,
-        frecuencia_cardiaca_media: entry.avgHeartRate,
-        frecuencia_cardiaca_maxima: entry.maxHeartRate,
-        pasos: entry.steps,
-        frecuencia_paso: entry.stepFrequency,
-        kcal: entry.kcal,
-        RPE: entry.rpe,
-      })),
-    ],
-  };
-}
 
 export default async function HistorialPage() {
   // Server Component: puede llamar a la capa de dominio directamente, sin

@@ -96,6 +96,12 @@ cambio relevante.
 - Lógica de resolución de ejercicios contra el catálogo (`session-entries.ts`) extraída y
   compartida entre el registro y la edición de sesiones, para no duplicar esa validación entre
   ambos flujos.
+- Una sesión que intercala ejercicios de fuerza y cardio (p. ej. cardio-fuerza-cardio) conserva
+  ese orden relativo al editarse y al releerse, aunque `StrengthEntry`/`CardioEntry` vivan en
+  tablas separadas: ambas comparten un campo `order` calculado sobre la posición real en la
+  lista de ejercicios original (no sobre el índice de cada subarray filtrado por tipo), y
+  `to-session-history-entry.ts` fusiona ambos arrays por ese campo antes de exponer la sesión al
+  formulario de edición (BL-004, ver DECISIONS.md 2026-07-19).
 - **UI web en `/historial`**: `SessionHistorySection` lista las sesiones del usuario (fecha +
   resumen legible de cada ejercicio — series para fuerza, métricas rellenas para cardio), con
   acciones "Editar" (formulario in-place, prefilled) y "Borrar" (confirmación nativa del

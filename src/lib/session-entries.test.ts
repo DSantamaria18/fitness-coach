@@ -77,6 +77,7 @@ describe("resolveSessionEntries", () => {
         cardioEntries: [
           {
             exerciseId: "ex-2",
+            order: 0,
             durationSeconds: 1800,
             distanceKm: 5.2,
             avgSpeedKmh: undefined,
@@ -92,6 +93,49 @@ describe("resolveSessionEntries", () => {
         ],
       },
     });
+  });
+
+  // BL-004: antes del fix, buildStrengthEntries/buildCardioEntries calculaban
+  // `order` sobre el índice del subarray ya filtrado por tipo, no sobre la
+  // posición real en la lista mixta original — una sesión cardio-fuerza-cardio
+  // guardaba fuerza con order=0 y ambos cardios con order=0/1, perdiendo la
+  // posición relativa real (índices 0, 1, 2). El fix calcula `order` sobre el
+  // índice del array `ejercicios` recibido, antes de filtrar por tipo.
+  it("calcula el order de fuerza y cardio sobre la posición en la lista intercalada original, no sobre el subarray filtrado por tipo", async () => {
+    findManyMock.mockResolvedValue([
+      {
+        id: "ex-cardio",
+        name: "Carrera",
+        type: "CARDIO",
+        createdAt: new Date(),
+      },
+      {
+        id: "ex-fuerza",
+        name: "Sentadilla",
+        type: "STRENGTH",
+        createdAt: new Date(),
+      },
+    ] as never);
+
+    const result = await resolveSessionEntries([
+      { tipo: "cardio", ejercicio: "Carrera", duracion: 1200 },
+      {
+        tipo: "fuerza",
+        ejercicio: "Sentadilla",
+        series: [{ reps: 5, peso_kg: 100 }],
+      },
+      { tipo: "cardio", ejercicio: "Carrera", duracion: 900 },
+    ]);
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.strengthEntries.map((entry) => entry.order)).toEqual([
+      1,
+    ]);
+    expect(result.data.cardioEntries.map((entry) => entry.order)).toEqual([
+      0, 2,
+    ]);
   });
 
   it("returns a failure result when a referenced exercise does not exist in the catalog", async () => {

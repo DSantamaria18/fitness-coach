@@ -180,3 +180,16 @@ Proyecto sin versión publicada todavía.
   sus tipos/helpers) a un módulo nuevo sin directiva, `src/lib/session-proposal/
   build-initial-registros.ts`, importable desde cliente y servidor por igual (ver DECISIONS.md
   2026-07-19).
+- **[BL-004]** El orden intercalado entre ejercicios de fuerza y cardio (p. ej.
+  cardio-fuerza-cardio) no se conservaba al editar una sesión sin cambiar nada: `CardioEntry`
+  no tenía campo `order` (a diferencia de `StrengthEntry`), y `resolveSessionEntries` calculaba
+  el `order` de fuerza sobre el índice del subarray ya filtrado por tipo, no sobre la posición
+  real en la lista mixta original — una sesión cardio-fuerza-cardio se reordenaba a
+  fuerza-cardio-cardio en el formulario de edición de `/historial` sin que el usuario tocara
+  nada. Sin pérdida de datos, solo reordenamiento visual. Corregido con un campo
+  `order Int @default(0)` nuevo en `CardioEntry` (migración no destructiva), calculando el
+  `order` de ambos tipos sobre el array `ejercicios` original en `session-entries.ts`, un
+  `orderBy: { order: "asc" }` que faltaba en la consulta de `cardioEntries` de
+  `get-session-history.ts`, y fusionando (en vez de concatenar en dos bloques) las entradas de
+  fuerza y cardio por su `order` en el nuevo `src/lib/to-session-history-entry.ts` (extraído de
+  `historial/page.tsx` para poder testearlo de forma aislada). Ver DECISIONS.md 2026-07-19.

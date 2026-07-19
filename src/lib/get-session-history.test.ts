@@ -19,7 +19,10 @@ const expectedInclude = {
     include: { exercise: true, sets: { orderBy: { order: "asc" } } },
     orderBy: { order: "asc" },
   },
-  cardioEntries: { include: { exercise: true } },
+  // BL-004: sin este orderBy, CardioEntry se devolvía en el orden de
+  // inserción de SQLite (implícito, no garantizado), rompiendo el orden
+  // intercalado real de la sesión al fusionarlo con strengthEntries.
+  cardioEntries: { include: { exercise: true }, orderBy: { order: "asc" } },
 };
 
 describe("getSessionHistory", () => {

@@ -98,10 +98,32 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   a partir de los ejercicios ya validados por Zod. Compartido entre `create-session.ts` y
   `update-session.ts` porque ambos necesitan exactamente la misma lógica de "ejercicios
   validados → entradas listas para Prisma".
+- **Orden intercalado de fuerza/cardio (BL-004, ver DECISIONS.md 2026-07-19)**: una sesión de
+  entreno puede intercalar ejercicios de fuerza y cardio (p. ej. cardio-fuerza-cardio), pero
+  Prisma los guarda en dos tablas separadas (`StrengthEntry`/`CardioEntry`) sin ningún array
+  único que preserve ese orden por sí solo. Se reconstruye con un campo `order Int` compartido
+  por ambos modelos, resuelto en tres pasos:
+  1. **Escritura** (`session-entries.ts`, `buildStrengthEntries`/`buildCardioEntries`): `order`
+     se calcula sobre el índice del array `ejercicios` **original** recibido (antes de filtrar
+     por tipo), no sobre el índice del subarray ya filtrado — así, en cardio-fuerza-cardio, el
+     `CardioEntry` del ejercicio 3 conserva `order: 2` aunque sea el segundo cardio, no el
+     segundo elemento de "todos los cardio".
+  2. **Lectura** (`get-session-history.ts`): la consulta incluye `orderBy: { order: "asc" }`
+     tanto en `strengthEntries` como en `cardioEntries` — Prisma no garantiza ningún orden de
+     fila implícito sin `orderBy` explícito.
+  3. **Fusión** (`to-session-history-entry.ts`, extraído de `historial/page.tsx` para poder
+     testearlo sin depender de `auth()`/Next.js): `strengthEntries` y `cardioEntries` llegan
+     cada una ordenada por su propio `order`, pero siguen siendo dos arrays separados —
+     `toSessionHistoryEntry` los fusiona en un único array y los reordena globalmente por ese
+     campo antes de devolver `ejercicios`, en vez de concatenarlos en dos bloques (fuerza
+     primero, cardio después), que es precisamente lo que causaba el bug original.
+
+  `update-session.ts` hereda el fix automáticamente porque reconstruye la sesión completa
+  llamando a `resolveSessionEntries` (paso 1) — no tiene lógica de orden propia.
 - `src/lib/get-session-history.ts` — consulta las sesiones de un usuario (más recientes
   primero) con sus `strengthEntries` (+ `sets`, ordenadas por `order`) y `cardioEntries`
-  incluidos, cada uno con su `exercise` para poder mostrar el nombre sin consultas
-  adicionales. Acepta filtros opcionales `desde`/`hasta` (mismo patrón Zod que
+  (ordenadas por `order`) incluidos, cada uno con su `exercise` para poder mostrar el nombre
+  sin consultas adicionales. Acepta filtros opcionales `desde`/`hasta` (mismo patrón Zod que
   `get-body-weight-history.ts`) y `ejercicio` (nombre del catálogo): una sesión "contiene" el
   ejercicio si aparece en cualquiera de sus entradas de fuerza o de cardio (SPEC §4 caso de
   uso 4) — el filtro actúa a nivel de sesión completa, no recorta las entradas devueltas.
@@ -124,8 +146,10 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   sesiones del usuario (fecha + resumen legible de sus ejercicios), con acciones "Editar"
   (formulario in-place) y "Borrar" (confirmación nativa) — mismo patrón estructural que
   `weight-history-section.tsx`. `historial/page.tsx` llama a `getSessionHistory` y
-  `listExercises` (además de `getBodyWeightHistory`) y serializa las `Date` de Prisma a ISO
-  string antes de pasarlas al Client Component, igual que ya hacía para peso. Server Actions
+  `listExercises` (además de `getBodyWeightHistory`), y usa `toSessionHistoryEntry`
+  (`src/lib/to-session-history-entry.ts`) para convertir cada sesión de Prisma (campos en
+  inglés, `Date`) a la forma en español que espera `SessionEntriesEditor`, serializando la
+  fecha a ISO string en el proceso — igual que ya hacía para peso. Server Actions
   `updateSessionEntry`/`deleteSessionEntry` en `historial/actions.ts`, mismo patrón de
   resolución de `userId` desde la sesión de NextAuth (nunca del cliente) que las de peso.
 
