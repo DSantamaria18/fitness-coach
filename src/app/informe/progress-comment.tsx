@@ -16,7 +16,11 @@ export type ProgressCommentInitial = {
 // estado) — se refleja como aviso discreto y el último comentario que
 // hubiera (guardado o de una generación anterior en esta misma sesión de
 // navegador) se mantiene visible.
-export function ProgressComment({ initial }: { initial: ProgressCommentInitial }) {
+export function ProgressComment({
+  initial,
+}: {
+  initial: ProgressCommentInitial;
+}) {
   const [state, formAction, isPending] = useActionState(
     generateAndSaveProgressComment,
     undefined,

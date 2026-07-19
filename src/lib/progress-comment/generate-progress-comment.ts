@@ -2,8 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { ProgressReportData } from "@/lib/get-progress-report";
 
 export type GenerateProgressCommentResult =
-  | { success: true; texto: string }
-  | { success: false; error: string };
+  { success: true; texto: string } | { success: false; error: string };
 
 // Modelo fijo (no configurable): esta es la integración de IA "simple" del
 // proyecto (SPEC.md §14 punto 2, DECISIONS.md 2026-07-19) — un resumen de

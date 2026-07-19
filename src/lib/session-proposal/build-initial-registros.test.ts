@@ -69,7 +69,11 @@ describe("buildInitialRegistros", () => {
 
   it("asigna una clave distinta y no vacía a cada registro convertido, en el mismo orden de entrada", () => {
     const registros = buildInitialRegistros([
-      { tipo: "fuerza", ejercicio: "Sentadilla", series: [{ reps: 5, peso_kg: 100 }] },
+      {
+        tipo: "fuerza",
+        ejercicio: "Sentadilla",
+        series: [{ reps: 5, peso_kg: 100 }],
+      },
       { tipo: "cardio", ejercicio: "Carrera", duracion: 1800 },
     ]);
 
