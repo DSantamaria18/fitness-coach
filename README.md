@@ -60,11 +60,18 @@ Requisitos: Node.js 20+ y npm.
 Otros comandos útiles durante el desarrollo:
 
 ```bash
-npm run test        # tests unitarios y de componentes (Vitest)
-npm run typecheck   # comprobación de tipos (tsc --noEmit)
-npm run lint        # ESLint
-npm run format      # Prettier (aplica formato)
+npm run test         # tests unitarios y de componentes (Vitest)
+npm run test:e2e     # tests E2E de los flujos críticos de móvil (Playwright)
+npm run typecheck    # comprobación de tipos (tsc --noEmit)
+npm run lint         # ESLint
+npm run format       # Prettier (aplica formato)
 ```
+
+`npm run test:e2e` no necesita nada de lo anterior configurado a mano: levanta su propio
+servidor (`next dev` en el puerto 3100), su propia base de datos SQLite de usar y tirar
+(migrada y sembrada automáticamente) y un servidor local que sustituye a la API de Anthropic —
+nunca gasta una llamada real, ni siquiera en los flujos de IA (`/sesion`, `/informe`). Ver
+[ARCHITECTURE.md](ARCHITECTURE.md), sección "Tests E2E (Playwright)".
 
 ## Conector MCP
 

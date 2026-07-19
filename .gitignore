@@ -17,6 +17,12 @@ dist/
 # testing
 /coverage
 
+# E2E (Playwright): SQLite propio de los tests y artefactos de ejecución,
+# ver playwright.config.ts / e2e/global-setup.ts.
+/e2e/.tmp/
+/playwright-report/
+/test-results/
+
 # prisma / sqlite
 *.db
 *.db-journal

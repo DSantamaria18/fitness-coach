@@ -6,12 +6,6 @@ dificultad estimada (baja/media/alta). Cuando algo se implementa, se mueve de aq
 
 ## Pendiente de aprobación del usuario
 
-- **Tests E2E con Playwright** cubriendo los flujos críticos de móvil (login, registrar peso,
-  registrar sesión) una vez existan pantallas reales. Justificación: Vitest + Testing Library
-  cubren lógica de dominio y componentes aislados, pero no verifican el flujo completo en un
-  navegador real como lo usará David desde el móvil. Dificultad: baja-media (configuración
-  estándar, pero exige mantener los tests al día con la UI).
-
 - **Regla de lint (o script de CI) que impida importar un export de función desde un módulo
   `"use client"` en un módulo `"use server"`.** Justificación: el bug de
   `buildInitialRegistros` (Runtime Error 500 determinista en éxito de "Generar propuesta con

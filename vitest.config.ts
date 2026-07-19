@@ -12,7 +12,10 @@ export default defineConfig({
     // árbol del repo, gitignored, pero vitest no respeta .gitignore por
     // sí solo): sin esto, un run en la raíz vuelve a ejecutar también los
     // tests de cada worktree activo como si fueran parte de este árbol.
-    exclude: [...configDefaults.exclude, ".claude/worktrees/**"],
+    // `e2e/**` también excluido: el patrón por defecto de Vitest incluye
+    // `*.spec.ts`, y los specs de Playwright usan su propio `test`/`expect`
+    // (incompatibles con el runner de Vitest) — ver playwright.config.ts.
+    exclude: [...configDefaults.exclude, ".claude/worktrees/**", "e2e/**"],
   },
   resolve: {
     alias: {
