@@ -159,7 +159,10 @@ function stripJsonComments(text) {
 /** Lee el mapeo del alias "@/*" desde el tsconfig.json de `tsconfigDir`, resuelto a ruta absoluta. */
 function readAliasBase(tsconfigDir) {
   try {
-    const raw = fs.readFileSync(path.join(tsconfigDir, "tsconfig.json"), "utf8");
+    const raw = fs.readFileSync(
+      path.join(tsconfigDir, "tsconfig.json"),
+      "utf8",
+    );
     const json = JSON.parse(stripJsonComments(raw));
     const aliasTargets = json?.compilerOptions?.paths?.["@/*"];
     if (!Array.isArray(aliasTargets) || aliasTargets.length === 0) {
@@ -284,8 +287,10 @@ const rule = {
         }
 
         const imported =
-          node.specifiers.map((specifier) => specifier.local?.name).filter(Boolean).join(", ") ||
-          node.source.value;
+          node.specifiers
+            .map((specifier) => specifier.local?.name)
+            .filter(Boolean)
+            .join(", ") || node.source.value;
 
         context.report({
           node,
