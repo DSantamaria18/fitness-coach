@@ -134,3 +134,8 @@ Proyecto sin versión publicada todavía.
   Detectado al verificar la integración de `feature/historial-peso` y `feature/registro-sesion`
   tras un reinicio del IDE. Corregido con `export const dynamic = "force-dynamic"` y añadido
   un paso de `build` a la CI para que no vuelva a colarse sin avisar.
+- Timeout demasiado ajustado en la propuesta de sesión con IA: `DEFAULT_TIMEOUT_MS` en
+  `generate-session-proposal.ts` estaba en 30s, pero en pruebas reales con
+  `ANTHROPIC_API_KEY` el flujo completo (exploración + turno final) tardó entre ~14s y ~31s,
+  haciendo fallar por timeout 3 de 5 pruebas (60%). Subido a 60s (ver DECISIONS.md
+  2026-07-19).

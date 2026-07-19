@@ -497,4 +497,27 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-19
+- **Decisión:** Sube `DEFAULT_TIMEOUT_MS` de la propuesta de sesión con IA
+  (`generate-session-proposal.ts`) de 30s a **60s**.
+- **Alternativas consideradas:** subir el timeout a un valor intermedio (p. ej. 40-45s) —
+  descartado por seguir demasiado cerca de las duraciones reales observadas; reducir
+  `MAX_EXPLORATION_ITERATIONS` para acotar la duración en vez de tocar el timeout —
+  descartado porque limitaría la calidad de la exploración del modelo sin atacar la causa
+  real (el límite de tiempo, no el número de turnos).
+- **Justificación:** verificación manual en producción-local con una `ANTHROPIC_API_KEY` real
+  (David, 5 pruebas) mostró que el flujo completo (fase de exploración con `toolRunner` +
+  turno final con `tool_choice` forzado, ambas con Sonnet 5) tarda entre ~14s y ~31s según
+  cuántas rondas de exploración necesite el modelo. Con el límite anterior de 30s, 3 de 5
+  pruebas (60%) fallaron por timeout, con duraciones de ~31.0-31.14s — un segundo por encima
+  del límite, no un caso raro sino el comportamiento típico. David decidió el nuevo valor
+  (60s) como margen suficiente sobre la duración máxima observada.
+- **Lecciones aprendidas:** un timeout fijado antes de tener datos de latencia real contra la
+  API en vivo (esta constante se escribió en la ronda de generación asistida por IA, cuando
+  todavía no había una `ANTHROPIC_API_KEY` real disponible para medir de verdad) es una
+  estimación, no un valor de diseño fiable — conviene revisarlo en cuanto se dispone de
+  mediciones reales, en vez de asumir que el número original ya contemplaba margen suficiente.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

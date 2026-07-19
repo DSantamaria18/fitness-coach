@@ -197,7 +197,7 @@ maquinaria para no sobre-diseñar la más simple:
    rotación — reutilizando la lógica de la skill, sin reimplementarla en el backend. La salida
    se parsea a la misma forma que ya consume `SessionEntriesEditor` y pasa por
    `validate-session.ts` antes de poder guardarse — la salida de la IA es siempre entrada no
-   confiable, igual que un formulario. Si falla (timeout ~30s, JSON inválido, red), el
+   confiable, igual que un formulario. Si falla (timeout ~60s, JSON inválido, red), el
    formulario cae a vacío/manual — nunca bloquea el flujo existente.
 2. **Comentario de progreso**: llamada directa y simple a la API de Mensajes de Claude con
    `@anthropic-ai/sdk` (sin tools, sin toolRunner), con la salida de `get_progress_report`
