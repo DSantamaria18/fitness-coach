@@ -32,7 +32,10 @@ describe("ProgressComment", () => {
   it("muestra el comentario ya guardado al cargar la página, antes de pulsar el botón", () => {
     render(
       <ProgressComment
-        initial={{ texto: "Vas muy bien.", generadoEn: "2026-07-18T10:00:00.000Z" }}
+        initial={{
+          texto: "Vas muy bien.",
+          generadoEn: "2026-07-18T10:00:00.000Z",
+        }}
       />,
     );
 
