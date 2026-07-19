@@ -15,7 +15,10 @@ import {
 // exploración del toolRunner (hasta MAX_EXPLORATION_ITERATIONS).
 const MODEL = "claude-sonnet-5";
 const MAX_TOKENS = 4096;
-const DEFAULT_TIMEOUT_MS = 30_000;
+// 60s, no 30s: en pruebas reales con ANTHROPIC_API_KEY el flujo completo
+// (exploración + turno final) tardó hasta ~31s, por encima del límite
+// anterior en el 60% de los casos (ver DECISIONS.md 2026-07-19).
+const DEFAULT_TIMEOUT_MS = 60_000;
 // Límite de turnos de exploración (lectura de historial/catálogo) antes de
 // pasar a la fase de salida forzada — evita un bucle sin fin si el modelo no
 // converge, incluso dentro del presupuesto de tiempo.

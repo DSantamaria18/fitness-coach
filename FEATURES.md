@@ -205,7 +205,8 @@ cambio relevante.
   una exploración con `client.beta.messages.toolRunner()` (tool_choice automático, hasta 6
   turnos) sobre los dos tools de solo lectura, y una única llamada final
   (`client.beta.messages.create()`) con la conversación acumulada, forzando `tool_choice` al
-  tool de salida. Timeout de 30s vía `AbortController` compartido entre ambas llamadas. La
+  tool de salida. Timeout de 60s vía `AbortController` compartido entre ambas llamadas (ver
+  DECISIONS.md 2026-07-19: con 30s, un 60% de las pruebas reales fallaba por timeout). La
   salida se valida siempre con `validateSession()` antes de devolverse — se trata como
   entrada no confiable, igual que un formulario manual. Devuelve un resultado discriminado
   (`{success:true,data}` / `{success:false,error:{code,message}}`), nunca lanza una excepción
