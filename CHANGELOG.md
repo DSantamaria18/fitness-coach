@@ -153,6 +153,23 @@ Proyecto sin versión publicada todavía.
   logout lo dispara la nav global, visible en todas las páginas autenticadas, no una sola
   sección de la app.
 
+- **[BL-005]** Filtro de rango de fechas (`desde`/`hasta`) en `/informe`: nuevo componente
+  `DateRangeFilter` (`informe/date-range-filter.tsx`, dos `<input type="date">` nativos,
+  mismo patrón controlado-por-URL que `ExerciseSelector`) que actualiza la URL vía
+  `useRouter`/`useSearchParams`. `informe/page.tsx` valida y convierte los valores crudos
+  `YYYY-MM-DD` de la URL con `parseDateRangeSearchParams` (`informe/parse-date-range.ts`, Zod
+  `z.iso.date()`, rechaza formato inválido o fechas de calendario inexistentes) a los límites
+  ISO datetime completos que ya esperaba `getProgressReport` (medianoche UTC para `desde`,
+  último instante del día en UTC para `hasta`). Un rango inválido a nivel de dominio (p. ej.
+  `desde` posterior a `hasta`) reutiliza el mismo fallback ya existente para un `ejercicio`
+  inexistente: se ignoran todos los filtros y se muestra el informe general. La card "Racha
+  actual" explicita mediante `buildStreakCaption` (`informe/streak-caption.ts`) que
+  `currentStreakWeeks` ignora `hasta` y siempre cuenta hacia atrás desde hoy, solo cuando ese
+  filtro está realmente aplicado. `ExerciseSelector` se refactorizó para combinar sus cambios
+  con los parámetros de URL ya presentes (`buildFilterUrl`, `informe/build-filter-url.ts`) en
+  vez de reconstruir la query desde cero, para que el filtro de ejercicio y el de fechas
+  convivan sin que uno borre al otro.
+
 ### Fixed
 
 - `session.user` no incluía el `id` del usuario autenticado (faltaban los callbacks `jwt` y

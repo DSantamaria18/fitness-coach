@@ -181,6 +181,15 @@ cambio relevante.
     ninguna sesión tiene ese dato se muestra un aviso en vez de un gráfico vacío.
   - Si el ejercicio del query param ya no existe en el catálogo, la página ignora el filtro y
     muestra el informe general en vez de romperse.
+- **[BL-005] Filtro de rango de fechas**: `DateRangeFilter` añade dos `<input type="date">`
+  ("Desde"/"Hasta") controlados por la URL (`?desde=&hasta=`), mismo patrón que
+  `ExerciseSelector`. Los valores se validan y convierten en `page.tsx` a los límites de día
+  completos que espera `getProgressReport`; un rango inválido (formato erróneo, fecha de
+  calendario inexistente, o `desde` posterior a `hasta`) se ignora igual que un `ejercicio`
+  obsoleto, mostrando el informe general. El filtro de ejercicio y el de fechas conviven en la
+  misma URL sin pisarse entre sí. Como `currentStreakWeeks` siempre cuenta hacia atrás desde
+  hoy e ignora `hasta` (ver DECISIONS.md 2026-07-18), la card "Racha actual" añade una nota
+  explícita de ese comportamiento solo cuando `hasta` está realmente aplicado.
 - **Comentario de progreso con IA** (SPEC.md §14 punto 2): botón "Generar comentario de
   progreso" en `/informe`, bajo demanda (nunca automático). Llama a un Server Action que
   encadena `getProgressReport(userId, {})` (informe global, sin filtro de ejercicio) →

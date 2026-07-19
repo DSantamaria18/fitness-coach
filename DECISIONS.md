@@ -737,4 +737,51 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-19
+- **Decisión:** Filtro de rango de fechas en `/informe` (BL-005). Tres decisiones de diseño no
+  triviales, dentro del alcance ya aprobado por David:
+  1. Conversión de `<input type="date">` (`YYYY-MM-DD`) a los límites de día que espera
+     `getProgressReport`: medianoche UTC fija para `desde` (`T00:00:00.000Z`) y último instante
+     del día en UTC para `hasta` (`T23:59:59.999Z`) — no la zona horaria del proceso Node. Es el
+     mismo criterio ya usado en todo el resto de la app para convertir un `<input type="date">`
+     (`peso/actions.ts`, `sesion/actions.ts`, `historial/actions.ts`: siempre
+     `T00:00:00.000Z`), documentado ahí como "medianoche UTC" en un comentario de
+     `weight-history-section.tsx`. Se sigue ese precedente en vez de usar la hora local del
+     servidor porque UTC fijo es reproducible independientemente de en qué zona horaria corra
+     el proceso (local, CI, Fly.io) — la hora local del proceso Node depende de configuración de
+     entorno, no del código, y habría dado resultados distintos entre entornos para el mismo
+     input del usuario.
+  2. Filtro inválido a nivel de dominio (`desde` posterior a `hasta`, único caso que sobrevive a
+     la validación de formato con `z.iso.date()` en `parse-date-range.ts`): en vez de construir
+     un mecanismo de fallback nuevo, se reutiliza el ya existente para un `ejercicio` que ya no
+     existe en el catálogo (`informe/page.tsx`: si el resultado con filtros falla y había algún
+     filtro activo, se reintenta `getProgressReport(userId, {})` sin ninguno). Evita mantener
+     dos mecanismos de "ignorar filtro inválido sin romper la página" haciendo esencialmente lo
+     mismo.
+  3. `ExerciseSelector` (existente, de la fase anterior del informe de progreso) reconstruía la
+     URL desde cero (`/informe?ejercicio=X`), lo que habría borrado el nuevo filtro de fechas al
+     cambiar de ejercicio (y viceversa, si `DateRangeFilter` hiciera lo mismo). Se extrajo
+     `buildFilterUrl` (`informe/build-filter-url.ts`, combina
+     `useSearchParams()` actual con las claves a cambiar/borrar vía `URLSearchParams`) y se
+     refactorizó `ExerciseSelector` para usarla, además del nuevo `DateRangeFilter`. Efecto
+     colateral menor ya documentado en el propio test: al pasar de construir la query a mano
+     (`encodeURIComponent`) a `URLSearchParams`, los espacios se codifican como `+` en vez de
+     `%20` — ambas formas son válidas y equivalentes en una query string, no es un cambio de
+     comportamiento observable para el usuario.
+- **Alternativas consideradas:** dejar `ExerciseSelector` sin tocar y aceptar que ambos filtros
+  se pisen entre sí (descartado: es una regresión de UX directamente causada por añadir el
+  segundo filtro, no un problema preexistente que quede fuera de alcance); guardar el rango de
+  fechas en estado de React en vez de en la URL (descartado: rompería el patrón ya establecido
+  de "la URL es la fuente de verdad de los filtros", que permite compartir/recargar un enlace
+  con el filtro aplicado, igual que ya ocurre con `ejercicio`).
+- **Justificación:** ver punto a punto arriba; en conjunto, minimiza superficie nueva
+  reutilizando patrones y mecanismos ya existentes y verificados en el proyecto (fallback,
+  contrato de fecha ISO, filtros controlados por URL) en vez de introducir alternativas
+  paralelas.
+- **Lecciones aprendidas:** ninguna nueva; se siguió sin repetir la lección ya registrada arriba
+  (2026-07-18) de dejar bien explicado en la UI el porqué de que la racha ignore `hasta`, ahora
+  que el filtro que lo hace visible ya existe.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

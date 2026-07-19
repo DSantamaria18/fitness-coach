@@ -34,14 +34,6 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   campo `order` en `CardioEntry` (migración de esquema) y tocar `resolveSessionEntries`. Nivel
   de riesgo bajo (nadie ha registrado sesiones reales todavía), pero lo anoto para no perderlo.
   Dificultad: media (migración de esquema + lógica de resolución de entradas).
-- **[BL-005]** **Elegir rango de fechas (`desde`/`hasta`) desde la UI de `/informe`.** Justificación:
-  `getProgressReport` ya soporta filtrar por rango de fechas, pero la pantalla actual solo
-  expone el filtro por ejercicio — David no puede acotar el informe a, por ejemplo, "el último
-  mes" sin editar la URL a mano. Nota: en cuanto exista este filtro, la nota de "racha" de la
-  UI debería explicitar también que `currentStreakWeeks` ignora `hasta` y siempre cuenta hacia
-  atrás desde hoy (ver DECISIONS.md 2026-07-18), porque ahí sí puede confundir que un rango
-  pasado muestre racha 0. Dificultad: baja-media (controles de fecha + pasar los parámetros a
-  `getProgressReport`, ya validados en la capa de dominio).
 - **[BL-006]** **Comparar periodos en el informe de progreso** (p.ej. este mes vs. el anterior, o evolución
   año contra año). Justificación: hoy el informe solo muestra una serie temporal continua; una
   comparación directa ayudaría a ver progreso relativo sin tener que interpretar el gráfico a
