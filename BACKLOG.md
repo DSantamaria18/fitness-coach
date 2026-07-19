@@ -6,18 +6,6 @@ dificultad estimada (baja/media/alta). Cuando algo se implementa, se mueve de aq
 
 ## Pendiente de aprobación del usuario
 
-- **Tests E2E con Playwright** cubriendo los flujos críticos de móvil (login, registrar peso,
-  registrar sesión, y las dos generaciones asistidas por IA en `/sesion` y `/informe`).
-  Justificación: Vitest + Testing Library cubren lógica de dominio y componentes aislados, pero
-  no verifican el flujo completo en un navegador real como lo usará David desde el móvil.
-  **Los flujos de IA deben interceptar/mockear la respuesta de `api.anthropic.com` (p. ej. con
-  `page.route()` de Playwright) en vez de usar `ANTHROPIC_API_KEY` real** — ver DECISIONS.md
-  2026-07-19 (ronda de generación asistida por IA): el bug de `buildInitialRegistros` (RSC) se
-  detecta igual con una respuesta simulada, porque depende de cruzar la frontera servidor/
-  cliente en cualquier éxito, no de que la respuesta sea real; un doble aquí no pierde
-  cobertura y evita gasto real recurrente en cada ejecución de CI. Dificultad: baja-media
-  (configuración estándar, pero exige mantener los tests al día con la UI).
-
 - **Regla de lint (o script de CI) que impida importar un export de función desde un módulo
   `"use client"` en un módulo `"use server"`.** Justificación: el bug de
   `buildInitialRegistros` (Runtime Error 500 determinista en éxito de "Generar propuesta con

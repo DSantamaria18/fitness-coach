@@ -122,6 +122,18 @@ Proyecto sin versión publicada todavía.
   `generateSessionProposalAction` precarga `SessionEntriesEditor` (editable, sin guardar
   directamente); en cualquier fallo muestra un aviso discreto sin romper el formulario manual.
 
+- Suite E2E con Playwright (`e2e/`, `npm run test:e2e`) cubriendo los flujos críticos de móvil
+  de punta a punta en un navegador real: login (éxito y credenciales incorrectas), registrar
+  peso corporal, registrar sesión de entreno, "Generar propuesta con IA" en `/sesion` y
+  "Generar comentario de progreso" en `/informe`. Emulación de un móvil Android (`devices["Pixel
+  7"]`, Chromium — SPEC §2/§6). Las dos llamadas de IA se mockean sustituyendo
+  `api.anthropic.com` por un servidor HTTP local (`e2e/mock-anthropic-server.ts`) apuntado vía
+  `ANTHROPIC_BASE_URL` (respetada de fábrica por `@anthropic-ai/sdk`) en vez de gastar una
+  llamada real en cada ejecución — ver DECISIONS.md 2026-07-19 para el porqué frente a
+  `page.route()` de Playwright, que no intercepta llamadas servidor-a-servidor. `e2e/
+  global-setup.ts` migra y siembra un SQLite propio de E2E antes de cada ejecución. Job `e2e`
+  nuevo en CI (`.github/workflows/ci.yml`), en paralelo al job `test` de Vitest.
+
 ### Fixed
 
 - `session.user` no incluía el `id` del usuario autenticado (faltaban los callbacks `jwt` y

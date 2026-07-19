@@ -573,4 +573,72 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-19
+- **Decisión:** Suite E2E con Playwright (`e2e/`, `playwright.config.ts`) cubriendo los flujos
+  críticos de móvil (login, registrar peso, registrar sesión, y las dos generaciones asistidas
+  por IA). Las dos llamadas de IA (`generateSessionProposal`, `generateProgressComment`) se
+  mockean sustituyendo `api.anthropic.com` por un servidor HTTP local
+  (`e2e/mock-anthropic-server.ts`, módulo `http` nativo, sin dependencia nueva) apuntado vía la
+  variable de entorno `ANTHROPIC_BASE_URL`, que el SDK `@anthropic-ai/sdk` ya respeta de
+  fábrica. Emulación móvil con el preset Android `devices["Pixel 7"]` (Chromium), no un preset
+  "iPhone *" (WebKit). Detalle técnico completo en ARCHITECTURE.md, sección "Tests E2E
+  (Playwright)".
+- **Alternativas consideradas:**
+  - `page.route()` de Playwright para interceptar las llamadas a Anthropic — descartada porque
+    solo intercepta tráfico que sale del contexto del navegador; las llamadas de IA de esta app
+    las hace el servidor de Next.js (Server Actions/funciones de servidor,
+    `generate-session-proposal.ts`/`generate-progress-comment.ts`), nunca el navegador, así que
+    `page.route()` nunca las vería.
+  - `ANTHROPIC_API_KEY` real contra la API en vivo — descartada por el criterio ya fijado en
+    BACKLOG.md al proponer esta suite: gastaría dinero real en cada ejecución de CI sin ganar
+    cobertura relevante, dado que el bug que motivó esta suite (RSC de
+    `buildInitialRegistros`, ver entrada de más abajo) depende solo de cruzar la frontera
+    servidor/cliente en cualquier éxito, no de que la respuesta del modelo sea real.
+  - `next build && next start` como servidor bajo test — descartado en favor de `next dev`:
+    arranque más rápido en cada ejecución local/CI, y sigue siendo un runtime real de Next.js
+    (a diferencia de Vitest/jsdom) para el propósito de esta suite.
+  - Emulación `devices["iPhone 13"]` (el preset "obvio" para SPEC §2, "navegador del móvil") —
+    descartada tras el primer intento de ejecución local: los presets "iPhone *" de Playwright
+    fijan `defaultBrowserType: "webkit"`, y solo había Chromium instalado (instalado
+    explícitamente para esta ronda) — habría exigido instalar y mantener también WebKit solo
+    para esta suite. Se sustituyó por `devices["Pixel 7"]` (Android, Chromium), que cubre el
+    mismo objetivo de "verificar el layout mobile-first" sin ese coste.
+- **Justificación:** el criterio de mockeo ya estaba fijado en BACKLOG.md (entrada "Tests E2E
+  con Playwright", añadida en la ronda anterior tras el bug de RSC): los flujos de IA deben
+  interceptar/mockear la respuesta de Anthropic en vez de gastar dinero real en cada CI. Un
+  servidor HTTP local vía `ANTHROPIC_BASE_URL` es el único punto de intercepción posible dado
+  que las llamadas de IA son servidor-a-servidor, no navegador-a-servidor.
+- **Lecciones aprendidas:**
+  - **Race de hidratación de React en `next dev`/Playwright**: un `click()`/`selectOption()`
+    inmediatamente después de `page.goto()` puede no hacer nada si el componente `"use client"`
+    de destino todavía no ha terminado de hidratarse — las comprobaciones de "actionability" de
+    Playwright (visible/habilitado/estable/recibe eventos) no esperan a que React haya
+    adjuntado los manejadores `onClick`/`onChange`, solo a que el elemento del DOM esté listo.
+    Se manifestó de dos formas distintas en la misma ronda: un test que pulsaba un botón
+    (`"Generar propuesta con IA"`) sin que ocurriera nada visible (ni éxito ni el aviso de
+    fallo, porque el handler no estaba adjunto todavía), y otro que seleccionaba un ejercicio de
+    un `<select>` y pulsaba "Añadir" — el valor del `<select>` cambiaba en el DOM, pero el
+    estado de React (`selectedExercise`) seguía en su valor inicial porque el `onChange` tampoco
+    estaba adjunto, así que se añadía el ejercicio por defecto en vez del seleccionado. Se
+    corrigió con un helper (`e2e/support/navigation.ts`, `gotoReady`) que espera a
+    `networkidle` tras cada navegación antes de interactuar. Es seguro esperar a `networkidle`
+    en esta app concreta porque el WebSocket de HMR de `next dev` no se queda abierto
+    indefinidamente frente a un origen no permitido (ver punto siguiente) — en una app con
+    conexiones persistentes legítimas (polling, WebSockets propios) `networkidle` no sería una
+    señal fiable de "ya se puede interactuar".
+  - **`allowedDevOrigins` de Next 16 bloqueaba el WebSocket de HMR contra `127.0.0.1`**: al
+    navegar Playwright contra `http://127.0.0.1:3100` (no `localhost`), la consola del
+    `webServer` mostraba un warning de "Blocked cross-origin request to Next.js dev resource"
+    para `/_next/webpack-hmr`. Sin efecto funcional en la suite (Fast Refresh no hace falta en
+    tests), pero se añadió `127.0.0.1` a `allowedDevOrigins` en `next.config.ts` para eliminar
+    el ruido y, sobre todo, porque ese bloqueo es precisamente lo que hace que `networkidle` sí
+    llegue a resolver (ver punto anterior) en vez de esperar indefinidamente a un WebSocket que
+    de otro modo se quedaría abierto.
+  - Este es el test (`e2e/sesion-ia.spec.ts`) que habría atrapado, sin gastar un céntimo real,
+    el bug de RSC de `buildInitialRegistros` de la ronda anterior (ver entrada de más abajo):
+    verificado ejecutando la suite completa en local contra un `.next`/base de datos
+    completamente limpios (sin caché de builds anteriores), con los 6 tests en verde.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

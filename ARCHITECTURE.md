@@ -12,13 +12,16 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   Conexión mediante el driver adapter `@prisma/adapter-better-sqlite3` (Prisma 7 requiere un
   adapter explícito; no hay motor Rust embebido por defecto).
 - **Validación**: Zod (compartirá esquemas entre rutas API web y tools MCP en fases futuras).
-- **Testing**: Vitest (unit + integración) + Testing Library (componentes) + jsdom.
+- **Testing**: Vitest (unit + integración) + Testing Library (componentes) + jsdom para
+  lógica/componentes aislados; Playwright para E2E en un navegador real (ver sección "Tests
+  E2E (Playwright)" más abajo) — cubren capas distintas, no se solapan.
 - **Lint/formato**: ESLint (`eslint-config-next`) + Prettier. Los ficheros Markdown de
   documentación (`*.md`) están excluidos del autoformateo (`.prettierignore`) porque se editan
   a mano y Prettier reescribe su estructura de forma indeseada.
-- **CI**: GitHub Actions (`.github/workflows/ci.yml`) — en cada push/PR: instala dependencias,
-  genera el cliente Prisma, y corre `format:check`, `lint`, `typecheck`, `test` y `build` (con
-  variables de entorno ficticias, solo para que el build pueda arrancar).
+- **CI**: GitHub Actions (`.github/workflows/ci.yml`) — en cada push/PR, el job `test` instala
+  dependencias, genera el cliente Prisma, y corre `format:check`, `lint`, `typecheck`, `test` y
+  `build` (con variables de entorno ficticias, solo para que el build pueda arrancar); un job
+  `e2e` en paralelo instala Chromium y corre `npm run test:e2e`.
 - **Autenticación**: Auth.js (NextAuth) v5, provider Credentials + bcrypt. Usuario único
   sembrado desde `ADMIN_USERNAME`/`ADMIN_PASSWORD_HASH` (ver `prisma/seed.ts` y
   `scripts/hash-password.ts`). Sesión JWT en cookie httpOnly (`AUTH_SECRET`), sin adapter de
@@ -290,6 +293,73 @@ propósito — no sobre-diseñar la más simple, regla 4 CLAUDE.md).
   de esta app; un cliente MCP que dependa de `structuredContent.error` para errores de
   validación de forma (no de negocio) debe tener en cuenta este caso. No se ha corregido por no
   haber una forma trivial de interceptar la validación del propio SDK sin reimplementarla.
+
+## Tests E2E (Playwright)
+
+- Suite en `e2e/` (config en `playwright.config.ts`, raíz del proyecto), separada de Vitest:
+  cubre los flujos críticos de móvil de punta a punta en un navegador real — login (éxito y
+  credenciales incorrectas), registrar peso corporal, registrar sesión de entreno, "Generar
+  propuesta con IA" en `/sesion` y "Generar comentario de progreso" en `/informe`. Se ejecuta
+  con `npm run test:e2e`, y en CI en un job `e2e` propio (`.github/workflows/ci.yml`), en
+  paralelo al job `test` de Vitest.
+- **Emulación móvil**: un único proyecto Playwright (`mobile-chromium`) con el preset
+  `devices["Pixel 7"]` — viewport/user-agent/touch de un Android real (SPEC.md §2/§6: uso
+  principal desde el navegador del móvil). Se eligió un preset Android en vez de uno "iPhone
+  *": los presets de iPhone de Playwright emulan Safari (`defaultBrowserType: "webkit"`), lo
+  que exigiría instalar y mantener también el motor WebKit; los presets Android usan Chromium,
+  el único motor que instala CI (`npx playwright install chromium`).
+- **Mock de la API de Anthropic, no `page.route()`**: las dos llamadas de IA de la app
+  (`generateSessionProposal` en `/sesion`, `generateProgressComment` en `/informe`) las hace el
+  servidor de Next.js (Server Actions/funciones de servidor), nunca el navegador —
+  `page.route()` de Playwright solo intercepta tráfico que sale del contexto del navegador, así
+  que no sirve aquí. En su lugar, `e2e/mock-anthropic-server.ts` levanta un servidor HTTP
+  mínimo (módulo `http` nativo, sin dependencia nueva) que sustituye a `api.anthropic.com`,
+  apuntado vía la variable de entorno `ANTHROPIC_BASE_URL` — el SDK `@anthropic-ai/sdk` la
+  respeta de fábrica (`new Anthropic()` sin `baseURL` explícito la lee de
+  `process.env.ANTHROPIC_BASE_URL`), así que no hace falta tocar código de producción para
+  mockear ambas integraciones. Un único handler basta porque tanto
+  `client.messages.create()` como `client.beta.messages.create()` golpean el mismo path,
+  `POST /v1/messages` (la variante beta solo añade `?beta=true` a la query string). El mock
+  distingue las 3 llamadas reales de la app por el `tool_choice` y los `tools` del body: el
+  turno final forzado de la propuesta de sesión (`tool_choice: {type: "tool", name:
+  "submit_session_proposal"}`) responde con un bloque `tool_use` cuyo `input` cumple
+  `sessionSchema` (referencia un ejercicio real sembrado por `prisma/seed.ts`, "Sentadilla");
+  cualquier otra llamada (el turno de exploración de esa misma propuesta, y la llamada única de
+  `generateProgressComment`) responde solo con texto y `stop_reason: "end_turn"` — no hace
+  falta simular `get_session_history`/`list_exercises` porque el tramo que esta suite prueba es
+  la salida estructurada final, no la exploración.
+- **Base de datos propia**: `e2e/global-setup.ts` migra (`prisma migrate deploy`) y siembra
+  (`prisma/seed.ts`, sin tocarlo — siembra tanto el catálogo de ejercicios como el usuario
+  admin) un SQLite separado (`e2e/.tmp/e2e.db`, gitignored) antes de cada ejecución, borrándolo
+  primero para partir de un estado determinista. También arranca el mock de Anthropic; al
+  devolver una función, esa misma función actúa como `globalTeardown` de Playwright (cierra el
+  mock), sin necesitar un fichero aparte.
+- **Servidor de la app bajo test**: `next dev` (no `next build && next start`) en el puerto
+  3100, con `DATABASE_URL`/`ANTHROPIC_BASE_URL`/`ANTHROPIC_API_KEY`/`AUTH_SECRET`/
+  `ADMIN_USERNAME`/`ADMIN_PASSWORD_HASH` de test inyectados vía `webServer.env` — arranque más
+  rápido que un build completo en cada ejecución, y sigue siendo un runtime real de Next.js (a
+  diferencia de Vitest/jsdom, que no interpreta `"use client"`/`"use server"` — ver
+  DECISIONS.md 2026-07-19 sobre el bug de RSC que solo detectó la verificación en navegador
+  real, precisamente el tipo de bug que esta suite E2E cubre ahora en CI sin depender de que
+  alguien lo repita a mano).
+- **Constantes compartidas**: `e2e/env.ts` centraliza puertos, URLs y credenciales de test
+  (incluye el hash bcrypt del password de test, calculado una vez al importar el módulo) para
+  que `playwright.config.ts`, `global-setup.ts` y los propios specs no puedan desincronizarse
+  entre sí.
+- `e2e/support/navigation.ts` (`gotoReady`) espera a `networkidle` tras cada navegación antes
+  de interactuar con la página: las comprobaciones de "actionability" de Playwright (visible/
+  habilitado/estable) no esperan a que React termine de hidratar un componente `"use client"`,
+  así que un click/`selectOption` inmediatamente después de `goto()` puede no hacer nada (se
+  detectó así, no es teórico: un test seleccionaba un ejercicio del desplegable y pulsaba
+  "Añadir" antes de que el `<select>` estuviera hidratado, y el registro añadido usaba el
+  estado inicial de React en vez del valor seleccionado). Es seguro esperar a `networkidle`
+  aquí porque el WebSocket de HMR de `next dev` no se queda abierto indefinidamente: Next 16 lo
+  bloquea por origen salvo que esté en `allowedDevOrigins` (`next.config.ts` no lo incluye a
+  propósito para el propio dev normal en `localhost`, pero sí incluye `127.0.0.1`, el host que
+  usa Playwright), así que la red sí llega a quedar inactiva en vez de no resolver nunca.
+- **Un único worker**: los specs comparten el mismo SQLite de E2E y se ejecutan en serie
+  (`workers: 1`) para evitar condiciones de carrera entre tests que escriben en la misma base
+  de datos — la suite es pequeña, así que el coste en tiempo total es asumible.
 
 ## Estructura de carpetas relevante
 

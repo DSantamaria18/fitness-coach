@@ -10,6 +10,11 @@ cambio relevante.
 - Catálogo de ejercicios sembrado (`npm run prisma:seed`).
 - Suite de tests (Vitest) y pipeline de CI (GitHub Actions) verificando formato, lint,
   typecheck, tests y build en cada push.
+- Suite E2E (Playwright, `npm run test:e2e`) cubriendo los flujos críticos de móvil de punta a
+  punta en un navegador real (Chromium, emulación Android): login, registrar peso, registrar
+  sesión, y las dos generaciones asistidas por IA (`/sesion`, `/informe`), con la API de
+  Anthropic sustituida por un mock local — nunca gasta una llamada real. Job `e2e` propio en CI,
+  en paralelo al job `test` de Vitest. Ver ARCHITECTURE.md, sección "Tests E2E (Playwright)".
 - Endpoint `/api/health` para verificar que el servidor está vivo (uso interno/CI, no es un
   caso de uso de producto).
 
