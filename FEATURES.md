@@ -151,6 +151,9 @@ cambio relevante.
 - `/` deja de ser el scaffold por defecto de `create-next-app`: ahora redirige server-side a
   `/historial` si hay sesión, o a `/login` si no la hay (defensa en profundidad además de la
   protección ya existente en `src/proxy.ts`).
+- **[BL-008]** Botón "Cerrar sesión" al final de la barra de navegación. Pide confirmación
+  nativa (`window.confirm`) y, si se confirma, invoca la Server Action `logout()`
+  (`src/app/actions.ts`), que llama a `signOut({ redirectTo: "/login" })` de Auth.js.
 
 ## Informe de progreso
 

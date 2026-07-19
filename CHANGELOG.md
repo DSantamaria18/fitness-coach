@@ -145,6 +145,14 @@ Proyecto sin versión publicada todavía.
   `RuleTester` de ESLint (`eslint-rules/no-client-import-in-server-file.test.ts`) y verificada
   empíricamente reproduciendo el bug real (ver DECISIONS.md 2026-07-19).
 
+- **[BL-008]** Botón "Cerrar sesión" en la barra de navegación global (`nav-bar.tsx`), con
+  confirmación nativa (`window.confirm`, mismo criterio que `DeleteSessionButton`/
+  `DeleteWeightButton`) antes de invocar la nueva Server Action `logout()`
+  (`src/app/actions.ts`), que llama a `signOut({ redirectTo: "/login" })` de Auth.js. La
+  Server Action vive en `src/app/actions.ts` (fuera de cualquier ruta concreta) porque el
+  logout lo dispara la nav global, visible en todas las páginas autenticadas, no una sola
+  sección de la app.
+
 ### Fixed
 
 - `session.user` no incluía el `id` del usuario autenticado (faltaban los callbacks `jwt` y

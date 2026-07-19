@@ -44,6 +44,10 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   al token y de ahí a `session.user.id` — sin ellos, `session.user` solo trae los campos
   estándar de Auth.js (name/email/image) y cualquier código que dependa de `session.user.id`
   ve siempre `undefined`.
+- **[BL-008]** `src/app/actions.ts` — Server Action `logout()` que llama a
+  `signOut({ redirectTo: "/login" })`. Vive fuera de cualquier carpeta de ruta (a diferencia de
+  `peso/actions.ts` o `sesion/actions.ts`) porque la dispara el botón "Cerrar sesión" de la
+  barra de navegación global (`nav-bar.tsx`), común a todas las páginas autenticadas.
 
 ## Registro de peso corporal
 

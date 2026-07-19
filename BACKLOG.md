@@ -53,15 +53,6 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   completo. Dificultad: media (generación de PDF/imagen en servidor o cliente, sin librería ya
   elegida en el stack).
 
-- **[BL-008]** **Botón de cerrar sesión visible en la interfaz.** Justificación: hoy no existe ningún punto
-  de la UI desde el que cerrar sesión (`signOut` de Auth.js está exportado en `src/auth.ts`
-  pero no se usa en ningún componente) — la única forma de salir es borrar la cookie a mano.
-  Detectado al implementar la navegación global (`feature/nav-global`): encajaría de forma
-  natural como un elemento más de la barra de navegación, pero dónde colocarlo y si pedir
-  confirmación antes de cerrar sesión son decisiones de producto, así que lo dejo para que las
-  apruebe David en vez de añadirlo por mi cuenta. Dificultad: baja (Server Action que llama a
-  `signOut()`).
-
 - **[BL-009]** **Menú hamburguesa o navegación colapsable para cuando crezca el número de secciones.**
   Justificación: la barra de navegación actual (`feature/nav-global`) reparte 5 enlaces en una
   fila horizontal a partes iguales, que ya queda ajustada en pantallas de móvil pequeñas; si se
