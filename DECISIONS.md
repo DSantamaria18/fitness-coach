@@ -641,4 +641,19 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-19
+- **Decisión:** A partir de ahora, cada entrada de BACKLOG.md lleva un código secuencial y
+  permanente `BL-NNN` (p. ej. `BL-001`). El código no se reutiliza ni se renumera aunque la
+  entrada cambie de sección, se mueva a CHANGELOG.md al implementarse, o se descarte. Se
+  asignaron códigos `BL-001` a `BL-014` a las entradas ya existentes en el orden en que
+  aparecían en el fichero.
+- **Alternativas consideradas:** prefijos separados por tipo (`FEAT-NNN`/`BUG-NNN`), descartado
+  por simplicidad — de momento BACKLOG.md no distingue tipo de forma consistente en todas las
+  entradas.
+- **Justificación:** permite referenciar una entrada concreta del backlog de forma inequívoca
+  (en commits, PRs, DECISIONS.md, conversación) sin depender de su posición en el fichero, que
+  cambia según se añaden/mueven entradas.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
