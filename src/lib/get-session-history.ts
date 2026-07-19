@@ -32,7 +32,10 @@ const sessionInclude = {
     include: { exercise: true, sets: { orderBy: { order: "asc" as const } } },
     orderBy: { order: "asc" as const },
   },
-  cardioEntries: { include: { exercise: true } },
+  cardioEntries: {
+    include: { exercise: true },
+    orderBy: { order: "asc" as const },
+  },
 } satisfies Prisma.SessionInclude;
 
 export type SessionHistoryEntry = Prisma.SessionGetPayload<{

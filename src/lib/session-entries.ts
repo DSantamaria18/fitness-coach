@@ -78,23 +78,45 @@ export async function resolveSessionEntries(
   };
 }
 
+// `order` se calcula sobre el índice en el array `ejercicios` ORIGINAL (antes
+// de filtrar por tipo), no sobre el índice del subarray ya filtrado — de lo
+// contrario, StrengthEntry/CardioEntry (dos tablas separadas) perderían la
+// posición relativa real de una sesión que intercala fuerza y cardio (p. ej.
+// cardio-fuerza-cardio) al reconstruirse en /historial (BL-004, ver
+// DECISIONS.md 2026-07-19 y ARCHITECTURE.md).
 function buildStrengthEntries(
   ejercicios: ValidatedRegistroEjercicio[],
   exerciseByName: Map<string, { id: string }>,
 ) {
-  return ejercicios.filter(isFuerza).map((entry, order) => ({
-    exerciseId: exerciseByName.get(entry.ejercicio)!.id,
-    notes: entry.notas,
-    order,
-    sets: {
-      create: entry.series.map((serie, serieOrder) => ({
-        order: serieOrder,
-        reps: serie.reps,
-        weightKg: serie.peso_kg,
-        tempo: serie.tempo,
-        rpe: serie.RPE,
-      })),
-    },
+  const entries: {
+    exerciseId: string;
+    notes: string | undefined;
+    order: number;
+    sets: { create: ReturnType<typeof buildSets> };
+  }[] = [];
+
+  ejercicios.forEach((entry, order) => {
+    if (!isFuerza(entry)) return;
+    entries.push({
+      exerciseId: exerciseByName.get(entry.ejercicio)!.id,
+      notes: entry.notas,
+      order,
+      sets: { create: buildSets(entry.series) },
+    });
+  });
+
+  return entries;
+}
+
+function buildSets(
+  series: Extract<ValidatedRegistroEjercicio, { tipo: "fuerza" }>["series"],
+) {
+  return series.map((serie, serieOrder) => ({
+    order: serieOrder,
+    reps: serie.reps,
+    weightKg: serie.peso_kg,
+    tempo: serie.tempo,
+    rpe: serie.RPE,
   }));
 }
 
@@ -102,18 +124,40 @@ function buildCardioEntries(
   ejercicios: ValidatedRegistroEjercicio[],
   exerciseByName: Map<string, { id: string }>,
 ) {
-  return ejercicios.filter(isCardio).map((entry) => ({
-    exerciseId: exerciseByName.get(entry.ejercicio)!.id,
-    durationSeconds: entry.duracion,
-    distanceKm: entry.distancia_km,
-    avgSpeedKmh: entry.velocidad_media,
-    avgPaceSecPerKm: entry.ritmo_medio,
-    avgHeartRate: entry.frecuencia_cardiaca_media,
-    maxHeartRate: entry.frecuencia_cardiaca_maxima,
-    steps: entry.pasos,
-    stepFrequency: entry.frecuencia_paso,
-    kcal: entry.kcal,
-    rpe: entry.RPE,
-    notes: entry.notas,
-  }));
+  const entries: {
+    exerciseId: string;
+    order: number;
+    durationSeconds: number | undefined;
+    distanceKm: number | undefined;
+    avgSpeedKmh: number | undefined;
+    avgPaceSecPerKm: number | undefined;
+    avgHeartRate: number | undefined;
+    maxHeartRate: number | undefined;
+    steps: number | undefined;
+    stepFrequency: number | undefined;
+    kcal: number | undefined;
+    rpe: number | undefined;
+    notes: string | undefined;
+  }[] = [];
+
+  ejercicios.forEach((entry, order) => {
+    if (!isCardio(entry)) return;
+    entries.push({
+      exerciseId: exerciseByName.get(entry.ejercicio)!.id,
+      order,
+      durationSeconds: entry.duracion,
+      distanceKm: entry.distancia_km,
+      avgSpeedKmh: entry.velocidad_media,
+      avgPaceSecPerKm: entry.ritmo_medio,
+      avgHeartRate: entry.frecuencia_cardiaca_media,
+      maxHeartRate: entry.frecuencia_cardiaca_maxima,
+      steps: entry.pasos,
+      stepFrequency: entry.frecuencia_paso,
+      kcal: entry.kcal,
+      rpe: entry.RPE,
+      notes: entry.notas,
+    });
+  });
+
+  return entries;
 }
