@@ -30,9 +30,7 @@ describe("NavBarGate", () => {
     expect(screen.getByRole("navigation")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Peso" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Sesión" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Historial" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Historial" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Informe" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Ajustes" })).toBeInTheDocument();
   });

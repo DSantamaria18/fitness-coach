@@ -642,6 +642,28 @@ nueva.
 ---
 
 - **Fecha:** 2026-07-19
+- **Decisión:** Corregido con `prettier --write` un desajuste de formato en 6 ficheros
+  (`src/app/informe/progress-comment.{tsx,test.tsx}`, `src/components/nav-bar-gate.test.tsx`,
+  `src/components/nav-bar.test.tsx`, `src/lib/progress-comment/generate-progress-comment.ts`,
+  `src/lib/session-proposal/build-initial-registros.test.ts`) que llevaba rompiendo el job
+  `test` de CI en `master` desde el commit `48b7f1c` (2026-07-18 20:15h) — es decir, durante 3
+  merges completos (PR #14, #15, y el commit directo de numeración BL-NNN) sin que se detectara.
+- **Alternativas consideradas:** ninguna — es una corrección mecánica de formato, sin lógica de
+  negocio de por medio.
+- **Justificación:** `npm run format:check` (Prettier) forma parte del job `test` de CI, pero el
+  Tech Lead venía verificando solo `npm run lint`/`npm run typecheck`/`npm test` en local antes
+  de mergear cada PR, sin comprobar el estado real de CI en GitHub tras el merge. Los ficheros
+  llegaron sin formatear probablemente en la PR #9 (`feature/informe-progreso`) y en la ronda de
+  generación asistida por IA, y nadie lo notó porque CI seguía en rojo silenciosamente.
+- **Lecciones aprendidas:** el Tech Lead debe comprobar el estado real de CI (`gh pr checks` o
+  `gh run list`) como parte del Definition of Done, no solo replicar los mismos comandos en
+  local — local y CI pueden divergir (aquí, un `git status` limpio en local no revela ficheros
+  ya mergeados que nunca pasaron `format:check`). Añadir esta verificación al checklist de
+  merge para evitar que vuelva a pasar desapercibido.
+
+---
+
+- **Fecha:** 2026-07-19
 - **Decisión:** A partir de ahora, cada entrada de BACKLOG.md lleva un código secuencial y
   permanente `BL-NNN` (p. ej. `BL-001`). El código no se reutiliza ni se renumera aunque la
   entrada cambie de sección, se mueva a CHANGELOG.md al implementarse, o se descarte. Se

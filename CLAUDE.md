@@ -154,6 +154,14 @@ Reglas adicionales de funcionamiento del equipo:
   concreto ejecutó `gh pr create`. El Tech Lead deja constancia de su review con `gh pr comment`
   y mergea directamente después (`gh pr merge`) — es el flujo esperado en este setup, no un
   error a corregir cada vez.
+- **El Tech Lead comprueba el estado real de CI en GitHub (`gh pr checks` / `gh run list`)
+  antes de dar por buena una PR, no solo replica en local `npm run lint`/`typecheck`/`test`.**
+  Local y CI pueden divergir: `npm run format:check` (Prettier) forma parte del job `test` de
+  CI, pero un `git status` limpio en local no revela que ficheros ya mergeados en `master`
+  nunca pasaron ese check. Pasó en la ronda de BL-001: CI llevaba roto en `master` desde el
+  commit `48b7f1c` (2026-07-18), durante 3 merges completos, sin que nadie lo notara porque la
+  verificación se quedaba en local. Añadir "comprobar CI en verde" al Definition of Done, como
+  paso explícito antes de mergear.
 </equipo_de_agentes>
 
 <primer_paso>

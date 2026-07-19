@@ -48,18 +48,18 @@ describe("NavBar", () => {
       "aria-current",
       "page",
     );
-    expect(
-      screen.getByRole("link", { name: "Peso" }),
-    ).not.toHaveAttribute("aria-current");
-    expect(
-      screen.getByRole("link", { name: "Sesión" }),
-    ).not.toHaveAttribute("aria-current");
-    expect(
-      screen.getByRole("link", { name: "Informe" }),
-    ).not.toHaveAttribute("aria-current");
-    expect(
-      screen.getByRole("link", { name: "Ajustes" }),
-    ).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("link", { name: "Peso" })).not.toHaveAttribute(
+      "aria-current",
+    );
+    expect(screen.getByRole("link", { name: "Sesión" })).not.toHaveAttribute(
+      "aria-current",
+    );
+    expect(screen.getByRole("link", { name: "Informe" })).not.toHaveAttribute(
+      "aria-current",
+    );
+    expect(screen.getByRole("link", { name: "Ajustes" })).not.toHaveAttribute(
+      "aria-current",
+    );
   });
 
   it("no marca ningún enlace como activo si la ruta no coincide con ninguno", () => {
@@ -67,9 +67,9 @@ describe("NavBar", () => {
     render(<NavBar />);
 
     for (const name of ["Peso", "Sesión", "Historial", "Informe", "Ajustes"]) {
-      expect(
-        screen.getByRole("link", { name }),
-      ).not.toHaveAttribute("aria-current");
+      expect(screen.getByRole("link", { name })).not.toHaveAttribute(
+        "aria-current",
+      );
     }
   });
 });
