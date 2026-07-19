@@ -162,6 +162,14 @@ Reglas adicionales de funcionamiento del equipo:
   commit `48b7f1c` (2026-07-18), durante 3 merges completos, sin que nadie lo notara porque la
   verificación se quedaba en local. Añadir "comprobar CI en verde" al Definition of Done, como
   paso explícito antes de mergear.
+- **Todo worktree nuevo necesita `npx prisma generate` antes de que `npm run typecheck` (y a
+  veces `npm run dev`) funcione.** El cliente de Prisma generado (`src/generated/prisma`) está
+  en `.gitignore`, así que un `git worktree add` no lo trae — sin este paso, `typecheck` falla
+  en cascada con `Cannot find module '@/generated/prisma/client'` en decenas de ficheros, un
+  falso positivo que parece un fallo real de la PR. Pasó de forma independiente en los 3 agentes
+  QA de la ronda BL-004/005/006/008 (cada uno lo descubrió por su cuenta). Ejecutar `npx prisma
+  generate` justo después de crear el worktree y enlazar `node_modules`, como paso estándar de
+  setup, no como algo a investigar cada vez.
 </equipo_de_agentes>
 
 <primer_paso>
