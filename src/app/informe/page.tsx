@@ -3,9 +3,12 @@ import { auth } from "@/auth";
 import { getProgressReport } from "@/lib/get-progress-report";
 import { listExercises } from "@/lib/list-exercises";
 import { getProgressComment } from "@/lib/progress-comment/get-progress-comment";
+import { DateRangeFilter } from "./date-range-filter";
 import { ExerciseSelector } from "./exercise-selector";
+import { parseDateRangeSearchParams } from "./parse-date-range";
 import { ProgressCharts, type ExerciseProgressData } from "./progress-charts";
 import { ProgressComment } from "./progress-comment";
+import { buildStreakCaption } from "./streak-caption";
 
 export const metadata: Metadata = {
   title: "Informe de progreso — Fitness Coach",
@@ -38,7 +41,7 @@ export default async function InformePage({
 }: {
   // Next 16 App Router: searchParams es una Promise (ver DECISIONS.md/
   // convenciones ya usadas en el resto de la app).
-  searchParams: Promise<{ ejercicio?: string }>;
+  searchParams: Promise<{ ejercicio?: string; desde?: string; hasta?: string }>;
 }) {
   // Server Component: llama a la capa de dominio directamente (sin pasar
   // por HTTP), mismo patrón que /historial. src/proxy.ts ya exige sesión
@@ -50,22 +53,37 @@ export default async function InformePage({
     return null;
   }
 
-  const { ejercicio } = await searchParams;
+  const { ejercicio, desde: desdeRaw, hasta: hastaRaw } = await searchParams;
+  // Los límites de fecha crudos de la URL (formato de <input type="date">)
+  // se validan y convierten aquí, antes de llegar a getProgressReport (que
+  // espera ISO datetime completo) — nunca se pasa el string sin parsear
+  // (CLAUDE.md regla 7).
+  const dateRange = parseDateRangeSearchParams({
+    desde: desdeRaw,
+    hasta: hastaRaw,
+  });
+
+  const filters = {
+    ...(ejercicio ? { ejercicio } : {}),
+    ...dateRange.filters,
+  };
+  const hasFilters = Object.keys(filters).length > 0;
 
   const [reportResult, exercises, progressComment] = await Promise.all([
-    getProgressReport(userId, ejercicio ? { ejercicio } : {}),
+    getProgressReport(userId, filters),
     listExercises(),
     getProgressComment(userId),
   ]);
 
-  // Un `ejercicio` en el query param que ya no existe en el catálogo
-  // (p.ej. borrado tras compartir/guardar el enlace) no debe romper la
-  // página: se ignora el filtro y se muestra el informe general en su
-  // lugar, en vez de propagar el error al usuario.
-  const report =
-    reportResult.success || !ejercicio
-      ? reportResult
-      : await getProgressReport(userId, {});
+  // Un filtro inválido a nivel de dominio (ejercicio que ya no existe en el
+  // catálogo, o un rango desde/hasta invertido colado por una URL editada a
+  // mano — el formato ya se validó arriba) no debe romper la página: se
+  // ignoran todos los filtros y se muestra el informe general, en vez de
+  // propagar el error al usuario.
+  const usedFallback = !reportResult.success && hasFilters;
+  const report = usedFallback
+    ? await getProgressReport(userId, {})
+    : reportResult;
 
   if (!report.success) {
     return (
@@ -133,9 +151,14 @@ export default async function InformePage({
             frequency.currentStreakWeeks === 1 ? "semana" : "semanas"
           }`}
           // La racha se calcula siempre respecto a la semana ISO real de
-          // hoy (ver DECISIONS.md/BACKLOG.md): esta nota evita que
-          // parezca un error si algún día no cuadra con lo esperado.
-          caption="Semanas consecutivas con al menos una sesión, contando hacia atrás desde hoy."
+          // hoy, ignorando el filtro `hasta` (ver DECISIONS.md/BACKLOG.md):
+          // con el filtro de rango de fechas ya disponible (BL-005), el
+          // caption lo explicita cuando `hasta` está realmente aplicado,
+          // para que un rango en el pasado no parezca un error al mostrar
+          // racha 0.
+          caption={buildStreakCaption(
+            !usedFallback && Boolean(dateRange.filters.hasta),
+          )}
         />
       </section>
 
@@ -145,10 +168,19 @@ export default async function InformePage({
           name: exercise.name,
           type: exercise.type,
         }))}
-        // Si el filtro se ignoró (ejercicio inexistente en catálogo), el
-        // selector vuelve a mostrar "Todos" en vez del valor obsoleto de
-        // la URL.
+        // Si el filtro se ignoró (ejercicio inexistente en catálogo, o el
+        // fallback se disparó por otro filtro inválido), el selector vuelve
+        // a mostrar "Todos" en vez del valor obsoleto de la URL.
         selected={data.exercise?.exercise ?? ""}
+      />
+
+      <DateRangeFilter
+        // Mismo criterio que ExerciseSelector: si el fallback se disparó
+        // (p.ej. un rango desde/hasta invertido), los inputs vuelven a
+        // mostrarse vacíos en vez del valor obsoleto de la URL — el informe
+        // ya se está mostrando sin ese filtro.
+        desde={usedFallback ? "" : dateRange.raw.desde}
+        hasta={usedFallback ? "" : dateRange.raw.hasta}
       />
 
       <ProgressComment

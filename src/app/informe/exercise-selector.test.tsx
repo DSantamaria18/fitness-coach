@@ -1,14 +1,16 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ExerciseSelector } from "./exercise-selector";
 
 vi.mock("next/navigation", () => ({
   useRouter: vi.fn(),
+  useSearchParams: vi.fn(),
 }));
 
 const mockedUseRouter = vi.mocked(useRouter);
+const mockedUseSearchParams = vi.mocked(useSearchParams);
 const pushMock = vi.fn();
 
 const exercises = [
@@ -23,6 +25,9 @@ describe("ExerciseSelector", () => {
     mockedUseRouter.mockReturnValue({
       push: pushMock,
     } as unknown as ReturnType<typeof useRouter>);
+    mockedUseSearchParams.mockReturnValue(
+      new URLSearchParams() as unknown as ReturnType<typeof useSearchParams>,
+    );
   });
 
   it("renderiza la opción 'Todos' y las opciones del catálogo agrupadas por tipo", () => {
@@ -82,8 +87,29 @@ describe("ExerciseSelector", () => {
       "Press banca & remo",
     );
 
+    // Vía buildFilterUrl/URLSearchParams (BL-005): codifica igual que
+    // encodeURIComponent salvo los espacios, como "+" en vez de "%20" —
+    // ambas formas son válidas y equivalentes en una query string.
     expect(pushMock).toHaveBeenCalledWith(
-      `/informe?ejercicio=${encodeURIComponent("Press banca & remo")}`,
+      "/informe?ejercicio=Press+banca+%26+remo",
     );
+  });
+
+  it("preserva otros parámetros de la URL (p.ej. el rango de fechas) al cambiar de ejercicio", async () => {
+    mockedUseSearchParams.mockReturnValue(
+      new URLSearchParams(
+        "desde=2026-06-01&hasta=2026-06-30",
+      ) as unknown as ReturnType<typeof useSearchParams>,
+    );
+    const user = userEvent.setup();
+    render(<ExerciseSelector exercises={exercises} selected="" />);
+
+    await user.selectOptions(screen.getByRole("combobox"), "Sentadilla");
+
+    const lastUrl = pushMock.mock.calls.at(-1)?.[0] as string;
+    const params = new URLSearchParams(lastUrl.split("?")[1]);
+    expect(params.get("ejercicio")).toBe("Sentadilla");
+    expect(params.get("desde")).toBe("2026-06-01");
+    expect(params.get("hasta")).toBe("2026-06-30");
   });
 });
