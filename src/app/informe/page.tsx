@@ -3,12 +3,51 @@ import { auth } from "@/auth";
 import { getProgressReport } from "@/lib/get-progress-report";
 import { listExercises } from "@/lib/list-exercises";
 import { getProgressComment } from "@/lib/progress-comment/get-progress-comment";
+import { alignComparisonSeries } from "./align-comparison-series";
+import { ComparisonPeriodSelector } from "./comparison-period-selector";
+import {
+  computeComparisonPeriods,
+  parseComparisonPreset,
+  type ComparisonPeriods,
+} from "./comparison-periods";
 import { DateRangeFilter } from "./date-range-filter";
 import { ExerciseSelector } from "./exercise-selector";
 import { parseDateRangeSearchParams } from "./parse-date-range";
-import { ProgressCharts, type ExerciseProgressData } from "./progress-charts";
+import {
+  ProgressCharts,
+  type ComparisonChartsData,
+  type ExerciseProgressData,
+} from "./progress-charts";
 import { ProgressComment } from "./progress-comment";
 import { buildStreakCaption } from "./streak-caption";
+
+// Reduce la duplicación de "serializar puntos a MetricPoint + fusionar por
+// día relativo" a una sola línea por métrica (BL-006): todos los puntos de
+// getProgressReport comparten forma `{ date: Date, ... }`, solo cambia qué
+// campo se usa como `value`.
+function buildMetricComparison<T extends { date: Date }>(
+  actualPoints: T[],
+  anteriorPoints: T[],
+  periods: ComparisonPeriods,
+  valueOf: (point: T) => number | null,
+) {
+  const toMetricPoints = (points: T[]) =>
+    points.map((point) => ({
+      date: point.date.toISOString(),
+      value: valueOf(point),
+    }));
+
+  return alignComparisonSeries({
+    actual: {
+      points: toMetricPoints(actualPoints),
+      periodStart: periods.actual.desde,
+    },
+    anterior: {
+      points: toMetricPoints(anteriorPoints),
+      periodStart: periods.anterior.desde,
+    },
+  });
+}
 
 export const metadata: Metadata = {
   title: "Informe de progreso — Fitness Coach",
@@ -41,7 +80,12 @@ export default async function InformePage({
 }: {
   // Next 16 App Router: searchParams es una Promise (ver DECISIONS.md/
   // convenciones ya usadas en el resto de la app).
-  searchParams: Promise<{ ejercicio?: string; desde?: string; hasta?: string }>;
+  searchParams: Promise<{
+    ejercicio?: string;
+    desde?: string;
+    hasta?: string;
+    comparar?: string;
+  }>;
 }) {
   // Server Component: llama a la capa de dominio directamente (sin pasar
   // por HTTP), mismo patrón que /historial. src/proxy.ts ya exige sesión
@@ -53,7 +97,12 @@ export default async function InformePage({
     return null;
   }
 
-  const { ejercicio, desde: desdeRaw, hasta: hastaRaw } = await searchParams;
+  const {
+    ejercicio,
+    desde: desdeRaw,
+    hasta: hastaRaw,
+    comparar: compararRaw,
+  } = await searchParams;
   // Los límites de fecha crudos de la URL (formato de <input type="date">)
   // se validan y convierten aquí, antes de llegar a getProgressReport (que
   // espera ISO datetime completo) — nunca se pasa el string sin parsear
@@ -62,10 +111,20 @@ export default async function InformePage({
     desde: desdeRaw,
     hasta: hastaRaw,
   });
+  const comparisonPreset = parseComparisonPreset(compararRaw);
+
+  // La comparación de periodos (BL-006) y el rango manual (BL-005) son
+  // mutuamente excluyentes (decisión de producto): si `comparar` es válido,
+  // se ignora cualquier desde/hasta que hubiera quedado en la URL en vez de
+  // combinarlos con un resultado ambiguo de cuál manda. La UI ya evita que
+  // ambos coexistan (ComparisonPeriodSelector/DateRangeFilter se borran
+  // mutuamente al cambiar), esto es la defensa server-side para una URL
+  // editada a mano.
+  const effectiveDateFilters = comparisonPreset ? {} : dateRange.filters;
 
   const filters = {
     ...(ejercicio ? { ejercicio } : {}),
-    ...dateRange.filters,
+    ...effectiveDateFilters,
   };
   const hasFilters = Object.keys(filters).length > 0;
 
@@ -132,6 +191,104 @@ export default async function InformePage({
 
   const { frequency } = data;
 
+  // BL-006: la comparación se calcula con dos llamadas extra a
+  // getProgressReport (periodo actual y anterior), usando el ejercicio ya
+  // resuelto por el informe general (`data.exercise`, tras cualquier
+  // fallback) en vez del `ejercicio` crudo de la URL — así nunca puede dar
+  // NOT_FOUND aquí, ese caso ya se resolvió arriba. Si por cualquier otro
+  // motivo alguna de las dos llamadas falla, se ignora la comparación en
+  // vez de romper la página: el usuario sigue viendo el informe general
+  // (mismo criterio de "degradar sin romper" que el resto de filtros).
+  let comparison: ComparisonChartsData | undefined;
+  if (comparisonPreset) {
+    const periods = computeComparisonPeriods(comparisonPreset, new Date());
+    const comparisonExercise = data.exercise?.exercise;
+    const comparisonFilters = comparisonExercise
+      ? { ejercicio: comparisonExercise }
+      : {};
+
+    const [actualResult, anteriorResult] = await Promise.all([
+      getProgressReport(userId, { ...comparisonFilters, ...periods.actual }),
+      getProgressReport(userId, {
+        ...comparisonFilters,
+        ...periods.anterior,
+      }),
+    ]);
+
+    if (actualResult.success && anteriorResult.success) {
+      const labels =
+        comparisonPreset === "mes"
+          ? { actual: "Este mes", anterior: "Mes anterior" }
+          : { actual: "Este año", anterior: "Año anterior" };
+      const actualExercise = actualResult.data.exercise;
+      const anteriorExercise = anteriorResult.data.exercise;
+
+      if (
+        data.exercise?.type === "STRENGTH" &&
+        actualExercise?.type === "STRENGTH" &&
+        anteriorExercise?.type === "STRENGTH"
+      ) {
+        comparison = {
+          labels,
+          exercise: {
+            type: "STRENGTH",
+            maxWeightKg: buildMetricComparison(
+              actualExercise.points,
+              anteriorExercise.points,
+              periods,
+              (point) => point.maxWeightKg,
+            ),
+            totalVolumeKg: buildMetricComparison(
+              actualExercise.points,
+              anteriorExercise.points,
+              periods,
+              (point) => point.totalVolumeKg,
+            ),
+          },
+        };
+      } else if (
+        data.exercise?.type === "CARDIO" &&
+        actualExercise?.type === "CARDIO" &&
+        anteriorExercise?.type === "CARDIO"
+      ) {
+        comparison = {
+          labels,
+          exercise: {
+            type: "CARDIO",
+            distanceKm: buildMetricComparison(
+              actualExercise.points,
+              anteriorExercise.points,
+              periods,
+              (point) => point.distanceKm,
+            ),
+            durationSeconds: buildMetricComparison(
+              actualExercise.points,
+              anteriorExercise.points,
+              periods,
+              (point) => point.durationSeconds,
+            ),
+            avgPaceSecPerKm: buildMetricComparison(
+              actualExercise.points,
+              anteriorExercise.points,
+              periods,
+              (point) => point.avgPaceSecPerKm,
+            ),
+          },
+        };
+      } else if (!data.exercise) {
+        comparison = {
+          labels,
+          bodyWeight: buildMetricComparison(
+            actualResult.data.bodyWeight,
+            anteriorResult.data.bodyWeight,
+            periods,
+            (point) => point.weightKg,
+          ),
+        };
+      }
+    }
+  }
+
   return (
     <main className="flex flex-1 flex-col gap-8 p-6">
       <h1 className="text-xl font-semibold">Informe de progreso</h1>
@@ -157,7 +314,7 @@ export default async function InformePage({
           // para que un rango en el pasado no parezca un error al mostrar
           // racha 0.
           caption={buildStreakCaption(
-            !usedFallback && Boolean(dateRange.filters.hasta),
+            !usedFallback && Boolean(effectiveDateFilters.hasta),
           )}
         />
       </section>
@@ -175,13 +332,15 @@ export default async function InformePage({
       />
 
       <DateRangeFilter
-        // Mismo criterio que ExerciseSelector: si el fallback se disparó
-        // (p.ej. un rango desde/hasta invertido), los inputs vuelven a
-        // mostrarse vacíos en vez del valor obsoleto de la URL — el informe
-        // ya se está mostrando sin ese filtro.
-        desde={usedFallback ? "" : dateRange.raw.desde}
-        hasta={usedFallback ? "" : dateRange.raw.hasta}
+        // Mismo criterio que ExerciseSelector: si el fallback se disparó, o
+        // si la comparación de periodos está activa (mutuamente excluyente
+        // con el rango manual, BL-006), los inputs vuelven a mostrarse
+        // vacíos en vez del valor obsoleto de la URL.
+        desde={usedFallback || comparisonPreset ? "" : dateRange.raw.desde}
+        hasta={usedFallback || comparisonPreset ? "" : dateRange.raw.hasta}
       />
+
+      <ComparisonPeriodSelector selected={comparisonPreset ?? ""} />
 
       <ProgressComment
         initial={
@@ -194,7 +353,11 @@ export default async function InformePage({
         }
       />
 
-      <ProgressCharts bodyWeight={bodyWeight} exercise={exerciseProgress} />
+      <ProgressCharts
+        bodyWeight={bodyWeight}
+        exercise={exerciseProgress}
+        comparison={comparison}
+      />
     </main>
   );
 }

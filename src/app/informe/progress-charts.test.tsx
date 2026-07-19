@@ -162,4 +162,106 @@ describe("ProgressCharts", () => {
       ).toBeInTheDocument();
     });
   });
+
+  describe("comparación de periodos (BL-006)", () => {
+    it("con `comparison.bodyWeight`, sustituye el gráfico simple de peso por el comparativo con las dos series", () => {
+      render(
+        <ProgressCharts
+          bodyWeight={[{ date: "2026-07-01T00:00:00.000Z", weightKg: 80 }]}
+          comparison={{
+            labels: { actual: "Este mes", anterior: "Mes anterior" },
+            bodyWeight: [
+              { diaRelativo: 1, actual: 80, anterior: 79 },
+              { diaRelativo: 2, actual: null, anterior: 78.5 },
+            ],
+          }}
+        />,
+      );
+
+      expect(screen.getByText("Este mes")).toBeInTheDocument();
+      expect(screen.getByText("Mes anterior")).toBeInTheDocument();
+    });
+
+    it("muestra un aviso de sin datos cuando ningún periodo tiene valores de peso", () => {
+      render(
+        <ProgressCharts
+          bodyWeight={[]}
+          comparison={{
+            labels: { actual: "Este mes", anterior: "Mes anterior" },
+            bodyWeight: [{ diaRelativo: 1, actual: null, anterior: null }],
+          }}
+        />,
+      );
+
+      expect(
+        screen.getByText(/sin datos de peso corporal registrados/i),
+      ).toBeInTheDocument();
+    });
+
+    it("con `comparison.exercise` de fuerza, sustituye las dos series de fuerza por sus comparativos", () => {
+      render(
+        <ProgressCharts
+          bodyWeight={[]}
+          exercise={{
+            exercise: "Sentadilla",
+            type: "STRENGTH",
+            points: [
+              {
+                sessionId: "s1",
+                date: "2026-07-01T00:00:00.000Z",
+                maxWeightKg: 80,
+                totalVolumeKg: 2400,
+              },
+            ],
+          }}
+          comparison={{
+            labels: { actual: "Este año", anterior: "Año anterior" },
+            exercise: {
+              type: "STRENGTH",
+              maxWeightKg: [{ diaRelativo: 1, actual: 80, anterior: 77.5 }],
+              totalVolumeKg: [{ diaRelativo: 1, actual: 2400, anterior: 2300 }],
+            },
+          }}
+        />,
+      );
+
+      expect(screen.getAllByText("Este año")).toHaveLength(2);
+      expect(screen.getAllByText("Año anterior")).toHaveLength(2);
+    });
+
+    it("con `comparison.exercise` de cardio, sustituye las tres series de cardio por sus comparativos", () => {
+      render(
+        <ProgressCharts
+          bodyWeight={[]}
+          exercise={{
+            exercise: "Carrera",
+            type: "CARDIO",
+            points: [
+              {
+                sessionId: "s1",
+                date: "2026-07-01T00:00:00.000Z",
+                distanceKm: 5,
+                durationSeconds: 1800,
+                avgPaceSecPerKm: 300,
+              },
+            ],
+          }}
+          comparison={{
+            labels: { actual: "Este mes", anterior: "Mes anterior" },
+            exercise: {
+              type: "CARDIO",
+              distanceKm: [{ diaRelativo: 1, actual: 5, anterior: 4.5 }],
+              durationSeconds: [
+                { diaRelativo: 1, actual: 1800, anterior: 1700 },
+              ],
+              avgPaceSecPerKm: [{ diaRelativo: 1, actual: 300, anterior: 310 }],
+            },
+          }}
+        />,
+      );
+
+      expect(screen.getAllByText("Este mes")).toHaveLength(3);
+      expect(screen.getAllByText("Mes anterior")).toHaveLength(3);
+    });
+  });
 });
