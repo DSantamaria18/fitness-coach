@@ -134,6 +134,26 @@ Reglas adicionales de funcionamiento del equipo:
   completarse dentro de la misma ronda. Pasó en la ronda de generación asistida por IA: la falta
   de `ANTHROPIC_API_KEY` se descubrió ya en la QA de la primera PR, dejando el camino de éxito
   sin verificar y la ronda con un cierre pendiente en vez de completo.
+- **Cualquier código que cruce la frontera Server Action ↔ Client Component (o, en general,
+  cualquier límite de React Server Components) exige verificación en navegador real antes de
+  darse por probado — tests en verde y code review no son suficientes.** Vitest/jsdom no
+  interpreta la directiva `"use client"` en absoluto (solo lo hace el bundler de RSC de
+  Next.js), así que una Server Action puede importar y llamar sin error aparente en tests a una
+  función "de cliente" que crashea siempre en `next dev`/`next start` reales. Pasó en la ronda
+  de generación asistida por IA: `buildInitialRegistros` (exportada por un módulo `"use
+  client"`) se llamaba desde una Server Action, y esto pasó 253 tests unitarios y un code review
+  limpio sin que nadie lo detectara — solo lo encontró la verificación manual en navegador real,
+  que ya crasheaba con un Runtime Error 500 determinista en el 100% de los casos de éxito. La
+  regla general de "verificación en navegador real para cambios de UI/flujo" ya cubría esto,
+  pero aquí no era "deseable", era la única forma posible de detectarlo — no asumir que "tests +
+  review" basta cuando hay código a ambos lados de esa frontera.
+- **El review/aprobación de PR del Tech Lead se registra como `gh pr comment`, nunca con `gh pr
+  review --approve`.** `gh pr review --approve` falla siempre con "Can not approve your own pull
+  request" en este proyecto, porque todos los agentes (Developers, QA, Tech Lead) comparten la
+  misma identidad autenticada de `gh` (la cuenta de GitHub de David), sin importar qué sub-agente
+  concreto ejecutó `gh pr create`. El Tech Lead deja constancia de su review con `gh pr comment`
+  y mergea directamente después (`gh pr merge`) — es el flujo esperado en este setup, no un
+  error a corregir cada vez.
 </equipo_de_agentes>
 
 <primer_paso>
