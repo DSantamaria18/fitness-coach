@@ -12,6 +12,19 @@ dificultad estimada (baja/media/alta). Cuando algo se implementa, se mueve de aq
   navegador real como lo usará David desde el móvil. Dificultad: baja-media (configuración
   estándar, pero exige mantener los tests al día con la UI).
 
+- **Regla de lint (o script de CI) que impida importar un export de función desde un módulo
+  `"use client"` en un módulo `"use server"`.** Justificación: el bug de
+  `buildInitialRegistros` (Runtime Error 500 determinista en éxito de "Generar propuesta con
+  IA", ver DECISIONS.md 2026-07-19) no lo detectó `npm test` — se verificó empíricamente que
+  Vitest/jsdom no interpreta la directiva `"use client"` (solo lo hace el bundler de RSC de
+  Next.js), así que una Server Action puede importar y llamar sin error aparente en tests a una
+  función "de cliente" que sí crashea siempre en `next dev`/`next start` reales. Solo la
+  verificación manual en navegador real lo encontró. Alguna combinación de
+  `eslint-plugin-react-server-components` (o una regla `no-restricted-imports` ad-hoc por
+  directorio) daría una señal en el propio editor/CI antes de llegar a QA. Dificultad: media
+  (investigar si existe una regla de ESLint madura para esto en el ecosistema Next.js 16 actual,
+  o escribir una regla custom sencilla basada en detectar la directiva del fichero importado).
+
 - **Automatizar el backup manual actual** (subida periódica a almacenamiento externo, p.ej.
   Google Drive o Backblaze B2, en vez de depender de que David pulse "Descargar backup").
   Justificación: hoy el aviso de 30 días en `/ajustes` es la única red de seguridad (ver

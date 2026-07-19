@@ -139,3 +139,13 @@ Proyecto sin versión publicada todavía.
   `ANTHROPIC_API_KEY` el flujo completo (exploración + turno final) tardó entre ~14s y ~31s,
   haciendo fallar por timeout 3 de 5 pruebas (60%). Subido a 60s (ver DECISIONS.md
   2026-07-19).
+- `generateSessionProposalAction` (`/sesion`) crasheaba con un Runtime Error 500 siempre que
+  la generación con IA tenía éxito: "Attempted to call buildInitialRegistros() from the server
+  but buildInitialRegistros is on the client". `actions.ts` (Server Action, `"use server"`)
+  llamaba a `buildInitialRegistros`, exportada por `session-entries-editor.tsx`
+  (`"use client"`) — RSC prohíbe invocar desde el servidor una función de un módulo cliente.
+  Bug determinista desde la PR de "propuesta de sesión con IA", solo visible verificando en
+  navegador real (Playwright), no en `npm test`. Corregido moviendo `buildInitialRegistros` (y
+  sus tipos/helpers) a un módulo nuevo sin directiva, `src/lib/session-proposal/
+  build-initial-registros.ts`, importable desde cliente y servidor por igual (ver DECISIONS.md
+  2026-07-19).

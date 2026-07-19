@@ -4,12 +4,14 @@ import { useActionState, useState } from "react";
 import { deleteSessionEntry, updateSessionEntry } from "./actions";
 import {
   SessionEntriesEditor,
-  buildInitialRegistros,
   CARDIO_FIELDS,
   type ExerciseOption,
+} from "@/components/session-entries-editor";
+import {
+  buildInitialRegistros,
   type RegistroState,
   type SessionEntryInitialData,
-} from "@/components/session-entries-editor";
+} from "@/lib/session-proposal/build-initial-registros";
 
 // Mismo DTO que SessionEntryInitialData (los campos que consume el editor
 // compartido): el Server Component padre serializa get-session-history.ts a
