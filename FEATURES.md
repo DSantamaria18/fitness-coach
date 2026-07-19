@@ -110,9 +110,14 @@ cambio relevante.
   (`/sesion`) y el de edición (`/historial`). Recibe `registros`/`onRegistrosChange` como prop
   controlado por el componente padre (no como estado interno), para que tanto `SessionForm`
   como el formulario de edición de `/historial` puedan conocer el número de ejercicios añadidos
-  y habilitar/deshabilitar su propio botón de guardar sin duplicar esa lógica tampoco. También
-  expone `buildInitialRegistros` para convertir una sesión ya guardada (formato de
-  `get-session-history.ts`) al estado de edición, usado solo por el formulario de edición.
+  y habilitar/deshabilitar su propio botón de guardar sin duplicar esa lógica tampoco.
+- `src/lib/session-proposal/build-initial-registros.ts` — conversor puro (`buildInitialRegistros`,
+  sin JSX ni hooks) de ejercicios ya guardados (formato de `get-session-history.ts`) o
+  propuestos por la IA (`ValidatedSession.ejercicios`, estructuralmente compatible) al estado
+  local de `SessionEntriesEditor`. Vive fuera de `session-entries-editor.tsx` (que sí es
+  `"use client"`) porque también lo invoca la Server Action `generateSessionProposalAction`
+  (ver "Propuesta de sesión con IA" más abajo) — RSC prohíbe llamar desde el servidor a una
+  función exportada por un módulo cliente, ver DECISIONS.md 2026-07-19.
 
 ## Backup manual
 
@@ -184,9 +189,11 @@ cambio relevante.
 
 - Botón "Generar propuesta con IA" en `/sesion`, junto al formulario manual (nunca lo
   sustituye — SPEC §4 caso de uso 7): invoca `generateSessionProposal(userId)` vía Server
-  Action y, en éxito, precarga `SessionEntriesEditor` (fecha + ejercicios) con el resultado —
-  sigue siendo editable antes de guardar, y el guardado real sigue pasando por el flujo de
-  creación de sesión ya existente sin cambios.
+  Action (`generateSessionProposalAction` en `app/sesion/actions.ts`) y, en éxito, precarga
+  `SessionEntriesEditor` (fecha + ejercicios, convertidos con `buildInitialRegistros` — ver
+  "Componente compartido de edición de sesión" más arriba) con el resultado — sigue siendo
+  editable antes de guardar, y el guardado real sigue pasando por el flujo de creación de
+  sesión ya existente sin cambios.
 - `src/lib/session-proposal/read-skill.ts` — lee `skills/sesion-entrenamiento/SKILL.md` del
   filesystem del servidor y separa el frontmatter YAML del cuerpo Markdown; solo el cuerpo se
   usa como `system` prompt. Es el único punto del código que toca ese fichero (contiene datos

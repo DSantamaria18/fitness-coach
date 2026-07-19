@@ -5,8 +5,8 @@ import { registerSession, generateSessionProposalAction } from "./actions";
 import {
   SessionEntriesEditor,
   type ExerciseOption,
-  type RegistroState,
 } from "@/components/session-entries-editor";
+import type { RegistroState } from "@/lib/session-proposal/build-initial-registros";
 
 export function SessionForm({ exercises }: { exercises: ExerciseOption[] }) {
   const [state, formAction, isPending] = useActionState(

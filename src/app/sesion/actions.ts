@@ -6,7 +6,7 @@ import { generateSessionProposal } from "@/lib/session-proposal/generate-session
 import {
   buildInitialRegistros,
   type RegistroState,
-} from "@/components/session-entries-editor";
+} from "@/lib/session-proposal/build-initial-registros";
 
 export type RegisterSessionState =
   { error: string } | { success: true } | undefined;

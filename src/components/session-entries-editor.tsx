@@ -1,79 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import {
+  nextRegistroKey,
+  type CardioMetricKey,
+  type RegistroState,
+} from "@/lib/session-proposal/build-initial-registros";
 
 // Componente compartido entre /sesion (crear) y /historial (editar): antes
 // vivía duplicado dentro de session-form.tsx. Se extrajo aquí (en vez de a
 // src/lib) porque es UI de cliente con estado propio de edición (añadir
 // ejercicio/serie), no lógica de dominio — ver ARCHITECTURE.md/DECISIONS.md.
+// Los tipos de datos y el conversor buildInitialRegistros sí viven en
+// src/lib/session-proposal/build-initial-registros.ts: son lógica pura sin
+// JSX/hooks que también necesita invocar una Server Action (actions.ts), y
+// RSC prohíbe llamar desde el servidor a una función exportada por un
+// módulo "use client" — ver DECISIONS.md 2026-07-19.
 
 export type ExerciseType = "STRENGTH" | "CARDIO";
 export type ExerciseOption = { id: string; name: string; type: ExerciseType };
-
-type SerieState = { reps: string; peso_kg: string; tempo: string; RPE: string };
-
-export type CardioMetricKey =
-  | "duracion"
-  | "distancia_km"
-  | "velocidad_media"
-  | "ritmo_medio"
-  | "frecuencia_cardiaca_media"
-  | "frecuencia_cardiaca_maxima"
-  | "pasos"
-  | "frecuencia_paso"
-  | "kcal"
-  | "RPE";
-
-type FuerzaRegistroState = {
-  key: string;
-  tipo: "fuerza";
-  ejercicio: string;
-  series: SerieState[];
-  notas: string;
-};
-
-type CardioRegistroState = {
-  key: string;
-  tipo: "cardio";
-  ejercicio: string;
-  notas: string;
-} & Record<CardioMetricKey, string>;
-
-export type RegistroState = FuerzaRegistroState | CardioRegistroState;
-
-// Forma de "ejercicio ya registrado" que le pasa el Server Component padre
-// al abrir el formulario de edición: mismos campos (en español) que
-// devuelve get-session-history.ts/consume validate-session.ts, para no
-// inventar un DTO paralelo. A diferencia de ValidatedRegistroEjercicio (Zod,
-// campos opcionales como `T | undefined`), aquí los numéricos llegan como
-// `T | null` porque salen directamente de Prisma.
-export type SessionEntryInitialData =
-  | {
-      tipo: "fuerza";
-      ejercicio: string;
-      notas?: string | null;
-      series: {
-        reps: number;
-        peso_kg: number;
-        tempo?: string | null;
-        RPE?: number | null;
-      }[];
-    }
-  | {
-      tipo: "cardio";
-      ejercicio: string;
-      notas?: string | null;
-      duracion?: number | null;
-      distancia_km?: number | null;
-      velocidad_media?: number | null;
-      ritmo_medio?: number | null;
-      frecuencia_cardiaca_media?: number | null;
-      frecuencia_cardiaca_maxima?: number | null;
-      pasos?: number | null;
-      frecuencia_paso?: number | null;
-      kcal?: number | null;
-      RPE?: number | null;
-    };
 
 export const CARDIO_FIELDS: { field: CardioMetricKey; label: string }[] = [
   { field: "duracion", label: "Duración (s)" },
@@ -87,6 +32,11 @@ export const CARDIO_FIELDS: { field: CardioMetricKey; label: string }[] = [
   { field: "kcal", label: "Kcal" },
   { field: "RPE", label: "RPE" },
 ];
+
+// Derivado de RegistroState (no redefinido a mano) para no desincronizarse
+// de la forma de una serie de fuerza si esa unión cambia — RegistroState
+// vive ahora en build-initial-registros.ts, ver comentario de imports.
+type SerieState = Extract<RegistroState, { tipo: "fuerza" }>["series"][number];
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -119,64 +69,6 @@ function toNumber(value: string): number | undefined {
 
 function toOptionalText(value: string): string | undefined {
   return value.trim() === "" ? undefined : value;
-}
-
-function toInputString(value: number | null | undefined): string {
-  return value != null ? String(value) : "";
-}
-
-// Contador simple para claves de React estables entre añadir/quitar bloques;
-// no necesita ser criptográfico, solo único dentro del ciclo de vida de la
-// pestaña (se comparte entre todas las instancias del componente, igual que
-// antes en session-form.tsx).
-let registroSequence = 0;
-function nextRegistroKey() {
-  registroSequence += 1;
-  return `registro-${registroSequence}`;
-}
-
-// Convierte los ejercicios ya guardados de una sesión (tal como los expone
-// get-session-history.ts) al estado local (todo strings) que edita este
-// componente. Usado por el formulario de edición de /historial para
-// preellenar; /sesion (crear) simplemente no pasa valores iniciales.
-export function buildInitialRegistros(
-  entries: SessionEntryInitialData[],
-): RegistroState[] {
-  return entries.map((entry) => {
-    if (entry.tipo === "fuerza") {
-      return {
-        key: nextRegistroKey(),
-        tipo: "fuerza",
-        ejercicio: entry.ejercicio,
-        notas: entry.notas ?? "",
-        series: entry.series.map((serie) => ({
-          reps: String(serie.reps),
-          peso_kg: String(serie.peso_kg),
-          tempo: serie.tempo ?? "",
-          RPE: toInputString(serie.RPE),
-        })),
-      };
-    }
-
-    return {
-      key: nextRegistroKey(),
-      tipo: "cardio",
-      ejercicio: entry.ejercicio,
-      notas: entry.notas ?? "",
-      duracion: toInputString(entry.duracion),
-      distancia_km: toInputString(entry.distancia_km),
-      velocidad_media: toInputString(entry.velocidad_media),
-      ritmo_medio: toInputString(entry.ritmo_medio),
-      frecuencia_cardiaca_media: toInputString(entry.frecuencia_cardiaca_media),
-      frecuencia_cardiaca_maxima: toInputString(
-        entry.frecuencia_cardiaca_maxima,
-      ),
-      pasos: toInputString(entry.pasos),
-      frecuencia_paso: toInputString(entry.frecuencia_paso),
-      kcal: toInputString(entry.kcal),
-      RPE: toInputString(entry.RPE),
-    };
-  });
 }
 
 // Convierte el estado local (todo strings, cómodo para <input>) al mismo

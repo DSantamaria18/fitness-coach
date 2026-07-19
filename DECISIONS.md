@@ -520,4 +520,57 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-19
+- **Decisión:** Mueve `buildInitialRegistros` (y los tipos `RegistroState`,
+  `SessionEntryInitialData`, `CardioMetricKey`, y el generador de claves `nextRegistroKey`)
+  de `src/components/session-entries-editor.tsx` a un módulo nuevo sin directiva `"use client"`,
+  `src/lib/session-proposal/build-initial-registros.ts`.
+- **Contexto/bug:** QA encontró, verificando en navegador real, que "Generar propuesta con IA"
+  (`/sesion`) crasheaba con un Runtime Error 500 siempre que la IA tenía éxito: "Attempted to
+  call buildInitialRegistros() from the server but buildInitialRegistros is on the client".
+  `src/app/sesion/actions.ts` (Server Action, `"use server"`) importaba y llamaba directamente
+  a `buildInitialRegistros`, exportada por `session-entries-editor.tsx` (`"use client"`). El
+  bundler de RSC sustituye las exportaciones de un módulo cliente por una referencia opaca al
+  importarlas desde el servidor; invocarla como función lanza esa excepción de forma
+  determinista, no intermitente — es una restricción arquitectónica de RSC, no un fallo de
+  timing. El bug ya estaba en `master` desde la PR de "propuesta de sesión con IA" (antes del
+  fix de timeout de más arriba), sin detectarse porque ningún test lo ejercitaba: `actions.ts`
+  no tenía test propio (`generateSessionProposalAction` solo se probaba indirectamente vía
+  `session-form.test.tsx`, que mockea `./actions` por completo).
+- **Alternativas consideradas:** envolver la llamada en un `try/catch` dentro de la Server
+  Action y hacer la conversión "a mano" solo para ese caso — descartada por reintroducir la
+  duplicación que `buildInitialRegistros` existía precisamente para evitar (la usa también
+  `/historial` para prefiltrar el formulario de edición). Mantener `buildInitialRegistros`
+  dentro de `session-entries-editor.tsx` y hacer que `actions.ts` llame a un endpoint HTTP
+  interno en su lugar — descartada por añadir un round-trip innecesario a una función pura.
+- **Justificación:** `buildInitialRegistros` es lógica de conversión pura (sin JSX ni hooks:
+  `ValidatedSession.ejercicios`/`SessionEntryInitialData` → `RegistroState[]`), así que no
+  necesita vivir en un módulo cliente — moverla a `src/lib/` (junto al resto de la capa de
+  dominio de `session-proposal/`) la hace importable tanto desde Server Actions/Server
+  Components como desde Client Components, sin restricción de RSC en ningún sentido.
+  `nextRegistroKey` se movió también porque `buildInitialRegistros` depende de ella para las
+  claves de React; cada lado del límite servidor/cliente tiene su propia instancia del módulo
+  (procesos/bundles distintos), así que el contador no se comparte entre servidor y cliente,
+  solo dentro de cada uno — igual que antes.
+- **Lecciones aprendidas:**
+  - Ninguna prueba con Vitest (ni siquiera importando el módulo cliente real sin mocks) habría
+    detectado este bug: la directiva `"use client"` solo la interpreta el bundler de Next.js
+    (webpack/Turbopack) al construir el árbol de RSC; en un entorno Vitest/jsdom normal
+    (`@vitejs/plugin-react`, sin el loader de Next) es una simple cadena de texto sin efecto,
+    así que llamar a una función "de cliente" desde un módulo "de servidor" funciona sin más en
+    los tests aunque falle siempre en `next dev`/`next start` reales — se verificó
+    empíricamente reproduciendo el patrón mínimo (`"use client"` + `"use server"` + llamada
+    directa) en un test Vitest aislado, que pasó sin errores. La única forma de detectar esta
+    clase de bug fue la verificación manual en navegador real (regla de trabajo del equipo:
+    verificación en navegador real para cambios de UI/flujo) — confirma que esa regla no es
+    opcional para features que cruzan el límite servidor/cliente.
+  - Cuando una Server Action necesita reutilizar lógica de conversión que también usa un
+    Client Component, esa lógica debe vivir desde el principio en un módulo sin directiva
+    (`src/lib/...`), nunca en el componente cliente aunque parezca conveniente reutilizar el
+    export existente — la PR original de "propuesta de sesión con IA" ya reutilizaba
+    conscientemente `buildInitialRegistros` para no duplicar código con `/historial`, pero no
+    reparó en que el punto de reutilización nuevo (una Server Action) cruzaba el límite RSC.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

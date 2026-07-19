@@ -298,7 +298,12 @@ propósito — no sobre-diseñar la más simple, regla 4 CLAUDE.md).
   los componentes colocados dentro de `src/app/<ruta>/`, que son propios de esa ruta). Primer
   y único caso por ahora: `session-entries-editor.tsx` (`SessionEntriesEditor`), compartido
   entre `/sesion` (crear) y `/historial` (editar) — ver DECISIONS.md para el porqué de esta
-  carpeta nueva en vez de otra ubicación.
+  carpeta nueva en vez de otra ubicación. La lógica de conversión pura que antes vivía dentro
+  de este componente (`buildInitialRegistros`) se movió a `src/lib/session-proposal/
+  build-initial-registros.ts`: al no llevar JSX/hooks no necesita la directiva `"use client"`
+  del componente, y una Server Action (`app/sesion/actions.ts`) también necesita invocarla —
+  RSC no permite llamar desde el servidor a una función exportada por un módulo cliente, ver
+  DECISIONS.md 2026-07-19.
 - `src/lib/prisma.ts` — instancia singleton del cliente Prisma (evita agotar conexiones SQLite
   por hot-reload en desarrollo).
 - `prisma/schema.prisma` — esquema de dominio (ver SPEC.md §3 para la definición funcional).
