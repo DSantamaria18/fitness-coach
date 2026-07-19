@@ -1,16 +1,28 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 vi.mock("next/navigation", () => ({
   usePathname: vi.fn(),
 }));
 
+vi.mock("@/app/actions", () => ({
+  logout: vi.fn(),
+}));
+
 import { usePathname } from "next/navigation";
+import { logout } from "@/app/actions";
 import { NavBar } from "./nav-bar";
 
 const usePathnameMock = usePathname as unknown as ReturnType<typeof vi.fn>;
+const logoutMock = vi.mocked(logout);
 
 describe("NavBar", () => {
+  beforeEach(() => {
+    logoutMock.mockReset();
+    vi.spyOn(window, "confirm");
+  });
+
   it("renderiza los 5 enlaces principales de la app", () => {
     usePathnameMock.mockReturnValue("/peso");
     render(<NavBar />);
@@ -71,5 +83,29 @@ describe("NavBar", () => {
         "aria-current",
       );
     }
+  });
+
+  it("pide confirmación antes de cerrar sesión y no llama a logout si se cancela", async () => {
+    vi.mocked(window.confirm).mockReturnValue(false);
+    usePathnameMock.mockReturnValue("/peso");
+    const user = userEvent.setup();
+    render(<NavBar />);
+
+    await user.click(screen.getByRole("button", { name: /cerrar sesión/i }));
+
+    expect(window.confirm).toHaveBeenCalled();
+    expect(logoutMock).not.toHaveBeenCalled();
+  });
+
+  it("llama a logout cuando se confirma el cierre de sesión", async () => {
+    vi.mocked(window.confirm).mockReturnValue(true);
+    logoutMock.mockResolvedValue(undefined);
+    usePathnameMock.mockReturnValue("/peso");
+    const user = userEvent.setup();
+    render(<NavBar />);
+
+    await user.click(screen.getByRole("button", { name: /cerrar sesión/i }));
+
+    expect(logoutMock).toHaveBeenCalled();
   });
 });
