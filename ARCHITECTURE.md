@@ -361,6 +361,43 @@ propósito — no sobre-diseñar la más simple, regla 4 CLAUDE.md).
   (`workers: 1`) para evitar condiciones de carrera entre tests que escriben en la misma base
   de datos — la suite es pequeña, así que el coste en tiempo total es asumible.
 
+## Regla ESLint: `local/no-client-import-in-server-file` (BL-001)
+
+- **Qué detecta**: un módulo `"use server"` (Server Actions) que importa, directa o vía el
+  alias `@/*`, algo exportado por un fichero `"use client"`. Es exactamente la clase de bug de
+  `buildInitialRegistros` (ver DECISIONS.md 2026-07-19 y la sección "Estructura de carpetas
+  relevante" más abajo): RSC sustituye los exports de un módulo cliente por referencias opacas
+  al empaquetar, así que invocarlos desde el servidor crashea siempre en runtime real, pero ni
+  Vitest/jsdom ni `tsc` lo detectan (la directiva `"use client"` es una simple cadena de texto
+  sin efecto fuera del bundler de RSC de Next.js).
+- **Mecanismo**: regla ESLint custom local (`eslint-rules/no-client-import-in-server-file.mjs`,
+  registrada como plugin `local` inline en `eslint.config.mjs`, sin publicar ningún paquete).
+  Para cada fichero cuya primera sentencia sea la directiva `"use server"`, resuelve cada
+  `ImportDeclaration` a un fichero real en disco (soporta rutas relativas y el alias `@/*` →
+  `./src/*`, leyendo `tsconfig.json` — tolerante a los comentarios JSONC que ya usa el propio
+  `tsconfig.json` de este proyecto — y probando extensiones `.ts`/`.tsx`/`.js`/`.jsx` e
+  `index.*` para directorios) y comprueba si la primera sentencia de ESE fichero es la
+  directiva `"use client"`. Si el import no resuelve a un fichero del proyecto (paquete de
+  `node_modules`, alias sin configurar), se ignora sin más.
+- **Por qué una regla custom y no algo ya existente en el ecosistema** (investigación previa a
+  escribir la regla, para no repetirla):
+  - `eslint-plugin-react-server-components` (candidato mencionado en BACKLOG.md): su única
+    regla relevante (`use-client`) solo detecta si un fichero *debería* llevar `"use client"`
+    por su propio contenido (hooks, APIs de navegador, JSX con handlers) — no inspecciona si un
+    fichero importa algo de OTRO fichero marcado `"use client"`, que es justo el caso del bug.
+  - `@next/eslint-plugin-next` (ya en uso vía `eslint-config-next`): no tiene ninguna regla
+    relacionada (solo `no-async-client-component`, sin relación).
+  - Convención de carpetas + `no-restricted-imports` por directorio: no aplica en este
+    proyecto, donde ficheros `"use server"`/`"use client"` conviven deliberadamente en la misma
+    carpeta por ruta de Next.js App Router (p. ej. `src/app/sesion/actions.ts` junto a
+    componentes cliente en `src/components/`) — no hay separación de directorio que sirva de
+    proxy fiable.
+- **Verificación empírica**: además de sus propios tests (`eslint-rules/
+  no-client-import-in-server-file.test.ts`, vía `RuleTester` de ESLint), se comprobó
+  reproduciendo temporalmente el bug real (reintroduciendo `"use client"` en
+  `build-initial-registros.ts`, importado por `app/sesion/actions.ts` vía el alias `@/*`) y
+  confirmando que `npm run lint` lo detecta; el cambio se revirtió antes de commitear.
+
 ## Estructura de carpetas relevante
 
 - `src/app/` — rutas y páginas (App Router de Next.js).

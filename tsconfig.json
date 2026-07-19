@@ -30,5 +30,12 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    // Fixtures de eslint-rules/*.test.ts: ficheros mínimos con directivas
+    // "use client"/"use server" a propósito, usados solo vía RuleTester
+    // (nunca importados desde la app), no forman parte del código a
+    // tipar.
+    "eslint-rules/__fixtures__"
+  ]
 }

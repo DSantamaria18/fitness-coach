@@ -134,6 +134,17 @@ Proyecto sin versión publicada todavía.
   global-setup.ts` migra y siembra un SQLite propio de E2E antes de cada ejecución. Job `e2e`
   nuevo en CI (`.github/workflows/ci.yml`), en paralelo al job `test` de Vitest.
 
+- **[BL-001]** Regla ESLint local `local/no-client-import-in-server-file`
+  (`eslint-rules/no-client-import-in-server-file.mjs`, registrada en `eslint.config.mjs`) que
+  detecta si un módulo `"use server"` importa algo exportado por un fichero `"use client"` —
+  la clase de bug de `buildInitialRegistros` (Runtime Error 500 determinista, ver más abajo en
+  "Fixed" y DECISIONS.md 2026-07-19) que ni `npm test` ni `tsc` pueden detectar, porque la
+  directiva `"use client"` solo la interpreta el bundler RSC de Next.js. Resuelve imports
+  relativos y el alias `@/*` (leyendo `tsconfig.json`) a ficheros reales en disco y comprueba
+  su directiva de cabecera; ignora paquetes de `node_modules`. Probada con 5 casos vía
+  `RuleTester` de ESLint (`eslint-rules/no-client-import-in-server-file.test.ts`) y verificada
+  empíricamente reproduciendo el bug real (ver DECISIONS.md 2026-07-19).
+
 ### Fixed
 
 - `session.user` no incluía el `id` del usuario autenticado (faltaban los callbacks `jwt` y
