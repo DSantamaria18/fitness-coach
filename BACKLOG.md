@@ -88,6 +88,22 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   externo). Dificultad: baja (es un indicador adicional en cada página, no cambia la
   navegación en sí).
 
+- **[BL-015]** **Ampliar `local/no-client-import-in-server-file` (BL-001) para detectar imports dinámicos**
+  (`await import("./modulo-cliente")`). Justificación: detectado por QA al validar BL-001 — la
+  regla actual solo visita nodos `ImportDeclaration` (import estático de ES Modules), no
+  `ImportExpression`. Un Server Action podría colar el mismo bug real (llamar código de un
+  módulo `"use client"`) a través de un import dinámico sin que la regla lo capture. Riesgo bajo
+  hoy (no se usa import dinámico en el código actual), pero es una brecha conocida en la
+  cobertura de la regla. Dificultad: baja (añadir un visitor `ImportExpression` que reutilice la
+  misma lógica de resolución ya existente).
+- **[BL-016]** **Ampliar `local/no-client-import-in-server-file` (BL-001) para seguir re-exports transitivos**
+  (`export * from "./modulo-cliente"` en un fichero intermedio sin directiva propia). Justificación:
+  detectado por QA al validar BL-001 — la regla solo comprueba la directiva del fichero al que
+  resuelve directamente el import, no sigue la cadena si ese fichero es a su vez un barrel que
+  reexporta desde un módulo `"use client"`. Dificultad: media (requiere resolver
+  recursivamente los `export * from`/`export {...} from` del fichero intermedio antes de
+  comprobar la directiva final).
+
 ## Iteraciones futuras ya acordadas (no implementar todavía)
 
 - **[BL-011]** **Integración con wearable** (pasos, sueño, frecuencia cardiaca). Justificación: ampliar el
