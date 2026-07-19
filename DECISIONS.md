@@ -784,4 +784,70 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-19
+- **Decisión:** BL-004 — el orden intercalado entre ejercicios de fuerza y cardio (p. ej.
+  cardio-fuerza-cardio) se resuelve añadiendo un campo `order Int @default(0)` a `CardioEntry`
+  (mismo campo que ya tenía `StrengthEntry`), calculando `order` en ambos builders de
+  `session-entries.ts` sobre el índice del array `ejercicios` **original** (antes de filtrar
+  por tipo fuerza/cardio), añadiendo `orderBy: { order: "asc" }` a la consulta de
+  `cardioEntries` en `get-session-history.ts`, y sustituyendo la concatenación en dos bloques
+  (`[...strengthEntries, ...cardioEntries]`) de `historial/page.tsx` por una fusión que ordena
+  ambos arrays juntos por `order`, extraída a `src/lib/to-session-history-entry.ts`.
+- **Causa raíz:** tres bugs independientes que se enmascaraban entre sí, todos con el mismo
+  síntoma (fuerza-primero-cardio-después en vez del orden real):
+  1. `CardioEntry` no tenía campo `order`, así que no había forma de saber en qué posición
+     relativa iba cada entrada de cardio respecto a las de fuerza.
+  2. `buildStrengthEntries` calculaba `order` con `ejercicios.filter(isFuerza).map((entry,
+     order) => ...)` — el índice `order` del `.map` es la posición dentro del subarray YA
+     filtrado, no la posición real en la lista mixta original. Con cardio-fuerza-cardio, el
+     único `StrengthEntry` recibía `order: 0` en vez de `order: 1` (su posición real).
+  3. `get-session-history.ts` tenía `orderBy: { order: "asc" }` en `strengthEntries` pero no en
+     `cardioEntries` — aunque el punto 1 se hubiera arreglado sin este `orderBy`, Prisma no
+     garantiza ningún orden de fila implícito, así que el orden de lectura habría sido
+     impredecible en vez de solo incorrecto.
+- **Alternativas consideradas:**
+  - Guardar los ejercicios de una sesión en una única tabla polimórfica (`SessionEntry` con
+    columnas nulables para los campos específicos de cada tipo) en vez de dos tablas separadas
+    — descartada por ser un cambio de esquema mucho más invasivo (afecta a todo el dominio de
+    sesiones, no solo al bug) para resolver un problema que un campo `order` compartido ya
+    resuelve sin tocar la forma de las dos tablas existentes.
+  - Guardar el orden serializado como JSON en la propia `Session` (p. ej. `orderedEntryIds:
+    string`) en vez de un campo `order` por fila — descartada por introducir una segunda fuente
+    de verdad del orden (la lista de ids y las propias filas) que podría desincronizarse (p.
+    ej. si se borra una entrada sin actualizar la lista), mientras que un campo `order` por fila
+    es la única fuente de verdad y no puede quedar huérfano.
+- **Justificación:** el fix se limita a lo mínimo necesario para resolver el bug (un campo
+  nuevo con default no destructivo, más lógica de cálculo/lectura/fusión), sin tocar el
+  contrato de `resolveSessionEntries` hacia sus llamantes (`create-session.ts`/
+  `update-session.ts` no necesitaron cambios propios — heredan el fix al llamar a
+  `resolveSessionEntries`, confirmado con un test de round-trip dedicado). Extraer
+  `toSessionHistoryEntry` de `historial/page.tsx` a `src/lib/to-session-history-entry.ts` sigue
+  el mismo criterio que `buildInitialRegistros` (ver entrada de más arriba, misma fecha):
+  lógica de conversión pura no necesita vivir dentro de un Server Component, y moverla permite
+  testearla de forma aislada sin mockear `auth()` ni el resto del árbol de `/historial`.
+- **Verificación (TDD):** test unitario en `session-entries.test.ts` con una lista intercalada
+  cardio-fuerza-cardio que comprueba `order: [0, 2]` en cardio y `order: [1]` en fuerza (falla
+  con el código anterior: `order: [0, 1]` en cardio y `order: [0]` en fuerza); test unitario en
+  `to-session-history-entry.test.ts` que comprueba que la fusión por `order` reconstruye el
+  orden intercalado a partir de dos arrays ya ordenados por separado; y un test de
+  round-trip (`session-order-round-trip.test.ts`) que ejercita el escenario real de principio a
+  fin a través de las funciones de dominio reales — `createSession` → `updateSession` (editar
+  sin cambiar nada, el camino exacto que dispara el bug en `/historial`) → `getSessionHistory` →
+  `toSessionHistoryEntry` — contra un fake de Prisma en memoria (vía `vi.hoisted`, ya que el
+  resto de la suite mockea Prisma por llamada y este escenario necesita encadenar tres
+  operaciones que comparten el mismo estado subyacente). Confirmado que los tres tests fallan
+  contra el código anterior antes del fix (revertido temporalmente con `git stash` para
+  verificarlo) y pasan después.
+- **Lecciones aprendidas:** un test de round-trip que ejercita las funciones de dominio reales
+  en cadena (crear → editar sin cambios → releer) detectó un matiz que un test aislado de
+  `resolveSessionEntries` por sí solo no habría cubierto: el escenario real del bug no es
+  "registrar una sesión intercalada", es "editarla sin tocar nada" — el formulario de edición
+  precarga los ejercicios ya guardados y los reenvía tal cual si el usuario no cambia nada, así
+  que el bug solo se manifestaba en el segundo paso (`updateSession`), no en el primero
+  (`createSession`). Vale la pena construir el fake de Prisma en memoria una vez que un bug
+  cruza varias funciones de dominio encadenadas, en vez de intentar cubrir el mismo caso solo
+  con mocks por-llamada de cada función por separado.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

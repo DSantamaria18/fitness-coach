@@ -105,6 +105,12 @@ model CardioEntry {
   id              String  @id @default(cuid())
   sessionId       String
   exerciseId      String
+  // Posición dentro de la lista de ejercicios ORIGINAL de la sesión (misma
+  // semántica que StrengthEntry.order), no dentro de la sublista de cardio:
+  // permite reconstruir el orden intercalado real de fuerza/cardio (BL-004,
+  // ver DECISIONS.md 2026-07-19). @default(0) para no romper filas ya
+  // existentes al aplicar la migración (no destructiva).
+  order           Int     @default(0)
   durationSeconds Int?
   distanceKm      Float?
   avgSpeedKmh     Float?

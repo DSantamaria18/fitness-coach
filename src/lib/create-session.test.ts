@@ -123,6 +123,7 @@ describe("createSession", () => {
           create: [
             {
               exerciseId: "ex-2",
+              order: 0,
               durationSeconds: 1800,
               distanceKm: 5.2,
               avgSpeedKmh: undefined,
