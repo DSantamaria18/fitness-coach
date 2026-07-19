@@ -207,6 +207,40 @@ avanza el roadmap de implementación (ver plan de fases acordado).
 - Errores estructurados con el mismo patrón que el resto de la capa de dominio:
   `{ success: false, error: { code: "VALIDATION_ERROR" | "NOT_FOUND", message } }`.
 
+### UI de filtros en `/informe` (BL-005)
+
+Tres funciones puras (sin dependencias de React/Next), cada una testeada de forma aislada,
+consumidas desde `informe/page.tsx` (Server Component) y desde los componentes de cliente:
+
+- `src/app/informe/parse-date-range.ts` (`parseDateRangeSearchParams`) — valida los
+  `searchParams` crudos `desde`/`hasta` (formato `YYYY-MM-DD` de `<input type="date">`, pero
+  potencialmente cualquier string si se edita la URL a mano) con `z.iso.date()` — rechaza tanto
+  formato inválido como fechas de calendario inexistentes (p.ej. 30 de febrero) — y los
+  convierte a los límites de día ISO datetime completos que ya validaba `getProgressReport`
+  (`T00:00:00.000Z` para `desde`, `T23:59:59.999Z` para `hasta`: medianoche UTC fija, mismo
+  criterio que el resto de la app para un `<input type="date">` — ver DECISIONS.md). Un
+  parámetro inválido se ignora (queda fuera del objeto devuelto) en vez de romper la página.
+- `src/app/informe/build-filter-url.ts` (`buildFilterUrl`) — combina los `searchParams`
+  actuales de la URL con las claves que un filtro concreto quiere cambiar/borrar, en vez de
+  reconstruir la query desde cero. La usan tanto `ExerciseSelector` como `DateRangeFilter`, así
+  que cambiar un filtro nunca borra al otro.
+- `src/app/informe/streak-caption.ts` (`buildStreakCaption`) — texto del caption de la card
+  "Racha actual"; añade el aviso de que `currentStreakWeeks` ignora `hasta` solo cuando ese
+  filtro está realmente aplicado (booleano ya resuelto por `page.tsx`), para no alargar el
+  caption por defecto sin motivo.
+- `src/app/informe/date-range-filter.tsx` (`DateRangeFilter`) — componente de cliente
+  controlado por la URL, mismo patrón que `ExerciseSelector` (sin estado propio): dos
+  `<input type="date">`, cada `onChange` llama a `buildFilterUrl` con los `searchParams`
+  actuales (`useSearchParams`) y navega con `router.push`. Atributos nativos `min`/`max`
+  cruzados entre ambos inputs, como guía de UI (`getProgressReport` sigue siendo quien valida
+  de verdad que `desde <= hasta`).
+- Fallback ante un filtro inválido a nivel de dominio (p.ej. `desde` posterior a `hasta`, únicos
+  casos que sobreviven a la validación de formato anterior): `page.tsx` reutiliza el mismo
+  mecanismo ya existente para un `ejercicio` que no existe en el catálogo — se reintenta
+  `getProgressReport(userId, {})` sin ningún filtro, y tanto `ExerciseSelector` como
+  `DateRangeFilter` vuelven a mostrar sus valores vacíos/por defecto en vez del valor obsoleto
+  de la URL.
+
 ### Comentario de progreso con IA (SPEC.md §14 punto 2)
 
 Segunda integración de IA del proyecto, deliberadamente más simple que la propuesta de sesión

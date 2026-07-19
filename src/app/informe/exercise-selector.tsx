@@ -1,6 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { buildFilterUrl } from "./build-filter-url";
 
 export type ExerciseOption = {
   id: string;
@@ -20,6 +21,7 @@ export function ExerciseSelector({
   selected: string;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const fuerzaExercises = exercises.filter(
     (exercise) => exercise.type === "STRENGTH",
@@ -32,10 +34,11 @@ export function ExerciseSelector({
     const value = event.target.value;
     // Navegación de cliente (sin recarga completa): mantiene la página como
     // Server Component que vuelve a resolver getProgressReport con el
-    // nuevo filtro a partir del searchParam.
-    router.push(
-      value ? `/informe?ejercicio=${encodeURIComponent(value)}` : "/informe",
-    );
+    // nuevo filtro a partir del searchParam. Se combina con los parámetros
+    // ya presentes en la URL (p.ej. el rango de fechas de DateRangeFilter,
+    // BL-005) en vez de reconstruirla desde cero, para que ambos filtros
+    // convivan sin que uno borre al otro.
+    router.push(buildFilterUrl(searchParams, { ejercicio: value || null }));
   }
 
   return (
