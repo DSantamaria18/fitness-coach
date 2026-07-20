@@ -943,30 +943,62 @@ nueva.
      `{ backgroundColor: getComputedStyle(document.body).backgroundColor }` explícitamente:
      toma el fondo real ya calculado por el navegador (claro u oscuro, lo que esté activo)
      en vez de asumir uno fijo.
+  3. **Segundo bug real, encontrado por QA en la validación de la PR (no en la primera ronda de
+     verificación manual)**: con un filtro de ejercicio o una comparación de periodos activos,
+     los `<select>` de `ExerciseSelector`/`ComparisonPeriodSelector` mostraban en el PNG
+     exportado su valor **por defecto** ("Todos" / "Sin comparar") aunque los gráficos de la
+     misma imagen sí reflejaban correctamente el filtro/comparación activos — un PNG
+     internamente contradictorio. Causa, confirmada leyendo el código fuente de
+     `modern-screenshot` (no solo sus `.d.ts`): al clonar cada nodo, la librería ya intenta
+     preservar el valor "vivo" de controles de formulario con una función interna
+     (`It(e,t) { (esTextarea(e)||esInput(e)||esSelect(e)) && t.setAttribute("value", e.value) }`)
+     — pero esto solo funciona de verdad para `<input>`/`<textarea>`, donde el atributo HTML
+     `value` sí existe y sí determina qué se renderiza. Un `<select>` no tiene atributo `value`
+     en HTML: lo que decide qué opción se ve marcada al rasterizar es el atributo `selected` de
+     cada `<option>`, y el clon solo conserva el que ya estaba en el marcado original (la opción
+     por defecto al cargar la página) — no refleja los cambios posteriores del usuario, porque
+     `ExerciseSelector`/`ComparisonPeriodSelector` son controlados por la URL (`router.push` +
+     re-render desde `page.tsx`), no por el atributo `selected` del HTML. Corregido con la
+     opción `onCloneEachNode` de `domToPng`: por cada nodo clonado que sea un
+     `HTMLSelectElement`, se lee el atributo `value` que la propia librería ya dejó (correcto,
+     aunque inerte para `<select>`) y se traduce manualmente a la `<option>` que corresponde
+     (`fixSelectedOption` en `export-image-button.tsx`) — sin necesidad de correlacionar el nodo
+     clonado con el nodo real del DOM vivo, porque el dato correcto ya viaja en el propio clon.
 - **Alternativas consideradas:** `html2canvas` y `dom-to-image` (descartadas por el Tech Lead
   antes de asignar la tarea, ver encargo original); PDF en vez de PNG (descartado por decisión
-  de producto de David).
+  de producto de David). Para el bug de los `<select>`: correlacionar el nodo clonado con el
+  nodo real recorriendo ambos árboles en paralelo (por posición/`querySelectorAll`) —
+  descartada por más frágil y compleja que aprovechar que la propia librería ya deja el valor
+  correcto disponible en el atributo `value` del clon.
 - **Justificación:** el mecanismo 100% client-side evita cualquier generación de imágenes en el
   servidor (sin coste de cómputo adicional, sin cruzar la frontera server/cliente que ya ha
   dado bugs reales en este proyecto — ver entrada 2026-07-19 sobre `buildInitialRegistros`).
   Excluir título y botón del PNG evita un caso de "capturarse a sí mismo a medio renderizar"
-  que habría sido confuso. El `backgroundColor` explícito es la lección más importante de esta
-  ronda: sin verificación manual en navegador real con el tema oscuro activo, el bug de
-  contraste habría llegado a QA (o a David) con una imagen técnicamente "generada con éxito"
-  pero prácticamente ilegible — ningún test con jsdom lo detecta, porque jsdom no interpreta
-  CSS real y `domToPng` está mockeado en los tests de `ExportImageButton` (regla ya existente
-  del equipo: "cualquier código que cruce..." no aplica aquí al no haber frontera RSC, pero el
-  mismo principio general — tests+review no bastan para lo que solo se ve renderizado de
-  verdad — sí aplicaba).
-- **Verificación:** TDD completo (`export-image-button.test.tsx`: renderizado del botón,
-  llamada a `domToPng` con el nodo y opciones esperadas, estado "Generando..." mientras la
-  promesa está pendiente, aviso discreto en fallo de `domToPng` y en ausencia del contenedor).
-  Verificación manual con Playwright MCP: login real, navegación a `/informe` con un registro
-  de peso sembrado a propósito, clic real en "Descargar imagen" interceptando el evento
-  `download` de Playwright (`page.waitForEvent('download')`) — confirma que el PNG descargado
-  no es un mock (103 KB, nombre de fichero `informe-progreso-<fecha>.png` correcto) y,
-  comparando visualmente el PNG contra una captura de la página en vivo, que el bug de fondo/
-  contraste descrito arriba estaba presente antes del fix y desaparece después.
+  que habría sido confuso. Los dos bugs de `modern-screenshot` encontrados en esta ronda
+  (fondo/contraste y `<select>`) comparten la misma lección: ninguno de los dos se manifiesta
+  en absoluto con `domToPng` mockeado (los tests con jsdom no interpretan CSS real ni tienen
+  forma de saber qué "se ve" al rasterizar), así que solo la verificación manual en navegador
+  real —y, en el caso del `<select>`, solo la de QA con un filtro/comparación realmente
+  activos, no la primera ronda del propio Developer— pudo encontrarlos. Queda como
+  precedente para cualquier futuro `<select>`/control de formulario nuevo que se añada dentro
+  de `#informe-content`: revisar si necesita el mismo tratamiento en `onCloneEachNode`.
+- **Verificación:** TDD completo (`export-image-button.test.tsx`, 7 tests: renderizado del
+  botón, llamada a `domToPng` con el nodo y opciones esperadas, estado "Generando..." mientras
+  la promesa está pendiente, aviso discreto en fallo de `domToPng` y en ausencia del
+  contenedor, corrección del `<select>` clonado vía `onCloneEachNode` — extrayendo esa función
+  del propio `mock.calls` de `domToPng` e invocándola contra un `<select>` construido a mano
+  que reproduce el escenario del bug, ya que mockear la clonación real de la librería no es
+  viable a nivel de test unitario — y que `onCloneEachNode` no toca nodos que no son
+  `<select>`). Verificación manual con Playwright MCP en dos rondas: (1) login real,
+  navegación a `/informe` con un registro de peso sembrado a propósito, clic real en
+  "Descargar imagen" interceptando el evento `download` de Playwright
+  (`page.waitForEvent('download')`) — confirma que el PNG descargado no es un mock (103 KB,
+  nombre de fichero `informe-progreso-<fecha>.png` correcto) y, comparando visualmente el PNG
+  contra una captura de la página en vivo, que el bug de fondo/contraste estaba presente antes
+  del fix y desaparece después; (2) tras el fix del `<select>`, se repitió con
+  `/informe?ejercicio=Sentadilla` y `/informe?comparar=mes` — el PNG exportado en ambos casos
+  ya muestra la opción correcta marcada ("Sentadilla" / "Este mes vs. anterior") en vez de la
+  opción por defecto.
 
 ---
 

@@ -200,7 +200,12 @@ Proyecto sin versión publicada todavía.
   del PNG queda transparente (blanco en la mayoría de visores) mientras el texto sigue usando
   los colores resueltos del tema activo (p. ej. `dark:text-white/60`), dejando etiquetas casi
   ilegibles en modo oscuro — bug real encontrado en la verificación manual con Playwright MCP,
-  no detectado por los tests con jsdom (no interpreta CSS real). Ver DECISIONS.md.
+  no detectado por los tests con jsdom (no interpreta CSS real). También recibe
+  `onCloneEachNode: fixSelectedOption`, que corrige un segundo bug de `modern-screenshot`
+  (encontrado por QA): sin esto, los `<select>` de `ExerciseSelector`/`ComparisonPeriodSelector`
+  aparecían siempre en el PNG con su opción por defecto ("Todos"/"Sin comparar") aunque el
+  filtro real estuviera activo y los gráficos de la misma imagen ya lo reflejaran. Ver
+  DECISIONS.md.
 
 ### Fixed
 

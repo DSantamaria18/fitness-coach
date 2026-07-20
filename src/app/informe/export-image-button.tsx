@@ -18,6 +18,32 @@ function buildFileName(now: Date): string {
   return `informe-progreso-${isoDate}.png`;
 }
 
+// Bug real de modern-screenshot con <select> (encontrado por QA en la
+// verificación de BL-007, ver DECISIONS.md): al clonar un <select>, la
+// librería copia el valor vivo del elemento a un atributo `value` en el
+// clon (su mecanismo interno, pensado para <input>/<textarea>, donde ese
+// atributo sí existe y sí importa) — pero HTML no tiene atributo `value`
+// para <select>, así que no cambia qué <option> se ve seleccionada al
+// rasterizar. La <option> que queda "seleccionada" en el PNG es la que ya
+// llevaba el atributo `selected` en el marcado original (la opción por
+// defecto al cargar la página), no la elegida después por el usuario —
+// justo lo que le pasa a ExerciseSelector/ComparisonPeriodSelector, ambos
+// controlados por la URL en vez de por el atributo HTML. Se traduce aquí
+// manualmente ese atributo `value` (ya correcto) a la <option> que
+// corresponde.
+function fixSelectedOption(cloned: Node) {
+  if (!(cloned instanceof HTMLSelectElement)) {
+    return;
+  }
+  const liveValue = cloned.getAttribute("value");
+  if (liveValue === null) {
+    return;
+  }
+  for (const option of Array.from(cloned.options)) {
+    option.toggleAttribute("selected", option.value === liveValue);
+  }
+}
+
 type Status = "idle" | "generating" | "error";
 
 // Aviso discreto en fallo, sin romper la página: mismo criterio ya
@@ -45,6 +71,7 @@ export function ExportImageButton() {
         // vez de asumir claro/oscuro, para que el PNG combine con lo que
         // el usuario está viendo en pantalla en ese momento.
         backgroundColor: getComputedStyle(document.body).backgroundColor,
+        onCloneEachNode: fixSelectedOption,
       });
       const link = document.createElement("a");
       link.href = dataUrl;

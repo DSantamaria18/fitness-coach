@@ -365,6 +365,23 @@ propósito — no sobre-diseñar la más simple, regla 4 CLAUDE.md).
   verificación manual con Playwright MCP (comparando el PNG exportado contra una captura de la
   página en vivo) — ni los tests con jsdom ni el build lo detectan, porque jsdom no interpreta
   CSS real y `domToPng` está mockeado en los tests de `ExportImageButton`. Ver DECISIONS.md.
+- **`onCloneEachNode` para corregir `<select>` clonados**: segundo bug real de
+  `modern-screenshot`, encontrado por QA (no en la primera ronda de verificación manual): con
+  un filtro de `ExerciseSelector` o `ComparisonPeriodSelector` activo, el PNG exportado mostraba
+  siempre la opción **por defecto** de cada `<select>` ("Todos" / "Sin comparar"), aunque los
+  gráficos de la misma imagen sí reflejaban el filtro/comparación real. Causa: `modern-screenshot`
+  ya copia el valor vivo de un `<select>` a un atributo `value` en el nodo clonado (su mecanismo
+  interno, pensado para `<input>`/`<textarea>`), pero HTML no tiene atributo `value` para
+  `<select>` — lo que decide qué opción se ve marcada al rasterizar es el atributo `selected` de
+  cada `<option>`, y el clon solo conserva el que ya estaba en el marcado original (la opción por
+  defecto al cargar la página), no el que refleja el estado real tras la interacción del usuario
+  (`ExerciseSelector`/`ComparisonPeriodSelector` son controlados por la URL, no por el atributo
+  HTML). Corregido con `fixSelectedOption` (función pasada como `onCloneEachNode` a `domToPng`):
+  por cada `HTMLSelectElement` clonado, lee el atributo `value` (ya correcto, dejado ahí por la
+  propia librería) y marca `selected` en la `<option>` que corresponde, sin necesidad de
+  correlacionar el nodo clonado con el nodo real del DOM vivo. Precedente para cualquier futuro
+  control de formulario nuevo dentro de `#informe-content`: revisar si necesita el mismo
+  tratamiento. Ver DECISIONS.md.
 
 ## Servidor MCP
 
