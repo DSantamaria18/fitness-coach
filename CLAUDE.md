@@ -62,18 +62,25 @@ A partir de ahora, el desarrollo se hace con un equipo de agentes con roles dife
 - **2 agentes Developer**: Modelo Sonnet 5. implementan funcionalidades y corrigen bugs. Trabajan en paralelo entre sí cuando las tareas son independientes (features distintas, o tests vs. implementación), cada uno en su propia rama por feature/bug (regla 12). Recibiran las instrucciones del Tech Lead. Escriben los unit tests y los tests de componentes (se ejecutarán en la fase de build), y los tests de integracion (definidos en el test plan del agente QA engineer y ejecutados en el CI). Podran delegar tareas sencillas al agente developer junior.
 - **1 agente Developer Junior**: Modelo Haiku. Los demas agentes podran delegarle tareas sencillas y repetitivas. 
 - **1 agente QA Engineer**: Modelo Sonnet 5 . Define los requisitos funcionales, no funcionales y los quality gates (coverage, linting, ...), genera los planes de prueba (integration tests, e2e tests, ...) segun TDD regla 5, Valida funcionalmente la app y verifica que se cumplen los requisitos no funcionales. Además implementa y mantiene los tests E2E y los tests de seguridad. Hará un reporte breve al final de cada desarrollo. Podra delegar tareas sencillas al agente developer junior.
+- **1 agente TechOps Engineer**: Experto en infraestructura del equipo. Rol de Arquitecto Cloud, SRE y DevOps. Modelo opus 4.8 . Encargado de las tareas de definicion, creacion y mantenimiento de la infraestructura necesaria para el proyecto. Tambien implementará métricas y alertas de infraestructura. Define y ejecuta sus propios checks de validación de infraestructura (no pasa por QA, ver reglas adicionales). Podrá delegar tareas sencillas al agente developer junior.
 - **1 agente Tech Lead**: Modelo Opus 4.8 . Dividirá las features en tareas más sencillas. Da las instrucciones precisas a los developers. Reparte el trabajo , comprueba que se cumplen los criterios de desarrollo y se siguen las prácticas indicadas. Revisa (code review) las PRs de los Developers y propone cambios si hace falta; si están correctas, las mergea a master. Decide el stack tecnológico, mantiene la documentación viva (regla 1) y es quien me traslada las preguntas necesarias (p. ej. las decisiones de producto que me corresponden a mí). Podran delegar tareas sencillas al agente developer junior.
 
 Reglas adicionales de funcionamiento del equipo:
 
 - **Punto único de contacto**: el Tech Lead es quien me traslada preguntas y progreso; los
-  Developers y QA no me contactan directamente.
+  Developers, QA y el TechOps Engineer no me contactan directamente.
 - **Orden de las validaciones antes de merge**: QA debe validar la PR (tests + plan de
   pruebas en verde) *antes* de que el Tech Lead la revise y apruebe — nunca en paralelo ni
   después. El sign-off de QA es requisito previo al review del Tech Lead.
-- **Solo el Tech Lead mergea a master**: ningún Developer hace push directo a master ni
-  mergea su propia PR. El Tech Lead da el sign-off final de merge (conecta con la regla 11
-  sobre acciones irreversibles).
+- **Excepción de QA para PRs de infraestructura**: en las PRs del TechOps Engineer, QA no
+  participa — el propio TechOps define y ejecuta sus checks de validación de infraestructura
+  (p. ej. healthchecks, acceso real al servicio desplegado, alertas disparando correctamente)
+  como paso previo al review del Tech Lead, ocupando el lugar que QA tiene en el flujo de
+  Developers. El resto del Definition of Done (review del Tech Lead → documentación viva →
+  merge por el Tech Lead) se mantiene igual.
+- **Solo el Tech Lead mergea a master**: ningún Developer ni el TechOps Engineer hacen push
+  directo a master ni mergean su propia PR. El Tech Lead da el sign-off final de merge
+  (conecta con la regla 11 sobre acciones irreversibles).
 - **Coordinación entre los 2 Developers**: el Tech Lead decide y coordina qué tarea hace cada
   Developer, para que trabajen en paralelo sin pisarse (evitar que ambos toquen los mismos
   ficheros/rama a la vez).
