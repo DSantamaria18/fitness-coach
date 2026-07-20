@@ -35,11 +35,13 @@ Proyecto sin versión publicada todavía.
   falla la escritura. Endpoint `POST /api/sessions` comparte la misma lógica que la Server
   Action del formulario.
 - Backup manual: página `/ajustes` con un botón "Descargar backup" (`GET /api/backup`) que
-  genera un snapshot consistente del SQLite en el momento (`db.backup()` de `better-sqlite3`,
-  válido incluso con escrituras concurrentes) y lo sirve como descarga sin conservar copia en
-  el servidor. Se registra la fecha de cada descarga (`create-backup.ts`, modelo `Backup`) para
-  mostrar un aviso en `/ajustes` si han pasado más de 30 días sin hacer uno o si nunca se ha
-  hecho ninguno.
+  genera un volcado de solo datos (sentencias SQL `INSERT` vía Prisma, `.sql`) y lo sirve como
+  descarga sin conservar copia en el servidor. Se registra la fecha de cada descarga
+  (`create-backup.ts`, modelo `Backup`) para mostrar un aviso en `/ajustes` si han pasado más de
+  30 días sin hacer uno o si nunca se ha hecho ninguno. Rediseñado el 2026-07-20 (ver
+  DECISIONS.md) para funcionar contra Turso: el mecanismo original (`db.backup()` de
+  `better-sqlite3` sobre el fichero SQLite local) dejó de ser viable al no existir fichero local
+  en el despliegue serverless.
 - Informe de progreso (capa de dominio): `src/lib/get-progress-report.ts`
   (`getProgressReport(userId, filters)`) calcula la evolución del peso corporal, la frecuencia
   de entrenamiento (total de sesiones, media semanal y racha de semanas ISO consecutivas con al

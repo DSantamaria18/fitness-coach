@@ -132,10 +132,11 @@ cambio relevante.
 
 ## Backup manual
 
-- Página `/ajustes` con un botón "Descargar backup" que genera al vuelo una copia consistente
-  del fichero SQLite (usando la API de backup online de `better-sqlite3`, segura incluso con
-  escrituras concurrentes) y la sirve como descarga del navegador — no se conserva ninguna
-  copia en el servidor.
+- Página `/ajustes` con un botón "Descargar backup" que genera al vuelo un volcado de solo
+  datos (sentencias SQL `INSERT`, vía Prisma) y lo sirve como descarga del navegador
+  (`fitness-coach-backup-YYYY-MM-DD.sql`) — no se conserva ninguna copia en el servidor.
+  Revisado el 2026-07-20 (ver DECISIONS.md): sustituye a la copia binaria del fichero SQLite
+  con `better-sqlite3`, inservible contra Turso al no haber fichero local en producción.
 - Cada descarga se registra con su fecha (`create-backup.ts`, modelo `Backup`), y `/ajustes`
   muestra un aviso si han pasado más de 30 días desde el último backup o si nunca se ha hecho
   ninguno (`get-last-backup.ts`).

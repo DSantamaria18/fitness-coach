@@ -14,8 +14,10 @@ export async function GET() {
   }
 
   // Fichero temporal por petición: se sirve y se borra al vuelo, nunca se
-  // conserva una copia del backup en el servidor (SPEC §11).
-  const destinationPath = path.join(tmpdir(), `backup-${randomUUID()}.db`);
+  // conserva una copia del backup en el servidor (SPEC §11). Extensión .sql:
+  // el backup ya no es un fichero .db binario (ver create-backup.ts), sino
+  // sentencias SQL de solo datos.
+  const destinationPath = path.join(tmpdir(), `backup-${randomUUID()}.sql`);
 
   const result = await createBackup(userId, destinationPath);
   if (!result.success) {
@@ -26,12 +28,12 @@ export async function GET() {
     const file = await readFile(destinationPath);
     const filename = `fitness-coach-backup-${result.data.createdAt
       .toISOString()
-      .slice(0, 10)}.db`;
+      .slice(0, 10)}.sql`;
 
     return new NextResponse(new Uint8Array(file), {
       status: 200,
       headers: {
-        "Content-Type": "application/vnd.sqlite3",
+        "Content-Type": "application/sql",
         "Content-Disposition": `attachment; filename="${filename}"`,
       },
     });

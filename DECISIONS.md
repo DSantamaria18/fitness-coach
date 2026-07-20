@@ -1473,4 +1473,70 @@ Requieren credenciales reales o acceso al dashboard, imposibles en fase 1:
 
 ---
 
+## 2026-07-20 — Rediseño del backup manual para Turso: volcado SQL de solo datos vía Prisma
+
+- **Decisión:** `src/lib/create-backup.ts` deja de usar la API de backup online de
+  `better-sqlite3` (`db.backup()`, inservible sin fichero local) y pasa a generar el backup
+  consultando todas las tablas vía el cliente Prisma (`findMany()` por modelo) y serializando
+  el resultado como sentencias SQL `INSERT` de texto plano, en orden de dependencia por clave
+  foránea (`User`/`Exercise` primero, `StrengthSet` al final de su cadena, etc.), envueltas en
+  una transacción. El fichero descargado desde `/ajustes` pasa de `.db` a `.sql`
+  (`fitness-coach-backup-YYYY-MM-DD.sql`, `Content-Type: application/sql`). Cambio de contrato
+  en `createBackup`: se elimina el parámetro `sourcePath` (ya no se abre ningún fichero SQLite
+  de origen; los datos salen siempre de Prisma, sea cual sea el backend real).
+- **Alternativas investigadas contra documentación oficial de Turso** (no se asumió ninguna sin
+  verificar, lección ya aprendida en esta misma sección con "Claude Agent SDK"):
+  - **`turso db export` / `turso db shell <db> .dump`** — confirmado en `docs.turso.tech/cli/db/export`
+    y `docs.turso.tech/cli/db/shell` que ambos requieren el binario del CLI de Turso ejecutándose
+    localmente; no existe como llamada HTTP/API. Empaquetar un binario Go precompilado dentro de
+    una función serverless de Vercel (arquitectura correcta, tamaño de bundle, permisos de
+    ejecución) es técnicamente posible pero añade una fragilidad operativa desproporcionada para
+    una app de un único usuario — descartado.
+  - **Platform API de Turso** (`docs.turso.tech/api-reference/introduction`) — cubre gestión de
+    organizaciones, bases de datos, grupos y tokens (crear/borrar/listar/generar auth tokens), y
+    un endpoint `POST .../databases/dumps` para *crear una base de datos a partir de un dump
+    subido* (dirección de importación, no de exportación). No se encontró ningún endpoint para
+    descargar/exportar el contenido de una base de datos existente — descartado.
+  - **Embedded replicas de libSQL** (`@libsql/client` con `syncUrl` + fichero local, ver
+    `docs.turso.tech/features/embedded-replicas/introduction`) — evaluada por ser, en teoría, la
+    más "nativa": produce un fichero SQLite real sincronizado desde el remoto, sin CLI. Descartada
+    por tres motivos concretos, no solo por precaución genérica: (1) la propia documentación
+    oficial desaconseja embedded replicas en "entornos serverless sin sistema de ficheros" sin
+    precisar si eso incluye o no `/tmp` de Vercel, y la documentación de Vercel+Turso confirma que
+    en producción "se decide deliberadamente no usar la réplica" en serverless por el coste de
+    sincronización en cada cold start — señal de que no es el uso previsto; (2) la semántica de si
+    un primer `.sync()` sobre un fichero vacío trae la base de datos **completa** o solo un prefijo
+    parcial (128 KiB + fetch bajo demanda) es ambigua y depende de qué mecanismo de sync usa la
+    versión del cliente (embedded replicas "clásicas" vs. el más reciente "Turso Sync" parcial) —
+    exactamente el tipo de comportamiento que no se puede verificar sin credenciales reales de
+    Turso, que no están disponibles en este entorno de desarrollo; (3) añadir `@libsql/client`
+    como dependencia nueva y nativa solo para este caso de uso es más pesado que reutilizar el
+    cliente Prisma que la app ya usa para todo lo demás.
+  - **Fichero `.db` reconstruido con `better-sqlite3`** (en vez de texto `.sql`) — descartada
+    frente a `.sql` porque `better-sqlite3` es un módulo nativo compilado; usarlo para *escribir*
+    el backup en el propio código de producción (no solo en tests) introduce el mismo riesgo de
+    compatibilidad de binarios nativos en el runtime serverless de Vercel que se quiso evitar del
+    lado de lectura. Un volcado de texto SQL no tiene esa dependencia y es igual de restaurable
+    (`turso db shell <db> < backup.sql`, el mismo mecanismo ya elegido para aplicar migraciones a
+    mano, ver §8/DECISIONS 2026-07-20 pivote).
+- **Alcance del volcado**: solo datos (`INSERT`), no `CREATE TABLE` ni `_prisma_migrations` — el
+  backup asume que el esquema del destino ya está migrado (problema ya resuelto por otra vía, ver
+  §8). Se documenta explícitamente en el propio fichero `.sql` generado (comentario de cabecera) y
+  en SPEC.md §11, para que quede claro en el momento de un restore real.
+- **Verificación de "restaurable" (no solo "no lanza error")**: el test de `create-backup.test.ts`
+  no compara el SQL generado byte a byte contra nada — genera datos de prueba con relaciones,
+  valores nulos, floats y una comilla simple en texto libre (caso real: notas con apóstrofos),
+  ejecuta el SQL resultante sobre una base SQLite real recién creada con el esquema aplicado, y
+  compara el contenido lógico de las filas restauradas contra los datos originales. Esto se pudo
+  hacer con SQLite local puro, sin red ni Docker — no fue necesario levantar `libsql-server` vía
+  testcontainers (como sí se decidió para verificar migraciones, ver pivote 2026-07-20) porque la
+  correctitud del SQL generado no depende del protocolo HTTP de libSQL, solo de que sea SQL
+  estándar válido; delegarlo a Prisma (mismo cliente que ya habla con Turso en producción) evita
+  además tener que reimplementar nada específico de libSQL en este mecanismo.
+- **Impacto en documentación viva**: SPEC.md §11 actualizada (deja de estar "pendiente de
+  rediseño"); `src/app/ajustes/backup-status.tsx` no necesitó cambios — no referencia el formato
+  ni la extensión del fichero, solo el enlace a `/api/backup`.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

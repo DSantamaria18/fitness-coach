@@ -51,7 +51,7 @@ describe("GET /api/backup", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-disposition")).toContain(
-      "fitness-coach-backup-2026-07-18.db",
+      "fitness-coach-backup-2026-07-18.sql",
     );
     const body = await response.text();
     expect(body).toBe("contenido-de-prueba");
