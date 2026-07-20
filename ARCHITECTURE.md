@@ -48,6 +48,12 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   `signOut({ redirectTo: "/login" })`. Vive fuera de cualquier carpeta de ruta (a diferencia de
   `peso/actions.ts` o `sesion/actions.ts`) porque la dispara el botón "Cerrar sesión" de la
   barra de navegación global (`nav-bar.tsx`), común a todas las páginas autenticadas.
+- **[BL-009]** Menú colapsable de `nav-bar.tsx`: patrón "disclosure" simple sin librería de
+  menús (`useState` + `useRef` del `<nav>` para el clic-fuera + listeners de `document` para
+  Escape/clic-fuera, activos solo mientras el menú está abierto). Visibilidad puramente vía
+  clases Tailwind `hidden`/`flex` (+ `sm:flex` fijo), **no** el atributo nativo `hidden` del
+  elemento — ver DECISIONS.md para el porqué (Tailwind v4 lo neutraliza con `!important` en su
+  Preflight, descubierto en la verificación en navegador real de esta misma tarea).
 
 ## Registro de peso corporal
 

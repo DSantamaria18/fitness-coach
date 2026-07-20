@@ -27,13 +27,6 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   completo. Dificultad: media (generación de PDF/imagen en servidor o cliente, sin librería ya
   elegida en el stack).
 
-- **[BL-009]** **Menú hamburguesa o navegación colapsable para cuando crezca el número de secciones.**
-  Justificación: la barra de navegación actual (`feature/nav-global`) reparte 5 enlaces en una
-  fila horizontal a partes iguales, que ya queda ajustada en pantallas de móvil pequeñas; si se
-  añaden más secciones en iteraciones futuras (wearable, fotos/medidas, comidas) dejará de
-  caber sin reducir demasiado el texto de cada enlace. Dificultad: media (patrón de menú
-  desplegable, gestión de estado abierto/cerrado y accesibilidad de foco).
-
 - **[BL-010]** **Breadcrumbs o indicador de sección dentro de cada página.** Justificación: la navegación
   global resalta la ruta activa en la propia barra fija, pero puede no ser obvio en qué sección
   está el usuario sin mirar arriba (p. ej. tras recargar la página o llegar desde un enlace
