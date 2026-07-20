@@ -737,6 +737,40 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-20
+- **Decisión:** Implementa BL-015 añadiendo un visitor `ImportExpression` a
+  `local/no-client-import-in-server-file` (BL-001), reutilizando tal cual `resolveImportToFile`
+  y `fileStartsWithClientDirective` ya existentes. Si el argumento del `import()` no es un
+  `Literal` de cadena estático (variable, template literal con interpolación, etc.), la regla
+  no reporta nada — mismo criterio que ya aplicaba a paquetes de `node_modules` o alias sin
+  configurar: no es un error, la regla simplemente no tiene información suficiente para
+  pronunciarse. Mensaje de error nuevo (`clientDynamicImportInServerFile`, distinto de
+  `clientImportInServerFile`) para que el texto en el editor/CI deje claro que el import es
+  dinámico, aunque la causa raíz sea la misma.
+- **Alternativas consideradas:** reutilizar el mismo `messageId` para ambos casos (el texto ya
+  era genérico) — descartado porque el encargo pedía usar criterio y separar los mensajes
+  cuesta una línea de `meta.messages` sin complicar la regla, y ayuda a quien lee el error en CI
+  a localizar mentalmente qué construcción (`import(...)` vs. `import ... from ...`) están
+  viendo sin tener que abrir el fichero. Intentar evaluar parcialmente template literals sin
+  interpolación (p. ej. `` import(`./client-module`) ``) como si fueran un string literal —
+  descartado por sobre-ingeniería: no es un patrón presente ni previsto en el código real del
+  proyecto, y el propio encargo pedía no complicar la regla más de lo necesario.
+- **Justificación:** mantiene el principio ya sentado en BL-001 (ignorar lo que la regla no
+  puede resolver de forma estática, en vez de intentar adivinar) y evita duplicar la lógica de
+  resolución de imports/lectura de directivas entre los dos visitors.
+- **Verificación:** 4 casos nuevos con `RuleTester`
+  (`eslint-rules/no-client-import-in-server-file.test.ts`, TDD — escritos y en rojo antes de
+  tocar la regla): válido (`import()` a fichero sin directiva), válido (`import(variable)`
+  no-literal, confirma que no revienta ni reporta), inválido (`import()` relativo a fichero
+  `"use client"`), inválido (mismo caso vía alias `@/*`). Verificado también empíricamente
+  reproduciendo el bug real (misma pareja de ficheros que BL-001,
+  `build-initial-registros.ts`/`app/sesion/actions.ts`, cambiando el import de
+  `buildInitialRegistros` a `await import(...)`): `npx eslint` lo detecta con
+  `clientDynamicImportInServerFile`; el cambio se revirtió antes de commitear, sin diff
+  residual.
+
+---
+
 - **Fecha:** 2026-07-19
 - **Decisión:** Filtro de rango de fechas en `/informe` (BL-005). Tres decisiones de diseño no
   triviales, dentro del alcance ya aprobado por David:
