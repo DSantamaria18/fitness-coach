@@ -12,6 +12,7 @@ import {
 } from "./comparison-periods";
 import { DateRangeFilter } from "./date-range-filter";
 import { ExerciseSelector } from "./exercise-selector";
+import { ExportImageButton } from "./export-image-button";
 import { parseDateRangeSearchParams } from "./parse-date-range";
 import {
   ProgressCharts,
@@ -291,73 +292,85 @@ export default async function InformePage({
 
   return (
     <main className="flex flex-1 flex-col gap-8 p-6">
-      <h1 className="text-xl font-semibold">Informe de progreso</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold">Informe de progreso</h1>
+        <ExportImageButton />
+      </div>
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <StatCard
-          label="Sesiones totales"
-          value={frequency.totalSessions.toLocaleString("es-ES")}
+      {/* Contenedor capturado por ExportImageButton (BL-007): incluye
+          exactamente el alcance de producto (estadísticas, controles de
+          filtro y gráficos, con la comparación de periodos si está activa).
+          Deja fuera el título y el propio botón de exportación: no forman
+          parte del "informe" en sí, y el botón además cambia de aspecto
+          ("Generando...") justo mientras se captura la imagen si se
+          incluyera. Ver ARCHITECTURE.md. */}
+      <div id="informe-content" className="flex flex-col gap-8">
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <StatCard
+            label="Sesiones totales"
+            value={frequency.totalSessions.toLocaleString("es-ES")}
+          />
+          <StatCard
+            label="Sesiones / semana"
+            value={frequency.sessionsPerWeek.toLocaleString("es-ES")}
+          />
+          <StatCard
+            label="Racha actual"
+            value={`${frequency.currentStreakWeeks} ${
+              frequency.currentStreakWeeks === 1 ? "semana" : "semanas"
+            }`}
+            // La racha se calcula siempre respecto a la semana ISO real de
+            // hoy, ignorando el filtro `hasta` (ver DECISIONS.md/BACKLOG.md):
+            // con el filtro de rango de fechas ya disponible (BL-005), el
+            // caption lo explicita cuando `hasta` está realmente aplicado,
+            // para que un rango en el pasado no parezca un error al mostrar
+            // racha 0.
+            caption={buildStreakCaption(
+              !usedFallback && Boolean(effectiveDateFilters.hasta),
+            )}
+          />
+        </section>
+
+        <ExerciseSelector
+          exercises={exercises.map((exercise) => ({
+            id: exercise.id,
+            name: exercise.name,
+            type: exercise.type,
+          }))}
+          // Si el filtro se ignoró (ejercicio inexistente en catálogo, o el
+          // fallback se disparó por otro filtro inválido), el selector vuelve
+          // a mostrar "Todos" en vez del valor obsoleto de la URL.
+          selected={data.exercise?.exercise ?? ""}
         />
-        <StatCard
-          label="Sesiones / semana"
-          value={frequency.sessionsPerWeek.toLocaleString("es-ES")}
+
+        <DateRangeFilter
+          // Mismo criterio que ExerciseSelector: si el fallback se disparó, o
+          // si la comparación de periodos está activa (mutuamente excluyente
+          // con el rango manual, BL-006), los inputs vuelven a mostrarse
+          // vacíos en vez del valor obsoleto de la URL.
+          desde={usedFallback || comparisonPreset ? "" : dateRange.raw.desde}
+          hasta={usedFallback || comparisonPreset ? "" : dateRange.raw.hasta}
         />
-        <StatCard
-          label="Racha actual"
-          value={`${frequency.currentStreakWeeks} ${
-            frequency.currentStreakWeeks === 1 ? "semana" : "semanas"
-          }`}
-          // La racha se calcula siempre respecto a la semana ISO real de
-          // hoy, ignorando el filtro `hasta` (ver DECISIONS.md/BACKLOG.md):
-          // con el filtro de rango de fechas ya disponible (BL-005), el
-          // caption lo explicita cuando `hasta` está realmente aplicado,
-          // para que un rango en el pasado no parezca un error al mostrar
-          // racha 0.
-          caption={buildStreakCaption(
-            !usedFallback && Boolean(effectiveDateFilters.hasta),
-          )}
+
+        <ComparisonPeriodSelector selected={comparisonPreset ?? ""} />
+
+        <ProgressComment
+          initial={
+            progressComment
+              ? {
+                  texto: progressComment.texto,
+                  generadoEn: progressComment.generadoEn.toISOString(),
+                }
+              : null
+          }
         />
-      </section>
 
-      <ExerciseSelector
-        exercises={exercises.map((exercise) => ({
-          id: exercise.id,
-          name: exercise.name,
-          type: exercise.type,
-        }))}
-        // Si el filtro se ignoró (ejercicio inexistente en catálogo, o el
-        // fallback se disparó por otro filtro inválido), el selector vuelve
-        // a mostrar "Todos" en vez del valor obsoleto de la URL.
-        selected={data.exercise?.exercise ?? ""}
-      />
-
-      <DateRangeFilter
-        // Mismo criterio que ExerciseSelector: si el fallback se disparó, o
-        // si la comparación de periodos está activa (mutuamente excluyente
-        // con el rango manual, BL-006), los inputs vuelven a mostrarse
-        // vacíos en vez del valor obsoleto de la URL.
-        desde={usedFallback || comparisonPreset ? "" : dateRange.raw.desde}
-        hasta={usedFallback || comparisonPreset ? "" : dateRange.raw.hasta}
-      />
-
-      <ComparisonPeriodSelector selected={comparisonPreset ?? ""} />
-
-      <ProgressComment
-        initial={
-          progressComment
-            ? {
-                texto: progressComment.texto,
-                generadoEn: progressComment.generadoEn.toISOString(),
-              }
-            : null
-        }
-      />
-
-      <ProgressCharts
-        bodyWeight={bodyWeight}
-        exercise={exerciseProgress}
-        comparison={comparison}
-      />
+        <ProgressCharts
+          bodyWeight={bodyWeight}
+          exercise={exerciseProgress}
+          comparison={comparison}
+        />
+      </div>
     </main>
   );
 }

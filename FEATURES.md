@@ -216,6 +216,14 @@ cambio relevante.
   (`getProgressComment`). En fallo (red, API, respuesta vacía) se muestra un aviso discreto sin
   tocar los gráficos existentes, y el último comentario visible (guardado o generado en esta
   misma sesión de navegador) se mantiene.
+- **[BL-007] Exportar como imagen PNG**: botón "Descargar imagen" (`ExportImageButton`) junto
+  al título de `/informe`, que genera un PNG del contenido actual del informe (estadísticas,
+  filtros y gráficos, incluida la comparación de periodos si está activa) tal cual se ve en
+  pantalla en ese momento, y dispara su descarga con nombre
+  `informe-progreso-<YYYY-MM-DD>.png`. Generación puramente client-side (captura del DOM ya
+  renderizado con [`modern-screenshot`](https://github.com/qq15725/modern-screenshot)), sin
+  llamada al servidor. Aviso discreto si la generación falla, sin romper la página (mismo
+  criterio que el resto de fallos de `/informe`). Ver ARCHITECTURE.md y DECISIONS.md.
 
 ## Propuesta de sesión con IA
 
