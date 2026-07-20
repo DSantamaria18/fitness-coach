@@ -281,6 +281,15 @@ Proyecto sin versión publicada todavía.
   DECISIONS.md. El endpoint `/api/health` pasa a excluirse del middleware de sesión
   (`proxy.ts`), para que Vercel y los monitores externos reciban un 200 en vez de un 307 a
   `/login`.
+- **[BL-018]** Preview deployments de Vercel sin Turso: SQLite efímero en `/tmp`. Como las
+  credenciales de Turso son scope Production-only (guardrail deliberado), un preview deployment
+  (uno por PR) nunca las recibe; `resolveDatasourceConfig()` detecta ese caso (`VERCEL_ENV`
+  distinta de `"production"` y sin `TURSO_DATABASE_URL`) y usa `file:/tmp/preview.db` en vez de
+  caer en silencio a un fichero local que no persiste en el runtime serverless. Como `/tmp` está
+  vacío en cada cold start, `src/lib/prisma.ts` aplica el esquema completo de
+  `prisma/migrations/` contra ese fichero antes de servir la primera petición
+  (`bootstrap-preview-schema.ts`), una única vez por instancia. Sin cambios en producción ni en
+  local/CI. Ver DECISIONS.md 2026-07-20.
 
 ### Fixed
 
