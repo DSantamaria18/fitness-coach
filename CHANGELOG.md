@@ -264,6 +264,16 @@ Proyecto sin versión publicada todavía.
   aparecían siempre en el PNG con su opción por defecto ("Todos"/"Sin comparar") aunque el
   filtro real estuviera activo y los gráficos de la misma imagen ya lo reflejaran. Ver
   DECISIONS.md.
+- Infraestructura de despliegue Vercel + Turso (fase 1, sin credenciales reales aún): job de CI
+  `verify-turso-migrations` que prepara la verificación de migraciones contra un `libsql-server`
+  real (imagen oficial de Turso), independiente y no bloqueante, con la invocación real del
+  script de migraciones marcada como pendiente de fase 2; `vercel.json` mínimo versionable
+  (`$schema` + `framework: nextjs`); documentación del guardrail de preview deployments (las
+  credenciales de la Turso de producción se marcan como scope Production en el dashboard de
+  Vercel, no versionable en config-as-code) y checklist de pasos manuales de fase 2 en
+  DECISIONS.md. El endpoint `/api/health` pasa a excluirse del middleware de sesión
+  (`proxy.ts`), para que Vercel y los monitores externos reciban un 200 en vez de un 307 a
+  `/login`.
 
 ### Fixed
 

@@ -38,6 +38,15 @@ describe("proxy matcher", () => {
     expect(matcher.test("/api/mcp/algo")).toBe(false);
   });
 
+  it("excluye /api/health del middleware de sesión", () => {
+    // El healthcheck lo consumen Vercel y monitores externos, que no llevan
+    // cookie de sesión: si pasara por el middleware, `authorized()` lo
+    // redirigiría a /login con un 307 en vez de devolver 200. Mismo patrón
+    // que /api/mcp (ver abajo). Es seguro exponerlo: solo responde
+    // { status: "ok" }, sin dato sensible alguno.
+    expect(matcher.test("/api/health")).toBe(false);
+  });
+
   it("sigue excluyendo la API de NextAuth y los assets estáticos", () => {
     expect(matcher.test("/api/auth/callback")).toBe(false);
     expect(matcher.test("/_next/static/chunk.js")).toBe(false);

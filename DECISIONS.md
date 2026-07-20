@@ -1261,4 +1261,111 @@ nueva.
 
 ---
 
+## 2026-07-20 — Infra fase 1: CI de migraciones Turso, healthcheck, guardrail de preview en Vercel
+
+Trabajo del TechOps Engineer preparando el terreno del despliegue Vercel + Turso **sin
+credenciales reales todavía** (fase 1). Los puntos que necesitan secretos o acceso al dashboard
+de Vercel/Turso quedan documentados como checklist de fase 2 al final de esta entrada.
+
+- **Job de CI `verify-turso-migrations` — testcontainers, no `services:`.**
+  - **Decisión:** el contenedor `libsql-server` lo lanza el script de verificación de
+    migraciones (que produce el Developer en `feature/despliegue-turso-adapter`) vía
+    **testcontainers**, no un bloque `services:` del YAML de GitHub Actions.
+  - **Alternativas consideradas:**
+    - **`services:` en el YAML** — descartada: partiría la responsabilidad en dos (el YAML
+      arranca el contenedor y el script asume que ya está levantado), duplicaría la config del
+      contenedor, y no funcionaría igual en local (donde no hay `services:`). Ya SPEC.md §8 y la
+      entrada de DECISIONS del pivote comprometían testcontainers precisamente para que la
+      misma verificación corra idéntica en CI y en local, con el script controlando el ciclo de
+      vida y la señal de readiness del contenedor.
+    - **testcontainers (elegida):** una sola fuente de verdad del contenedor, dentro del script;
+      los runners `ubuntu-latest` traen Docker preinstalado (lo único que testcontainers
+      necesita), así que no hace falta `services:`. Contrapartida asumida: testcontainers hace
+      pull de la imagen en tiempo de ejecución (primer run más lento) — aceptable.
+  - **Verificado contra documentación oficial** (no asumido): la imagen es
+    `ghcr.io/tursodatabase/libsql-server:latest`, escucha HTTP en `:8080` (y gRPC en `:5001`,
+    no lo usamos), y requiere `SQLD_NODE=primary` para arrancar como instancia standalone
+    (github.com/tursodatabase/libsql/blob/main/docs/DOCKER.md).
+  - **Estado fase 1:** el job queda estructuralmente montado, es **independiente** (sin
+    `needs:`) para no bloquear `test`/`e2e` ni depender de ellos, y **no requiere ningún
+    secreto** (el servidor libSQL es local y efímero, no la Turso de producción). Incluye un
+    *smoke* `continue-on-error: true` que arranca la imagen en el runner para de-riesgar la fase
+    2 (probar que el runner puede levantarla), y un paso placeholder claramente marcado
+    (`PENDIENTE FASE 2`) donde irá la invocación real al script. **No se ha inventado la
+    interfaz del script** (nombre npm, args, ni cómo lleva el control de qué migraciones ya se
+    aplicaron a Turso — cuestión abierta heredada del pivote): es un punto de integración
+    explícito, a resolver en fase 2.
+
+- **Healthcheck `GET /api/health` — ya existía; se documenta su intención, no se duplica.**
+  - Ya había un endpoint (`src/app/api/health/route.ts`) que responde `200 { status: "ok" }`
+    con su test de comportamiento. Se **reutiliza** en vez de crear otro. Se añadió solo un
+    comentario de *por qué*: es un check de **liveness** (¿responde el proceso?), deliberadamente
+    **sin round-trip a la base de datos**, para no gastar cuota de lectura de Turso ni provocar
+    falsos negativos por latencia de red, y sin exponer versión/entorno ni dato sensible alguno.
+    Sirve como URL de comprobación para Vercel/monitorización externa (SPEC.md §9).
+
+- **Guardrail de preview deployments — el scoping de env vars NO es versionable; es dashboard.**
+  - **Hallazgo (verificado en docs oficiales de Vercel):** el scope de una variable de entorno
+    por entorno (Production / Preview / Development) se configura **solo en el dashboard o vía
+    Vercel CLI**, no en `vercel.json` — `vercel.json` no tiene clave `env` en su esquema actual
+    para valores ni para scoping. Por tanto, evitar que los preview deployments accedan a la
+    Turso de producción **no se puede resolver en config-as-code**: se hace marcando las
+    credenciales de producción como scope **Production únicamente** en el dashboard (ver
+    checklist de fase 2).
+  - **Lo que sí se versiona:** un `vercel.json` mínimo (`$schema` para autocompletado +
+    `framework: "nextjs"` explícito). No se fija `maxDuration`: con *fluid compute* (activo por
+    defecto) el plan Hobby ya da 300s por defecto y de máximo — de sobra para las llamadas de IA
+    de ~44-60s (docs de Vercel, "Configuring Maximum Duration"), así que SPEC.md §10 ("hasta
+    300s") es correcto para Hobby y no hace falta configurar nada extra.
+  - **`VERCEL_ENV`** (`production` | `preview` | `development`) lo inyecta Vercel
+    automáticamente en cada deployment: es la señal que permite al código, en fase 2, distinguir
+    el entorno si hiciera falta un guardrail adicional en la app.
+
+- **Punto de coordinación abierto para el Tech Lead (defensa en profundidad, fase 2):** si los
+  preview deployments se quedan (a propósito) sin `TURSO_DATABASE_URL`, la app necesita decidir
+  qué hace un preview sin BD de producción — fallar rápido con un mensaje claro, o conectar a un
+  SQLite efímero de `/tmp`. Esto toca el adapter de Prisma (Developer de
+  `feature/despliegue-turso-adapter`), no la infra: se deja como decisión explícita de fase 2,
+  no se resuelve a ciegas aquí.
+
+- **Alerta para David (vía Tech Lead), NO resuelta en esta ronda — modelo de red:** SPEC.md §2,
+  §5 y §7 asumen que tanto la webapp como el servidor MCP están **expuestos únicamente a través
+  de la VPN Tailscale, nunca abiertos a internet**. El pivote a Vercel (Hobby) sirve la app en
+  **internet público** (Vercel no ofrece Tailscale); la protección pasa a ser login + token en
+  vez de frontera de red. La entrada del pivote (2026-07-20) cubrió BD/despliegue/backup pero
+  **no** esta implicación de seguridad. Es una decisión de producto/seguridad de David: no se ha
+  tocado §2/§5/§7 en este trabajo, se traslada al Tech Lead para que la plantee.
+
+### Checklist de pasos MANUALES pendientes en Vercel/Turso (fase 2 — los ejecuta el Tech Lead cuando tenga acceso)
+
+Requieren credenciales reales o acceso al dashboard, imposibles en fase 1:
+
+1. **Vercel — variables de entorno de PRODUCCIÓN (scope Production únicamente):**
+   - `TURSO_DATABASE_URL` = URL de la Turso `fitness-coach` (formato `libsql://...`).
+   - `TURSO_AUTH_TOKEN` = token de auth de esa Turso (generado con `turso db tokens create fitness-coach`).
+   - `AUTH_SECRET` = el secreto de sesión de producción (`npx auth secret`).
+   - `ADMIN_USERNAME` y `ADMIN_PASSWORD_HASH` (hash generado en local con `npm run hash-password`).
+   - `ANTHROPIC_API_KEY` = clave de pago de Anthropic.
+   - **Para cada una: en Project Settings → Environment Variables, marcar SOLO el checkbox
+     "Production"** (desmarcar "Preview" y "Development"). Este es el guardrail que impide que un
+     preview deployment escriba en la Turso de producción.
+2. **Vercel — decidir qué reciben los preview deployments (si algo):** confirmar con el Developer
+   del adapter la estrategia (fallar rápido sin BD, o SQLite efímero). Si se opta por una BD de
+   preview distinta, añadir esas vars con scope "Preview". Por defecto (fase 1): los previews NO
+   llevan credenciales de Turso.
+3. **Turso — aplicar las migraciones a la base `fitness-coach`:** con el flujo del script del
+   Developer (`feature/despliegue-turso-adapter`), aplicar el SQL generado en local vía
+   `turso db shell fitness-coach < migracion.sql` (o el mecanismo que defina el script), tras
+   verificarlo en CI contra `libsql-server`.
+4. **CI — conectar la verificación real de migraciones (quita el `PENDIENTE FASE 2`):** en
+   `.github/workflows/ci.yml`, sustituir el paso placeholder de `verify-turso-migrations` por la
+   invocación real (`npm run <script-del-adapter>`) y quitar el `continue-on-error: true` del
+   smoke para que pase a ser un gate real. Requiere que el script esté mergeado en `master`.
+5. **Vercel — conectar el repo de GitHub** (integración Git) y confirmar que `master` es la
+   Production Branch, para que cada merge despliegue a producción automáticamente (SPEC.md §10).
+6. **Anthropic — configurar límite de gasto mensual** en console.anthropic.com como red de
+   seguridad (SPEC.md §7/§14).
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
