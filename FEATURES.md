@@ -160,6 +160,13 @@ cambio relevante.
 - **[BL-008]** Botón "Cerrar sesión" al final de la barra de navegación. Pide confirmación
   nativa (`window.confirm`) y, si se confirma, invoca la Server Action `logout()`
   (`src/app/actions.ts`), que llama a `signOut({ redirectTo: "/login" })` de Auth.js.
+- **[BL-009]** Menú hamburguesa por debajo del breakpoint `sm` (640px): los 5 enlaces y el botón
+  de logout colapsan detrás de un botón con `aria-expanded`/`aria-label` ("Abrir menú"/"Cerrar
+  menú"), estado `useState`. Se cierra al pulsar Escape, al hacer clic fuera del menú, al hacer
+  clic en cualquier enlace (además de al navegar realmente), y automáticamente en cuanto cambia
+  la ruta. En `sm:` y superior la barra se comporta exactamente igual que antes (fila
+  horizontal, sin hamburguesa). Sin librería de menús — un `useState` más las clases
+  `hidden`/`flex`/`sm:flex` de Tailwind ya establecidas en el proyecto.
 
 ## Informe de progreso
 

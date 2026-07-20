@@ -184,6 +184,20 @@ Proyecto sin versión publicada todavía.
   logout lo dispara la nav global, visible en todas las páginas autenticadas, no una sola
   sección de la app.
 
+- **[BL-009]** Menú hamburguesa colapsable en `nav-bar.tsx` por debajo del breakpoint `sm`
+  (640px, ya en uso en el resto del proyecto): los 5 enlaces y el botón de logout colapsan
+  detrás de un botón (`useState`, `aria-expanded`, `aria-label` "Abrir menú"/"Cerrar menú").
+  Se cierra con Escape, con clic fuera del menú (listener `mousedown` en `document`, comparado
+  contra un `ref` del `<nav>`), al hacer clic en cualquier enlace, y automáticamente cuando
+  cambia la ruta (ajuste de estado durante el render, no en un efecto — evita el aviso de lint
+  `react-hooks/set-state-in-effect`). En `sm:` y superior la barra se comporta exactamente
+  igual que antes. El contenedor de enlaces alterna las clases Tailwind `hidden`/`flex` (con
+  `sm:flex` fijo) según el estado — **no** el atributo nativo `hidden` del elemento, que se
+  probó primero pero Tailwind v4 lo neutraliza con `!important` en su Preflight (ver
+  DECISIONS.md). Sin librería de menús nueva, TDD (`nav-bar.test.tsx`), y verificado en
+  navegador real con Playwright MCP a 375px (abrir/cerrar, Escape, clic fuera, navegación) y a
+  1024px (confirma que la barra de escritorio no cambia).
+
 - **[BL-005]** Filtro de rango de fechas (`desde`/`hasta`) en `/informe`: nuevo componente
   `DateRangeFilter` (`informe/date-range-filter.tsx`, dos `<input type="date">` nativos,
   mismo patrón controlado-por-URL que `ExerciseSelector`) que actualiza la URL vía

@@ -1105,4 +1105,56 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-20
+- **Decisión:** El menú hamburguesa de `nav-bar.tsx` (BL-009) alterna las clases Tailwind
+  `hidden`/`flex` (con `sm:flex` fijo en el contenedor para que en pantallas grandes se
+  muestre siempre) para mostrar/ocultar los enlaces según `isMenuOpen`. **No** usa el atributo
+  nativo `hidden` del elemento HTML, pese a ser en teoría la opción con mejor semántica de
+  accesibilidad (saca de verdad el contenido del árbol de accesibilidad mientras está oculto).
+- **Contexto/bug:** la primera implementación sí usaba el atributo nativo `hidden`, combinado
+  con `sm:flex` para forzar su visibilidad en pantallas grandes — patrón que la documentación
+  de Tailwind (v2/v3) describe como válido, y que en teoría debería funcionar porque una regla
+  de origen "author" (`sm:flex`) debería ganar a una regla "user-agent" (`[hidden] {
+  display:none }` del navegador) en el cascade, independientemente de capas/especificidad.
+  Los tests con `RuleTester`/Vitest pasaban en verde, pero la verificación en navegador real
+  (Playwright MCP, exigida por este mismo encargo) mostró la barra de navegación
+  **completamente vacía en pantallas grandes** (ni enlaces ni botón de logout, ver captura
+  `nav-desktop.png` de la ronda) — un bug que ningún test unitario podía detectar, porque
+  jsdom no aplica hojas de estilo reales y por tanto no podía reproducir el problema.
+  Inspeccionando el CSS generado (`grep '\[hidden\]' .next/.../globals.css`) se encontró la
+  causa: el Preflight de **Tailwind v4** incluye
+  `[hidden]:where(:not([hidden="until-found"])) { display: none !important; }` — con
+  `!important`, que gana a cualquier utilidad de display sin importar origen/capa. Esto es un
+  cambio de comportamiento de Tailwind v4 frente a v2/v3 (donde el patrón "atributo `hidden` +
+  utilidad `md:block`" sí es el recomendado en su documentación), y explica por qué la barra
+  quedaba vacía: el `!important` del Preflight neutralizaba `sm:flex` en cualquier breakpoint.
+- **Alternativas consideradas:** mantener el atributo `hidden` y añadir `!important` también a
+  la utilidad `sm:flex` (vía `important:` de Tailwind o CSS a medida) — descartado por
+  complejidad innecesaria (CLAUDE.md regla 4) para un caso que el idioma estándar
+  `hidden`/`flex` + `sm:flex` (sin atributo nativo, ya usado implícitamente en el resto del
+  proyecto vía clases `hidden`/`sm:*`) resuelve de forma más simple y ya verificada.
+- **Justificación:** el idioma basado puramente en clases (`hidden`/`flex` + `sm:flex`) no
+  choca con el Preflight de Tailwind (que solo afecta al atributo nativo, no a la clase
+  `.hidden`), y es el patrón que ya usa el resto del proyecto para responsive (`sm:flex-row`,
+  `sm:grid-cols-3`, etc.), sin introducir una excepción de comportamiento respecto al resto de
+  la base de código.
+- **Verificación:** este bug NO lo detectaron los tests unitarios (`nav-bar.test.tsx` en
+  verde con la versión rota, porque jsdom no simula CSS real) — solo lo encontró la
+  verificación en navegador real que este mismo encargo exigía para cambios de UI/flujo. Tras
+  el fix, reverificado en Playwright MCP: 375px (menú colapsado por defecto, abre/cierra,
+  Escape, clic fuera, navegación cierran el menú) y 1024px (barra idéntica a la versión
+  anterior a BL-009, sin hamburguesa, los 5 enlaces + logout visibles). Los tests unitarios se
+  adaptaron para comprobar las clases `hidden`/`flex` del contenedor directamente (jsdom no
+  aplica CSS, así que `toBeVisible()` no distingue nada aquí de todos modos).
+- **Lecciones aprendidas:** cuando una feature depende de CSS real (visibilidad, layout,
+  breakpoints), "tests unitarios en verde" no es señal suficiente de que funciona — ni siquiera
+  cuando el patrón usado está documentado como correcto en general, porque el comportamiento
+  exacto puede depender de la versión concreta de la herramienta (aquí, un cambio de Tailwind
+  v3 a v4 invierte la recomendación sobre combinar el atributo `hidden` con utilidades de
+  display). Esto refuerza la regla ya existente en CLAUDE.md sobre verificar en navegador real
+  los cambios de UI/flujo: aquí no fue "deseable", fue la única forma de detectar el bug antes
+  de que llegara a QA o a producción.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
