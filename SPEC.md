@@ -25,9 +25,13 @@ IA en dos puntos concretos: una propuesta de sesión editable (reutilizando la s
 
 ## 2. Usuarios y contexto de uso
 
-Un único usuario. Acceso principal desde el navegador del móvil. La infraestructura vive en un
-NAS/servidor propio de David, expuesta únicamente a través de una red privada Tailscale (VPN) —
-nunca abierta directamente a internet.
+Un único usuario. Acceso principal desde el navegador del móvil. La infraestructura vive en
+Vercel (ver §10), expuesta directamente a internet — sin frontera de VPN — protegida por login
+(web) y token Bearer (servidor MCP). Revisado el 2026-07-20 (ver DECISIONS.md): el plan
+original de exponer la app solo vía Tailscale asumía un host con proceso persistente (Fly.io o
+el NAS propio); Vercel es serverless y no puede unirse a una VPN, así que David decidió
+explícitamente aceptar login/token como única capa, de forma permanente, en vez de mover el
+servidor MCP a un host aparte.
 
 ## 3. Modelo de dominio
 
@@ -72,8 +76,9 @@ nunca abierta directamente a internet.
 
 ## 5. API y contrato MCP
 
-- El servidor MCP escucha **solo** en la interfaz de la VPN Tailscale (no expuesto a internet
-  abierto) y exige además un **token secreto** (Bearer) en cada petición.
+- El servidor MCP está expuesto en internet junto al resto de la app (Vercel), protegido por un
+  **token secreto** (Bearer) obligatorio en cada petición — única capa, decisión permanente
+  desde el pivote a Vercel (ver §2 y §7, y DECISIONS.md 2026-07-20).
 - Herramientas expuestas (nombres provisionales, a refinar en el plan de implementación):
   - `log_weight(fecha, peso_kg)`
   - `get_weight_history(desde?, hasta?)`
@@ -103,14 +108,15 @@ nunca abierta directamente a internet.
 
 - **Login web**: usuario/contraseña única (single-user), hash con bcrypt/argon2, sesión vía
   cookie httpOnly firmada. Sin registro público, sin recuperación de contraseña compleja.
-- **MCP**: dos capas — solo alcanzable por la VPN Tailscale, y token Bearer secreto obligatorio
-  en cada petición.
+- **MCP**: una única capa — token Bearer secreto obligatorio en cada petición. El plan original
+  de doble capa (VPN Tailscale + token) se descartó de forma permanente al pivotar a Vercel
+  (serverless, no puede unirse a una VPN) — decisión explícita de David, ver DECISIONS.md
+  2026-07-20.
 - **Validación de inputs** en el servidor para todo lo que entra (tipos, rangos: RPE 1-10,
   pesos y distancias positivos, fechas válidas), tanto desde la web como desde el MCP.
 - **Secretos** (token MCP, credenciales de login, claves de backup) vía variables de
   entorno de Vercel (Environment Variables, scope Production) — nunca committeados a git.
-- HTTPS en todo momento (certificados de Tailscale, y HTTPS automático de Vercel en el
-  despliegue).
+- HTTPS en todo momento (certificado automático de Vercel en el despliegue).
 - Nuevo secreto `ANTHROPIC_API_KEY` (variable de entorno de Vercel, nunca committeado). Límite
   de gasto mensual configurado en la consola de Anthropic.
 - La skill "sesion-entrenamiento" contiene datos personales de salud de David: vive en el
@@ -202,7 +208,7 @@ Ver [BACKLOG.md](BACKLOG.md) para detalle y justificación de cada uno:
 - Puede editar o borrar cualquier registro existente (peso o sesión).
 - Puede consultar su historial y un informe de progreso básico con gráficos.
 - La skill "sesion-entrenamiento" (u otro chat de Claude con el conector MCP configurado)
-  puede leer y escribir estos datos de forma segura (VPN + token).
+  puede leer y escribir estos datos de forma segura (token Bearer).
 - La app está desplegada en Vercel (Hobby) con Turso como base de datos, con CI corriendo tests
   antes de cada cambio, y con el backup manual desde `/ajustes` funcionando (verificado con al
   menos un restore de prueba).

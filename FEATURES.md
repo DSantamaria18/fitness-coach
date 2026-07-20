@@ -310,5 +310,7 @@ cambio relevante.
   proceso entre peticiones (ver ARCHITECTURE.md y DECISIONS.md 2026-07-18 para el detalle).
 - Errores estructurados `{ code, message }` en todos los casos, tanto los propios de cada tool
   (validación, "no encontrado") como los normalizados desde la capa de dominio.
-- Pendiente (ver BACKLOG.md): añadir la segunda capa de seguridad (VPN Tailscale) que especifica
-  SPEC §7, cuando se migre al NAS propio de David.
+- La segunda capa de seguridad (VPN Tailscale) que especificaba originalmente SPEC §7 se
+  descartó de forma permanente al pivotar el despliegue a Vercel (serverless, no puede unirse a
+  una VPN) — token Bearer es la única capa, decisión explícita de David (ver DECISIONS.md
+  2026-07-20).
