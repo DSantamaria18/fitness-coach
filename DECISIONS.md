@@ -1157,4 +1157,45 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-20
+- **Decisión:** Implementa BL-010 como un indicador de sección plano (`SectionIndicator`,
+  `src/components/section-indicator.tsx`) en vez de un breadcrumb jerárquico literal ("Inicio >
+  Sección > Subsección"). Se renderiza una única vez en `src/app/layout.tsx`, justo debajo de
+  `NavBarGate`, no repetido en cada `page.tsx`. Deriva el label comparando `usePathname()`
+  contra `NAV_LINKS`, extraído de `nav-bar.tsx` a un módulo nuevo compartido
+  (`src/lib/nav-links.ts`) para que ambos componentes lean de la misma fuente. Se autooculta
+  (`null`) en rutas que no son ninguna de las 5 secciones (`/login`, `/`, que redirige antes de
+  pintar nada).
+- **Alternativas consideradas:**
+  - **Breadcrumb jerárquico real** (la lectura literal del título de la entrada de BACKLOG.md,
+    "Breadcrumbs...") — descartado: la app tiene un único nivel de navegación (5 secciones
+    planas, sin sub-rutas anidadas tipo `/informe/detalle/x`), así que una cadena
+    "Inicio > Sección" no aportaría ninguna información que la ruta activa ya resaltada en
+    `nav-bar.tsx` (`aria-current="page"`) no diera ya — sería un componente nuevo que repite el
+    mismo dato con más ceremonia visual, sin resolver el problema real que motiva la entrada
+    (justificación de BACKLOG.md: "puede no ser obvio en qué sección está el usuario sin mirar
+    arriba"). Se interpretó el encargo por su justificación, no por su título literal.
+  - **Componente repetido en cada `page.tsx`** (opción (a) del encargo) — descartado frente a
+    colocarlo una sola vez en `layout.tsx`: el proyecto ya tiene un único layout raíz compartido
+    por todas las rutas (no hay grupos de rutas `(auth)`/`(public)` separados), así que
+    repetirlo en los 5 `page.tsx` habría sido pura duplicación sin ningún beneficio — el mismo
+    componente en `layout.tsx`, autoocultándose por pathname, cubre las 5 secciones actuales y
+    cualquiera futura sin tocar más ficheros.
+  - **Mostrar el indicador siempre, incluso fuera de las 5 secciones** (p. ej. algo genérico en
+    `/login`) — descartado: `/login` y `/` (que solo redirige) no son "secciones" de la app en
+    el sentido de `NAV_LINKS`, y forzar un valor no derivaría de la misma fuente de verdad que
+    la nav — mejor no mostrar nada que mostrar algo inventado.
+- **Justificación:** resuelve el problema real (reforzar visualmente en qué sección está el
+  usuario, cerca del título, sin depender de mirar la barra fija arriba — relevante también en
+  móvil, donde esa barra puede estar colapsada detrás del menú hamburguesa de BL-009) con el
+  mecanismo más simple posible (CLAUDE.md regla 4): ni una jerarquía que la app no tiene, ni un
+  componente duplicado en 5 ficheros cuando un layout compartido ya existe.
+- **Verificación:** TDD con 7 casos (`section-indicator.test.tsx`): las 5 secciones muestran su
+  label correcto, y dos rutas no-sección (`/login`, `/`) no muestran nada. Verificado también en
+  navegador real con Playwright MCP: las 5 secciones (`/peso`, `/sesion`, `/historial`,
+  `/informe`, `/ajustes`) muestran el label correcto junto al `<h1>`, en claro y oscuro, y en
+  móvil con el menú hamburguesa (BL-009) tanto abierto como cerrado.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

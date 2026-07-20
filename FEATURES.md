@@ -167,6 +167,12 @@ cambio relevante.
   la ruta. En `sm:` y superior la barra se comporta exactamente igual que antes (fila
   horizontal, sin hamburguesa). Sin librería de menús — un `useState` más las clases
   `hidden`/`flex`/`sm:flex` de Tailwind ya establecidas en el proyecto.
+- **[BL-010]** Indicador de sección activa (`SectionIndicator`) junto al título de cada página,
+  derivado de la misma fuente que la nav-bar (`NAV_LINKS`). No es un breadcrumb jerárquico —
+  la app solo tiene un nivel de navegación (5 secciones planas) — sino un refuerzo textual de
+  qué sección estás viendo, útil sobre todo donde el `<h1>` de la página no repite literalmente
+  el label de la nav (p. ej. "Registrar peso" en `/peso`, cuyo label en la nav es "Peso"). Se
+  autooculta fuera de las 5 secciones (`/login`, `/`).
 
 ## Informe de progreso
 

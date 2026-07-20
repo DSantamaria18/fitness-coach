@@ -4,17 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/app/actions";
-
-// /informe todavía no existe en esta rama: lo añade otro Developer en
-// paralelo (feature/informe-progreso). El enlace apunta ahí igualmente,
-// existirá en cuanto ambas ramas se mergeen a master.
-const NAV_LINKS = [
-  { href: "/peso", label: "Peso" },
-  { href: "/sesion", label: "Sesión" },
-  { href: "/historial", label: "Historial" },
-  { href: "/informe", label: "Informe" },
-  { href: "/ajustes", label: "Ajustes" },
-] as const;
+import { NAV_LINKS } from "@/lib/nav-links";
 
 // Barra de navegación mobile-first: fila de enlaces con altura mínima de
 // 44px (tamaño de toque recomendado en iOS/Android), ya que el uso
