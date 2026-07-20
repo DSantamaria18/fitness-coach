@@ -177,6 +177,16 @@ Reglas adicionales de funcionamiento del equipo:
   QA de la ronda BL-004/005/006/008 (cada uno lo descubrió por su cuenta). Ejecutar `npx prisma
   generate` justo después de crear el worktree y enlazar `node_modules`, como paso estándar de
   setup, no como algo a investigar cada vez.
+- **Un `node_modules` enlazado por symlink no trae dependencias nuevas que la propia rama
+  añadió.** El symlink apunta al `node_modules` del repo principal tal y como esté en ese
+  momento — si la rama del worktree añadió un paquete a `package.json`/`package-lock.json`
+  (p. ej. un adapter nuevo), ese paquete no está instalado ahí hasta que alguien corra `npm
+  install`, ni en el repo principal ni en ningún otro worktree enlazado al mismo
+  `node_modules`. Pasó en la ronda del pivote a Turso: el worktree de QA para la PR #30 no
+  tenía `@prisma/adapter-libsql` instalado pese al symlink, porque el repo principal tampoco
+  lo tenía todavía. Tras mergear una PR que añade dependencias nuevas, el Tech Lead corre `npm
+  install` en el repo principal (actualiza el `node_modules` compartido por todos los
+  worktrees enlazados) como paso estándar, no solo `git pull`.
 </equipo_de_agentes>
 
 <primer_paso>
