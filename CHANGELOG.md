@@ -264,6 +264,11 @@ Proyecto sin versión publicada todavía.
   aparecían siempre en el PNG con su opción por defecto ("Todos"/"Sin comparar") aunque el
   filtro real estuviera activo y los gráficos de la misma imagen ya lo reflejaran. Ver
   DECISIONS.md.
+- Capa de datos del pivote de despliegue a Vercel + Turso (ver DECISIONS.md 2026-07-20):
+  cliente Prisma migrado a un único adapter `@prisma/adapter-libsql` (producción y local/tests,
+  sustituye a `@prisma/adapter-better-sqlite3`) y nuevo `scripts/apply-turso-migrations.ts` que
+  aplica las migraciones generadas en local contra cualquier target libSQL (Turso real o un
+  `libsql-server` de CI), con su propia tabla de control para ser idempotente en reintentos.
 
 ### Fixed
 

@@ -1,10 +1,14 @@
 import "dotenv/config";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { PrismaClient, ExerciseType } from "../src/generated/prisma/client";
+import { resolveDatasourceConfig } from "../src/lib/prisma-datasource-config";
 
-const adapter = new PrismaBetterSqlite3({
-  url: process.env.DATABASE_URL ?? "file:./dev.db",
-});
+// Mismo adapter y misma resolución de URL que la app (src/lib/prisma.ts):
+// el seed puede sembrar tanto un fichero SQLite local (dev/E2E) como una
+// Turso remota si algún día se necesita sembrar producción a mano, sin
+// duplicar la lógica de qué variable de entorno gana — ver DECISIONS.md
+// 2026-07-20.
+const adapter = new PrismaLibSql(resolveDatasourceConfig());
 const prisma = new PrismaClient({ adapter });
 
 // Catálogo inicial sembrado a partir de los ejercicios que ya usaba la

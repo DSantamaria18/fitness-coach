@@ -15,10 +15,11 @@ export type DeleteSessionResult =
 // deleteMany explícito dentro de una transacción), aquí basta con
 // prisma.session.delete: el esquema declara `onDelete: Cascade` en
 // StrengthEntry/CardioEntry hacia Session (y StrengthSet hacia
-// StrengthEntry), y se comprobó empíricamente contra el adapter
-// @prisma/adapter-better-sqlite3 (no solo leyendo schema.prisma) que esas
-// cascadas se aplican en runtime, sin dejar registros huérfanos — ver
-// DECISIONS.md.
+// StrengthEntry), y se comprobó empíricamente (no solo leyendo
+// schema.prisma) que esas cascadas se aplican en runtime — primero contra
+// @prisma/adapter-better-sqlite3, y re-verificado contra
+// @prisma/adapter-libsql (ver prisma.integration.test.ts) tras el pivote a
+// Turso — sin dejar registros huérfanos. Ver DECISIONS.md.
 export async function deleteSession(
   userId: string,
   id: string,
