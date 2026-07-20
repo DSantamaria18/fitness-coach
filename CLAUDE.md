@@ -187,6 +187,25 @@ Reglas adicionales de funcionamiento del equipo:
   lo tenía todavía. Tras mergear una PR que añade dependencias nuevas, el Tech Lead corre `npm
   install` en el repo principal (actualiza el `node_modules` compartido por todos los
   worktrees enlazados) como paso estándar, no solo `git pull`.
+- **QA reporta explícitamente si la rama de la PR está por detrás de `master` (commits behind),
+  no solo el resultado funcional.** Cuando varias PRs se desarrollan en paralelo sobre una base
+  común (p. ej. varias ramas que dependen del mismo adapter de datos), una rama puede quedarse
+  desactualizada sin que GitHub la marque como "unmergeable" hasta el intento real de merge.
+  Pasó en la ronda del pivote a Turso: la PR #28 (backup) llevaba 8 commits por detrás de
+  `master` cuando otras tres PRs paralelas (#27, #29, #30) ya habían mergeado — QA lo detectó y
+  lo señaló como hallazgo de proceso al validar, lo que permitió al Tech Lead rebasar y
+  re-verificar antes de mergear en vez de descubrirlo solo al fallar `gh pr merge`. Añadir
+  "cuántos commits por detrás de `master` está la rama" como comprobación estándar de QA en
+  rondas con varias PRs paralelas sobre una base compartida.
+- **Al probar formularios manualmente en navegador real, usar valores de prueba que respeten las
+  restricciones nativas del HTML (`step`, `min`, `max`, `pattern`).** Un valor que las incumple
+  bloquea el envío del formulario de forma silenciosa — sin error de red ni de consola — y puede
+  parecer un bug de guardado cuando es solo un dato de prueba mal elegido. Pasó en la ronda del
+  pivote a Turso: QA probó `/peso` con `82.35` (el campo tiene `step="0.1"`), el navegador
+  bloqueó el envío sin ningún rastro en consola/red, y hubo que investigarlo como posible
+  regresión antes de confirmar que era un falso positivo. Revisar las restricciones del campo (o
+  reutilizar los valores que ya usan los tests E2E existentes) antes de dar por bueno un valor de
+  prueba.
 </equipo_de_agentes>
 
 <primer_paso>
