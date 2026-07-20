@@ -477,24 +477,29 @@ propósito — no sobre-diseñar la más simple, regla 4 CLAUDE.md).
   (`workers: 1`) para evitar condiciones de carrera entre tests que escriben en la misma base
   de datos — la suite es pequeña, así que el coste en tiempo total es asumible.
 
-## Regla ESLint: `local/no-client-import-in-server-file` (BL-001)
+## Regla ESLint: `local/no-client-import-in-server-file` (BL-001, ampliada en BL-015)
 
 - **Qué detecta**: un módulo `"use server"` (Server Actions) que importa, directa o vía el
-  alias `@/*`, algo exportado por un fichero `"use client"`. Es exactamente la clase de bug de
-  `buildInitialRegistros` (ver DECISIONS.md 2026-07-19 y la sección "Estructura de carpetas
-  relevante" más abajo): RSC sustituye los exports de un módulo cliente por referencias opacas
-  al empaquetar, así que invocarlos desde el servidor crashea siempre en runtime real, pero ni
-  Vitest/jsdom ni `tsc` lo detectan (la directiva `"use client"` es una simple cadena de texto
-  sin efecto fuera del bundler de RSC de Next.js).
+  alias `@/*`, algo exportado por un fichero `"use client"` — tanto con un import estático
+  (`import { x } from "./y"`) como con un `import()` dinámico (`await import("./y")`, BL-015).
+  Es exactamente la clase de bug de `buildInitialRegistros` (ver DECISIONS.md 2026-07-19 y la
+  sección "Estructura de carpetas relevante" más abajo): RSC sustituye los exports de un módulo
+  cliente por referencias opacas al empaquetar, así que invocarlos desde el servidor crashea
+  siempre en runtime real, pero ni Vitest/jsdom ni `tsc` lo detectan (la directiva `"use
+  client"` es una simple cadena de texto sin efecto fuera del bundler de RSC de Next.js).
 - **Mecanismo**: regla ESLint custom local (`eslint-rules/no-client-import-in-server-file.mjs`,
   registrada como plugin `local` inline en `eslint.config.mjs`, sin publicar ningún paquete).
   Para cada fichero cuya primera sentencia sea la directiva `"use server"`, resuelve cada
-  `ImportDeclaration` a un fichero real en disco (soporta rutas relativas y el alias `@/*` →
-  `./src/*`, leyendo `tsconfig.json` — tolerante a los comentarios JSONC que ya usa el propio
-  `tsconfig.json` de este proyecto — y probando extensiones `.ts`/`.tsx`/`.js`/`.jsx` e
-  `index.*` para directorios) y comprueba si la primera sentencia de ESE fichero es la
-  directiva `"use client"`. Si el import no resuelve a un fichero del proyecto (paquete de
-  `node_modules`, alias sin configurar), se ignora sin más.
+  `ImportDeclaration` y cada `ImportExpression` (import dinámico) a un fichero real en disco
+  (soporta rutas relativas y el alias `@/*` → `./src/*`, leyendo `tsconfig.json` — tolerante a
+  los comentarios JSONC que ya usa el propio `tsconfig.json` de este proyecto — y probando
+  extensiones `.ts`/`.tsx`/`.js`/`.jsx` e `index.*` para directorios) y comprueba si la primera
+  sentencia de ESE fichero es la directiva `"use client"`. Si el import no resuelve a un
+  fichero del proyecto (paquete de `node_modules`, alias sin configurar, o el argumento de un
+  `import()` no es un string literal estático — p. ej. `import(variable)`), se ignora sin más:
+  la regla no tiene nada que decir sobre imports genuinamente dinámicos. El mensaje de error
+  distingue ambos casos (`clientImportInServerFile` vs. `clientDynamicImportInServerFile`) para
+  que quien lo lea en el editor/CI sepa de qué construcción viene.
 - **Por qué una regla custom y no algo ya existente en el ecosistema** (investigación previa a
   escribir la regla, para no repetirla):
   - `eslint-plugin-react-server-components` (candidato mencionado en BACKLOG.md): su única
@@ -512,7 +517,10 @@ propósito — no sobre-diseñar la más simple, regla 4 CLAUDE.md).
   no-client-import-in-server-file.test.ts`, vía `RuleTester` de ESLint), se comprobó
   reproduciendo temporalmente el bug real (reintroduciendo `"use client"` en
   `build-initial-registros.ts`, importado por `app/sesion/actions.ts` vía el alias `@/*`) y
-  confirmando que `npm run lint` lo detecta; el cambio se revirtió antes de commitear.
+  confirmando que `npm run lint` lo detecta; el cambio se revirtió antes de commitear. Repetido
+  en BL-015 con la misma pareja de ficheros, cambiando el import de `buildInitialRegistros` a
+  `await import(...)`: `npx eslint` detecta el import dinámico con
+  `clientDynamicImportInServerFile`; también revertido antes de commitear.
 
 ## Estructura de carpetas relevante
 

@@ -259,6 +259,13 @@ const rule = {
     messages: {
       clientImportInServerFile:
         'No se puede importar "{{imported}}" desde "{{resolvedPath}}" (fichero "use client") en un módulo "use server". Ver DECISIONS.md 2026-07-19.',
+      // BL-015: mismo problema real (RSC no permite invocar código cliente
+      // desde el servidor), pero colado vía import() dinámico en vez de un
+      // import estático — mensaje separado para que quien lo lea en el
+      // editor/CI entienda de qué construcción viene sin tener que mirar la
+      // línea reportada.
+      clientDynamicImportInServerFile:
+        'No se puede importar dinámicamente "{{resolvedPath}}" (fichero "use client") en un módulo "use server". Ver DECISIONS.md 2026-07-19.',
     },
   },
 
@@ -297,6 +304,38 @@ const rule = {
           messageId: "clientImportInServerFile",
           data: {
             imported,
+            resolvedPath: path.relative(process.cwd(), resolvedPath),
+          },
+        });
+      },
+
+      // BL-015: import() dinámico (`await import("./modulo")`). A
+      // diferencia de ImportDeclaration, el argumento no siempre es un
+      // Literal de cadena estático (puede ser una variable o un template
+      // literal con interpolación) — si no podemos extraer un string
+      // literal del argumento, esta regla no tiene nada que decir sobre ese
+      // import, igual que ya ocurre con paquetes de node_modules.
+      ImportExpression(node) {
+        if (
+          node.source?.type !== "Literal" ||
+          typeof node.source.value !== "string"
+        ) {
+          return;
+        }
+
+        const resolvedPath = resolveImportToFile(filename, node.source.value);
+        if (!resolvedPath) {
+          return;
+        }
+
+        if (!fileStartsWithClientDirective(resolvedPath)) {
+          return;
+        }
+
+        context.report({
+          node,
+          messageId: "clientDynamicImportInServerFile",
+          data: {
             resolvedPath: path.relative(process.cwd(), resolvedPath),
           },
         });

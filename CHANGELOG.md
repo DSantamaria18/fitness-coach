@@ -145,6 +145,18 @@ Proyecto sin versión publicada todavía.
   `RuleTester` de ESLint (`eslint-rules/no-client-import-in-server-file.test.ts`) y verificada
   empíricamente reproduciendo el bug real (ver DECISIONS.md 2026-07-19).
 
+- **[BL-015]** Ampliada `local/no-client-import-in-server-file` (BL-001) para detectar el mismo
+  bug también cuando se cuela vía `import()` dinámico (`ImportExpression`), no solo
+  `import`/`export` estático (`ImportDeclaration`). Nuevo visitor `ImportExpression` en la
+  misma regla, que reutiliza tal cual `resolveImportToFile` y
+  `fileStartsWithClientDirective`; si el argumento del `import()` no es un string literal
+  estático (p. ej. `import(variable)` o una template literal con interpolación), la regla no
+  tiene forma de saber a qué resuelve y lo ignora, igual que ya hacía con paquetes de
+  `node_modules`. Nuevo `messageId` `clientDynamicImportInServerFile` para distinguir en el
+  mensaje que el problema viene de un import dinámico. 4 casos nuevos vía `RuleTester`
+  (`eslint-rules/no-client-import-in-server-file.test.ts`) y verificada empíricamente
+  reproduciendo el bug real vía import dinámico (misma pareja de ficheros que BL-001).
+
 - **[BL-008]** Botón "Cerrar sesión" en la barra de navegación global (`nav-bar.tsx`), con
   confirmación nativa (`window.confirm`, mismo criterio que `DeleteSessionButton`/
   `DeleteWeightButton`) antes de invocar la nueva Server Action `logout()`
