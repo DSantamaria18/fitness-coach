@@ -269,6 +269,16 @@ Proyecto sin versión publicada todavía.
   sustituye a `@prisma/adapter-better-sqlite3`) y nuevo `scripts/apply-turso-migrations.ts` que
   aplica las migraciones generadas en local contra cualquier target libSQL (Turso real o un
   `libsql-server` de CI), con su propia tabla de control para ser idempotente en reintentos.
+- Infraestructura de despliegue Vercel + Turso (fase 1, sin credenciales reales aún): job de CI
+  `verify-turso-migrations` que prepara la verificación de migraciones contra un `libsql-server`
+  real (imagen oficial de Turso), independiente y no bloqueante, con la invocación real del
+  script de migraciones marcada como pendiente de fase 2; `vercel.json` mínimo versionable
+  (`$schema` + `framework: nextjs`); documentación del guardrail de preview deployments (las
+  credenciales de la Turso de producción se marcan como scope Production en el dashboard de
+  Vercel, no versionable en config-as-code) y checklist de pasos manuales de fase 2 en
+  DECISIONS.md. El endpoint `/api/health` pasa a excluirse del middleware de sesión
+  (`proxy.ts`), para que Vercel y los monitores externos reciban un 200 en vez de un 307 a
+  `/login`.
 
 ### Fixed
 

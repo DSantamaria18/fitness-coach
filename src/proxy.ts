@@ -10,8 +10,8 @@ const { auth } = NextAuth(authConfig);
 export default auth;
 
 // Protege todas las rutas salvo login, la API de NextAuth, el servidor MCP
-// (api/mcp) y los assets estáticos/internos de Next.js (que no deben
-// requerir sesión).
+// (api/mcp), el healthcheck (api/health) y los assets estáticos/internos de
+// Next.js (que no deben requerir sesión).
 //
 // api/mcp queda fuera A PROPÓSITO: ningún cliente MCP (la skill
 // "sesion-entrenamiento", un chat con el conector configurado) tiene cookie
@@ -23,6 +23,13 @@ export default auth;
 // ARCHITECTURE.md, sección "Servidor MCP"); no añadas aquí una exigencia de
 // sesión para esta ruta, y no quites el check de Bearer de route.ts
 // asumiendo que el middleware ya protege algo.
+//
+// api/health queda fuera por la misma razón: Vercel y los monitores externos
+// que lo sondean no llevan cookie de sesión; si pasara por el middleware,
+// recibirían un 307 a /login en vez del 200 { status: "ok" } esperado. Es
+// seguro exponerlo: no devuelve ningún dato sensible (ver route.ts).
 export const config = {
-  matcher: ["/((?!api/auth|api/mcp|_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!api/auth|api/mcp|api/health|_next/static|_next/image|favicon.ico).*)",
+  ],
 };

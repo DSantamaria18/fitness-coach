@@ -82,3 +82,77 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  # Verificación de que las migraciones (generadas en local contra SQLite de
+  # fichero) se aplican limpiamente contra el protocolo HTTP real de libSQL,
+  # no solo contra SQLite puro (ver SPEC.md §8 y DECISIONS.md 2026-07-20).
+  #
+  # Job INDEPENDIENTE a propósito (sin `needs:`): no bloquea `test` ni `e2e`
+  # ni depende de ellos. En esta FASE 1 solo se deja la estructura montada;
+  # la invocación real al script de migraciones (que produce el Developer en
+  # `feature/despliegue-turso-adapter`) se completa en la FASE 2, cuando ese
+  # script exista en `master`. No requiere ningún secreto: el servidor libSQL
+  # es local y efímero, no la Turso de producción.
+  verify-turso-migrations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Generar cliente Prisma
+        run: npx prisma generate
+
+      # Smoke de FASE 1: probamos que el runner puede arrancar la imagen
+      # oficial de libsql-server (el mismo servidor que Turso corre en la
+      # nube, hablando el protocolo HTTP de libSQL en :8080) — así de-riesgamos
+      # la FASE 2, donde el script de migraciones lo levantará vía
+      # testcontainers. `SQLD_NODE=primary` es obligatorio para que arranque
+      # como instancia standalone (confirmado en la documentación oficial:
+      # github.com/tursodatabase/libsql/blob/main/docs/DOCKER.md).
+      #
+      # `continue-on-error: true`: en FASE 1 este paso es informativo, nunca
+      # bloquea el pipeline. En FASE 2 la verificación real de migraciones sí
+      # será un gate y se quitará el continue-on-error.
+      - name: "Smoke: libsql-server arranca en el runner (FASE 1, no bloqueante)"
+        continue-on-error: true
+        run: |
+          docker run -d --name libsql-smoke -p 8080:8080 \
+            -e SQLD_NODE=primary \
+            ghcr.io/tursodatabase/libsql-server:latest
+          echo "Esperando a que libsql-server acepte conexiones en :8080..."
+          for i in $(seq 1 30); do
+            if curl -s -o /dev/null http://127.0.0.1:8080/; then
+              echo "libsql-server responde en el intento $i."
+              docker rm -f libsql-smoke
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "libsql-server no respondió a tiempo; logs del contenedor:"
+          docker logs libsql-smoke || true
+          docker rm -f libsql-smoke || true
+          exit 1
+
+      # PENDIENTE FASE 2 — punto de integración deliberadamente sin resolver:
+      # aquí irá la invocación real al script de verificación de migraciones
+      # de `feature/despliegue-turso-adapter`. NO inventamos su interfaz (nombre
+      # de script npm, args, cómo lleva el control de qué migraciones ya se
+      # aplicaron a Turso — cuestión abierta en DECISIONS.md 2026-07-20). Ese
+      # script, según SPEC.md §8, gestiona el ciclo de vida del contenedor
+      # libsql-server vía testcontainers, por eso este job NO declara un bloque
+      # `services:` (una sola fuente de verdad del contenedor, y funciona igual
+      # en local que en CI). En FASE 2: sustituir este echo por el `npm run ...`
+      # correspondiente y quitar el continue-on-error del smoke de arriba.
+      - name: "Verificación real de migraciones (PENDIENTE FASE 2)"
+        run: |
+          echo "FASE 1: estructura del job lista. La verificación real de"
+          echo "migraciones contra libsql-server se conecta en la FASE 2,"
+          echo "cuando el script de 'feature/despliegue-turso-adapter' esté"
+          echo "en master. No requiere secretos (contenedor local efímero)."

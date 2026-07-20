@@ -25,9 +25,13 @@ IA en dos puntos concretos: una propuesta de sesión editable (reutilizando la s
 
 ## 2. Usuarios y contexto de uso
 
-Un único usuario. Acceso principal desde el navegador del móvil. La infraestructura vive en un
-NAS/servidor propio de David, expuesta únicamente a través de una red privada Tailscale (VPN) —
-nunca abierta directamente a internet.
+Un único usuario. Acceso principal desde el navegador del móvil. La infraestructura vive en
+Vercel (ver §10), expuesta directamente a internet — sin frontera de VPN — protegida por login
+(web) y token Bearer (servidor MCP). Revisado el 2026-07-20 (ver DECISIONS.md): el plan
+original de exponer la app solo vía Tailscale asumía un host con proceso persistente (Fly.io o
+el NAS propio); Vercel es serverless y no puede unirse a una VPN, así que David decidió
+explícitamente aceptar login/token como única capa, de forma permanente, en vez de mover el
+servidor MCP a un host aparte.
 
 ## 3. Modelo de dominio
 
@@ -72,8 +76,9 @@ nunca abierta directamente a internet.
 
 ## 5. API y contrato MCP
 
-- El servidor MCP escucha **solo** en la interfaz de la VPN Tailscale (no expuesto a internet
-  abierto) y exige además un **token secreto** (Bearer) en cada petición.
+- El servidor MCP está expuesto en internet junto al resto de la app (Vercel), protegido por un
+  **token secreto** (Bearer) obligatorio en cada petición — única capa, decisión permanente
+  desde el pivote a Vercel (ver §2 y §7, y DECISIONS.md 2026-07-20).
 - Herramientas expuestas (nombres provisionales, a refinar en el plan de implementación):
   - `log_weight(fecha, peso_kg)`
   - `get_weight_history(desde?, hasta?)`
@@ -103,15 +108,17 @@ nunca abierta directamente a internet.
 
 - **Login web**: usuario/contraseña única (single-user), hash con bcrypt/argon2, sesión vía
   cookie httpOnly firmada. Sin registro público, sin recuperación de contraseña compleja.
-- **MCP**: dos capas — solo alcanzable por la VPN Tailscale, y token Bearer secreto obligatorio
-  en cada petición.
+- **MCP**: una única capa — token Bearer secreto obligatorio en cada petición. El plan original
+  de doble capa (VPN Tailscale + token) se descartó de forma permanente al pivotar a Vercel
+  (serverless, no puede unirse a una VPN) — decisión explícita de David, ver DECISIONS.md
+  2026-07-20.
 - **Validación de inputs** en el servidor para todo lo que entra (tipos, rangos: RPE 1-10,
   pesos y distancias positivos, fechas válidas), tanto desde la web como desde el MCP.
 - **Secretos** (token MCP, credenciales de login, claves de backup) vía variables de
-  entorno/Fly.io secrets — nunca committeados a git.
-- HTTPS en todo momento (certificados de Tailscale, y de Fly.io en el despliegue inicial).
-- Nuevo secreto `ANTHROPIC_API_KEY` (Fly.io secrets, nunca committeado). Límite de gasto
-  mensual configurado en la consola de Anthropic.
+  entorno de Vercel (Environment Variables, scope Production) — nunca committeados a git.
+- HTTPS en todo momento (certificado automático de Vercel en el despliegue).
+- Nuevo secreto `ANTHROPIC_API_KEY` (variable de entorno de Vercel, nunca committeado). Límite
+  de gasto mensual configurado en la consola de Anthropic.
 - La skill "sesion-entrenamiento" contiene datos personales de salud de David: vive en el
   repo pero fuera de cualquier ruta servible públicamente, y su contenido nunca se loguea.
 - Todo output generado por IA (propuesta de sesión, comentario de progreso) se trata como
@@ -157,10 +164,17 @@ nunca abierta directamente a internet.
   contenedor de despliegue.
 - Dominio: subdominio por defecto de Vercel al principio; la URL/dominio nunca se hardcodea en
   el código (siempre vía variable de entorno), para poder cambiarlo sin fricción.
-- **CI**: GitHub Actions — corre tests, typecheck y (nuevo) la verificación de migraciones
-  contra `libsql-server` real (ver §8) en cada push. El despliegue en sí lo dispara
-  directamente la integración Git de Vercel, no un job de GitHub Actions. Sin entorno de
-  staging separado (justificado por ser un proyecto single-user).
+- **Preview deployments**: Vercel crea un deployment de preview por cada PR. A propósito **no**
+  reciben las credenciales de la Turso de producción (se configuran con scope Production
+  únicamente en el dashboard de Vercel), para que ningún preview escriba en la base de datos
+  real — sustituye a la falta de entorno de staging separado. El scoping por entorno no es
+  versionable en `vercel.json` (solo dashboard/CLI); ver DECISIONS.md 2026-07-20 (infra fase 1)
+  para el guardrail y la checklist de pasos manuales.
+- **CI**: GitHub Actions — corre tests, typecheck y (nuevo) el job `verify-turso-migrations`,
+  que aplica el SQL de migración contra un `libsql-server` real (imagen oficial de Turso, vía
+  testcontainers; ver §8) en cada push. Es un job independiente que no bloquea `test`/`e2e`. El
+  despliegue en sí lo dispara directamente la integración Git de Vercel, no un job de GitHub
+  Actions. Sin entorno de staging separado (justificado por ser un proyecto single-user).
 
 ## 11. Backup y restore
 
@@ -198,9 +212,10 @@ Ver [BACKLOG.md](BACKLOG.md) para detalle y justificación de cada uno:
 - Puede editar o borrar cualquier registro existente (peso o sesión).
 - Puede consultar su historial y un informe de progreso básico con gráficos.
 - La skill "sesion-entrenamiento" (u otro chat de Claude con el conector MCP configurado)
-  puede leer y escribir estos datos de forma segura (VPN + token).
-- La app está desplegada en Fly.io, con CI corriendo tests antes de cada cambio, y con el
-  backup manual desde `/ajustes` funcionando (verificado con al menos un restore de prueba).
+  puede leer y escribir estos datos de forma segura (token Bearer).
+- La app está desplegada en Vercel (Hobby) con Turso como base de datos, con CI corriendo tests
+  antes de cada cambio, y con el backup manual desde `/ajustes` funcionando (verificado con al
+  menos un restore de prueba).
 - Puede generar una propuesta de sesión con IA desde `/sesion`, editarla, y guardarla como
   cualquier sesión manual.
 - Puede generar (o regenerar) un comentario de progreso con IA desde `/informe`.
@@ -227,8 +242,8 @@ maquinaria para no sobre-diseñar la más simple:
    serializada como contexto. El resultado sustituye siempre al `ComentarioProgreso` anterior
    (fila única por usuario, no histórico).
 
-**Autenticación/coste**: `ANTHROPIC_API_KEY` (pago por token, vía Fly.io secrets — nunca en
-código ni logs), no autenticación por suscripción/OAuth (los términos de consumidor de
+**Autenticación/coste**: `ANTHROPIC_API_KEY` (pago por token, vía variable de entorno de Vercel
+— nunca en código ni logs), no autenticación por suscripción/OAuth (los términos de consumidor de
 Anthropic restringen esos tokens a Claude Code/claude.ai). Coste estimado con uso diario:
 ~1€/mes típico, ~3-6€/mes en el peor caso — se configura un límite de gasto mensual en la
 consola de Anthropic como red de seguridad adicional.
