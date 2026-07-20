@@ -915,4 +915,59 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-20
+- **Decisión:** Exportar `/informe` como imagen PNG (BL-007). Decisiones de producto ya
+  cerradas por David: formato PNG (no PDF), alcance "toda la vista actual tal cual se ve en
+  pantalla" (estadísticas + gráficos + controles de filtro, incluida la comparación de
+  periodos si está activa). Decisión técnica del Tech Lead: librería
+  [`modern-screenshot`](https://github.com/qq15725/modern-screenshot) (`domToPng`), un fork
+  activo de `html-to-image` — elegida sobre `html2canvas`/`dom-to-image` por ser más ligera,
+  sin dependencias de React, y por su enfoque basado en SVG nativo (`foreignObject`), que
+  maneja mejor la variable CSS que ya usa `ComparisonChart` (`--series-actual-color`, BL-006)
+  que un enfoque basado en reconstrucción manual de canvas como `html2canvas`.
+  1. **Qué queda dentro/fuera del PNG**: el contenido se envuelve en
+     `<div id="informe-content">` (estadísticas, filtros, gráficos), pero el `<h1>` y el propio
+     botón "Descargar imagen" quedan **fuera** — no forman parte del "informe" en sí, y
+     capturar el botón habría significado capturarlo a medio camino de cambiar a
+     "Generando..." (el `setStatus("generating")` se dispara antes de `await domToPng(...)`).
+  2. **Bug real encontrado en verificación manual (no en tests)**: la primera versión pasaba
+     `domToPng(node)` sin más opciones. Comparando el PNG exportado contra una captura de la
+     página en vivo con Playwright MCP (con el navegador en modo oscuro, tema real usado por
+     David), el PNG salía con fondo **blanco** en vez de oscuro, y las etiquetas secundarias
+     (`text-black/60 dark:text-white/60` — pensadas para fondo oscuro) casi invisibles: texto
+     casi blanco sobre fondo casi blanco. Causa: `domToPng` solo captura el subárbol de
+     `#informe-content`, no `<body>` (donde vive el `background: var(--background)` real de
+     `globals.css`), y su `backgroundColor` por defecto es `null` (transparente, compuesto como
+     blanco por la mayoría de visores) — mientras que los textos sí seguían resolviendo
+     correctamente los colores del tema activo vía `getComputedStyle`. Corregido pasando
+     `{ backgroundColor: getComputedStyle(document.body).backgroundColor }` explícitamente:
+     toma el fondo real ya calculado por el navegador (claro u oscuro, lo que esté activo)
+     en vez de asumir uno fijo.
+- **Alternativas consideradas:** `html2canvas` y `dom-to-image` (descartadas por el Tech Lead
+  antes de asignar la tarea, ver encargo original); PDF en vez de PNG (descartado por decisión
+  de producto de David).
+- **Justificación:** el mecanismo 100% client-side evita cualquier generación de imágenes en el
+  servidor (sin coste de cómputo adicional, sin cruzar la frontera server/cliente que ya ha
+  dado bugs reales en este proyecto — ver entrada 2026-07-19 sobre `buildInitialRegistros`).
+  Excluir título y botón del PNG evita un caso de "capturarse a sí mismo a medio renderizar"
+  que habría sido confuso. El `backgroundColor` explícito es la lección más importante de esta
+  ronda: sin verificación manual en navegador real con el tema oscuro activo, el bug de
+  contraste habría llegado a QA (o a David) con una imagen técnicamente "generada con éxito"
+  pero prácticamente ilegible — ningún test con jsdom lo detecta, porque jsdom no interpreta
+  CSS real y `domToPng` está mockeado en los tests de `ExportImageButton` (regla ya existente
+  del equipo: "cualquier código que cruce..." no aplica aquí al no haber frontera RSC, pero el
+  mismo principio general — tests+review no bastan para lo que solo se ve renderizado de
+  verdad — sí aplicaba).
+- **Verificación:** TDD completo (`export-image-button.test.tsx`: renderizado del botón,
+  llamada a `domToPng` con el nodo y opciones esperadas, estado "Generando..." mientras la
+  promesa está pendiente, aviso discreto en fallo de `domToPng` y en ausencia del contenedor).
+  Verificación manual con Playwright MCP: login real, navegación a `/informe` con un registro
+  de peso sembrado a propósito, clic real en "Descargar imagen" interceptando el evento
+  `download` de Playwright (`page.waitForEvent('download')`) — confirma que el PNG descargado
+  no es un mock (103 KB, nombre de fichero `informe-progreso-<fecha>.png` correcto) y,
+  comparando visualmente el PNG contra una captura de la página en vivo, que el bug de fondo/
+  contraste descrito arriba estaba presente antes del fix y desaparece después.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

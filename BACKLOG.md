@@ -21,11 +21,6 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   bloquear el desarrollo en Fly.io mientras el NAS propio de David no esté montado. Hay que
   volver a esto en cuanto el NAS con Tailscale esté disponible. Dificultad: baja (es
   configuración de red del despliegue, no cambia el código del servidor MCP).
-- **[BL-007]** **Exportar el informe de progreso** (PDF o imagen descargable) para compartirlo o archivarlo
-  fuera de la app. Justificación: propuesta razonable dado que ya existe un flujo de exportar
-  datos (backup manual desde `/ajustes`), pero para el informe visual, no el fichero SQLite
-  completo. Dificultad: media (generación de PDF/imagen en servidor o cliente, sin librería ya
-  elegida en el stack).
 
 - **[BL-009]** **Menú hamburguesa o navegación colapsable para cuando crezca el número de secciones.**
   Justificación: la barra de navegación actual (`feature/nav-global`) reparte 5 enlaces en una

@@ -189,6 +189,19 @@ Proyecto sin versión publicada todavía.
   rango manual de fechas (BL-005) son mutuamente excluyentes: activar uno borra el otro de la
   URL, tanto desde `ComparisonPeriodSelector` como desde `DateRangeFilter`.
 
+- **[BL-007]** Exportar `/informe` como imagen PNG: botón "Descargar imagen"
+  (`informe/export-image-button.tsx`, componente cliente) que captura, con
+  [`modern-screenshot`](https://github.com/qq15725/modern-screenshot) (`domToPng`), el
+  contenedor `#informe-content` (estadísticas, controles de filtro y gráficos, incluida la
+  comparación de periodos si está activa) tal cual se ve en pantalla, y dispara la descarga del
+  PNG resultante (`informe-progreso-<YYYY-MM-DD>.png`). Generación 100% client-side, sin cruzar
+  la frontera server/cliente ni tocar el servidor. `domToPng` recibe explícitamente
+  `backgroundColor: getComputedStyle(document.body).backgroundColor`: sin este ajuste, el fondo
+  del PNG queda transparente (blanco en la mayoría de visores) mientras el texto sigue usando
+  los colores resueltos del tema activo (p. ej. `dark:text-white/60`), dejando etiquetas casi
+  ilegibles en modo oscuro — bug real encontrado en la verificación manual con Playwright MCP,
+  no detectado por los tests con jsdom (no interpreta CSS real). Ver DECISIONS.md.
+
 ### Fixed
 
 - `session.user` no incluía el `id` del usuario autenticado (faltaban los callbacks `jwt` y

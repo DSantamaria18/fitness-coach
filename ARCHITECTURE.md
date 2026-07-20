@@ -328,6 +328,44 @@ propósito — no sobre-diseñar la más simple, regla 4 CLAUDE.md).
 - Autenticación/coste: `ANTHROPIC_API_KEY` (variable de entorno, pago por token — ver
   `.env.example`), nunca en código ni logs. En producción se configura como secret de Fly.io.
 
+### Exportar como imagen PNG (BL-007)
+
+- Mecanismo **puramente client-side**: la imagen se genera capturando el DOM ya renderizado en
+  el propio navegador, sin ninguna llamada al servidor ni Server Action — a diferencia de las
+  dos integraciones de IA de esta misma página, aquí no hay frontera server/cliente nueva que
+  cruzar.
+- `informe/page.tsx` envuelve en un `<div id="informe-content">` todo el contenido del informe
+  (tarjetas de estadísticas, `ExerciseSelector`, `DateRangeFilter`, `ComparisonPeriodSelector`,
+  `ProgressComment` y `ProgressCharts`, incluida la comparación de periodos si está activa).
+  Deliberadamente **fuera** de ese contenedor quedan el `<h1>` y el propio botón de exportación:
+  no son parte del "informe" en sí, y el botón además cambia de aspecto ("Generando...") justo
+  mientras se captura la imagen si estuviera dentro — se habría capturado a sí mismo a medio
+  cambiar de estado.
+- `src/app/informe/export-image-button.tsx` (`ExportImageButton`, componente cliente): al hacer
+  clic, busca el nodo por `document.querySelector("#informe-content")` (no recibe un ref por
+  props — no hay necesidad de más acoplamiento con el árbol de componentes que "encontrar el
+  contenedor ya renderizado"), llama a `domToPng` de
+  [`modern-screenshot`](https://github.com/qq15725/modern-screenshot) sobre ese nodo, y dispara
+  la descarga creando y clicando un `<a download>` con la `dataUrl` resultante. Nombre de
+  fichero `informe-progreso-<YYYY-MM-DD>.png` (fecha de generación, no del contenido). Estado
+  simple `idle | generating | error`: botón deshabilitado y texto "Generando..." mientras la
+  promesa está pendiente; si `domToPng` rechaza (o el contenedor no existe, defensa ante un
+  desajuste de id entre este componente y `page.tsx`), aviso discreto (`role="alert"`) sin
+  romper la página — mismo criterio que el resto de fallos "silenciosos" de `/informe`
+  (`ProgressComment`, BL-005/BL-006).
+- **`backgroundColor` explícito**: `domToPng` recibe
+  `{ backgroundColor: getComputedStyle(document.body).backgroundColor }`. `domToPng` solo
+  captura el subárbol de `#informe-content`, no `<body>`, y por defecto deja el fondo del PNG
+  transparente — que la mayoría de visores componen como blanco. Como los textos secundarios de
+  la página usan variantes `dark:text-white/60` (opacidad reducida, pensadas para un fondo
+  oscuro), un PNG con fondo transparente/blanco en modo oscuro dejaba esas etiquetas casi
+  invisibles: texto casi blanco sobre fondo casi blanco. Se resuelve tomando el color de fondo
+  ya calculado por el navegador en el momento de la captura (claro u oscuro, lo que esté activo
+  vía `prefers-color-scheme`) en vez de asumir uno fijo. Bug real, encontrado en la
+  verificación manual con Playwright MCP (comparando el PNG exportado contra una captura de la
+  página en vivo) — ni los tests con jsdom ni el build lo detectan, porque jsdom no interpreta
+  CSS real y `domToPng` está mockeado en los tests de `ExportImageButton`. Ver DECISIONS.md.
+
 ## Servidor MCP
 
 - `src/app/api/mcp/route.ts` — única ruta del servidor MCP (SPEC §5 y §4 caso de uso 6):
