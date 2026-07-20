@@ -15,15 +15,6 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   credenciales, y decidir el disparador — cron interno choca con el auto-stop de Fly.io free
   tier, así que probablemente un GitHub Actions programado contra un endpoint propio).
 
-- **[BL-018]** **Definir qué reciben los preview deployments de Vercel sin la Turso de
-  producción.** Justificación: por el guardrail de seguridad (las credenciales de Turso son
-  scope Production únicamente, ver DECISIONS.md 2026-07-20 infra fase 1), los preview
-  deployments no tienen `TURSO_DATABASE_URL`. Hay que decidir el comportamiento: fallar rápido
-  con un mensaje claro, o conectar a un SQLite efímero de `/tmp` para poder revisar la UI en el
-  preview. Toca el adapter de Prisma para Turso (`feature/despliegue-turso-adapter`), por eso se
-  resuelve en fase 2 y no a ciegas ahora. Dificultad: baja (leer `VERCEL_ENV` y ramificar la
-  construcción del cliente Prisma).
-
 ## Iteraciones futuras ya acordadas (no implementar todavía)
 
 - **[BL-011]** **Integración con wearable** (pasos, sueño, frecuencia cardiaca). Justificación: ampliar el
