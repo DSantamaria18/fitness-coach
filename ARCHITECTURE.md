@@ -472,9 +472,10 @@ propósito — no sobre-diseñar la más simple, regla 4 CLAUDE.md).
   el propio protocolo espera de cualquier tool) y `structuredContent` — `{data: ...}` en éxito,
   `{error: {code, message}, isError: true}` en fallo —, reflejando el contrato de error de
   SPEC §5 dentro del propio protocolo MCP en vez de solo a nivel HTTP.
-- Seguridad: por ahora el servidor MCP se protege solo con el token Bearer (ver DECISIONS.md
-  2026-07-18, ronda anterior); la segunda capa de VPN Tailscale que especifica SPEC §7 queda
-  pendiente hasta migrar al NAS propio de David (ver BACKLOG.md).
+- Seguridad: el servidor MCP se protege solo con el token Bearer (ver DECISIONS.md 2026-07-18).
+  La segunda capa de VPN Tailscale que especificaba originalmente SPEC §7 se descartó de forma
+  **permanente** al pivotar a Vercel (serverless, sin proceso persistente que pueda unirse a una
+  VPN) — decisión explícita de David, ver DECISIONS.md 2026-07-20.
 - **`/api/mcp` está intencionadamente excluido del middleware de sesión** (`src/proxy.ts`, cuyo
   `matcher` incluye `api/mcp` en el negative lookahead junto a `api/auth`, `_next/static`,
   `_next/image` y `favicon.ico`). Ningún cliente MCP (la skill "sesion-entrenamiento", un chat
@@ -649,5 +650,6 @@ propósito — no sobre-diseñar la más simple, regla 4 CLAUDE.md).
 
 - Despliegue en Vercel + Turso (ver SPEC.md §8-11, pivote 2026-07-20 desde Fly.io) — ver el
   plan de fases y BACKLOG.md.
-  El servidor MCP ya está implementado (ver sección "Servidor MCP" arriba); pendiente solo la
-  capa VPN Tailscale sobre él (ver BACKLOG.md).
+  El servidor MCP ya está implementado (ver sección "Servidor MCP" arriba), protegido solo por
+  token Bearer de forma permanente — la segunda capa de VPN Tailscale se descartó al pivotar a
+  Vercel (ver DECISIONS.md 2026-07-20).

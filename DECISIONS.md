@@ -1368,4 +1368,47 @@ Requieren credenciales reales o acceso al dashboard, imposibles en fase 1:
 
 ---
 
+## 2026-07-20 — Modelo de red definitivo: token Bearer sin VPN (cierra BL-003 y BL-017)
+
+- **Decisión:** David acepta **login (web) + token Bearer (MCP) como única capa de seguridad de
+  red, de forma permanente** — no un estado transitorio hasta montar el NAS. Se descarta
+  definitivamente añadir Tailscale (u otra VPN) delante de la app o del servidor MCP.
+- **Motivo del cambio:** el pivote de despliegue de Fly.io+Docker a Vercel (ver entrada de más
+  arriba, "Pivote de despliegue") hizo evidente, vía el TechOps Engineer, que SPEC.md §2/§5/§7
+  seguían asumiendo un host con proceso persistente uniéndose a una VPN Tailscale — algo que
+  Vercel, al ser serverless, no puede ofrecer nunca (no hay proceso de larga duración que
+  mantenga una sesión de VPN). Esto convertía en papel mojado tanto BL-003 ("añadir VPN cuando
+  el NAS esté listo") como parte del propio SPEC.md original.
+- **Alternativas consideradas** (planteadas a David vía `AskUserQuestion`):
+  - **Separar el servidor MCP a un host aparte que sí soporte Tailscale** (el NAS futuro, o algo
+    mínimo mientras tanto) — no elegida. Habría mantenido el diseño original de doble capa para
+    el dato más sensible, a cambio de una topología de despliegue más compleja (dos hosts en vez
+    de uno) y volver a depender de un NAS que todavía no existe.
+  - **No exponer el MCP en producción todavía, esperar al NAS** — no elegida. Habría dejado sin
+    resolver el caso de uso original del proyecto (la skill "sesion-entrenamiento" leyendo/
+    escribiendo en la app en vez de en su fichero JSON local) hasta una fecha sin definir.
+  - **Bearer token único, permanente (elegida):** David prioriza simplicidad operativa y no
+    bloquear el uso real de la app a la espera de infraestructura propia que no tiene fecha —
+    coherente con el principio ya aplicado varias veces en este proyecto (backup manual sin
+    automatizar, sin entorno de staging) de aceptar menos automatización/capas a cambio de menos
+    complejidad operativa para un único usuario.
+- **Impacto en documentación viva:** SPEC.md §2, §5, §7, §14 actualizadas (ya no describen
+  Tailscale como parte del modelo de seguridad, ni como "pendiente"); ARCHITECTURE.md (sección
+  Servidor MCP y "Pendiente de definir en fases futuras") y FEATURES.md actualizadas en el mismo
+  sentido. BL-013 (WebAuthn) ajustada: su viabilidad ya no se justifica por el HTTPS de
+  Tailscale, sino por el de Vercel (no cambia la decisión de posponerlo, solo la justificación
+  técnica).
+- **BL-003 y BL-017 se cierran sin implementación** (quedan eliminadas de BACKLOG.md, sus
+  códigos no se reutilizan, y su resolución queda documentada aquí — convención ya establecida
+  en la entrada del 2026-07-19 de códigos permanentes).
+- **Lección aprendida:** una decisión de arquitectura de despliegue (Fly.io persistente → Vercel
+  serverless) puede invalidar silenciosamente una decisión de seguridad tomada en una ronda
+  anterior sin que nadie la revise explícitamente, si nadie se para a comprobar las asunciones
+  cruzadas entre secciones de SPEC.md. Aquí lo detectó el TechOps Engineer durante la fase 1 de
+  infraestructura, no en la propia entrada del pivote — vale la pena, en futuros pivotes de
+  infraestructura, revisar explícitamente §7 (Seguridad) como checklist, no solo las secciones
+  obviamente relacionadas (persistencia, despliegue).
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
