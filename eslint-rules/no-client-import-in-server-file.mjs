@@ -207,19 +207,21 @@ function resolveImportToFile(fromFilename, importPath) {
 }
 
 /**
- * Comprueba si la primera sentencia "real" (ignorando comentarios y
- * espacio en blanco iniciales) del fichero en `filePath` es la directiva
- * "use client". Escaneo textual deliberado en vez de un parse completo:
- * esta regla solo necesita saber si esa cadena concreta encabeza el
- * fichero, y evita depender de un parser TS/JSX para ficheros que no son
- * el que ESLint ya está lintando.
+ * Lee el literal de cadena de la primera sentencia "real" (ignorando
+ * comentarios y espacio en blanco iniciales) del fichero en `filePath`, si
+ * la hay — es decir, su directiva de módulo en cabecera ("use client",
+ * "use server", o cualquier otro literal si hubiera uno). Null si no hay
+ * ninguna, o si el fichero no existe/no se puede leer. Escaneo textual
+ * deliberado en vez de un parse completo: esta función solo necesita saber
+ * qué cadena concreta encabeza el fichero, y evita depender de un parser
+ * TS/JSX para ficheros que no son el que ESLint ya está lintando.
  */
-function fileStartsWithClientDirective(filePath) {
+function readLeadingDirective(filePath) {
   let source;
   try {
     source = fs.readFileSync(filePath, "utf8");
   } catch {
-    return false;
+    return null;
   }
 
   let i = 0;
@@ -240,7 +242,73 @@ function fileStartsWithClientDirective(filePath) {
   }
 
   const match = src.slice(i).match(/^(["'])((?:\\.|(?!\1).)*)\1/);
-  return match ? match[2] === DIRECTIVE_CLIENT : false;
+  return match ? match[2] : null;
+}
+
+// BL-016: reexports vía módulo ("export * from '...'" / "export { a, b }
+// from '...'") que un barrel intermedio SIN directiva propia usa para
+// reexponer algo de otro fichero. Regex sobre el contenido completo, no un
+// parse completo del fichero: un barrel real solo contiene estas sentencias
+// a nivel de módulo (nunca dentro de una función o bloque), así que basta
+// con encontrarlas en cualquier parte del texto sin necesitar un parser
+// JS/TS completo para un fichero que no es el que ESLint ya está lintando
+// (ver DECISIONS.md sobre esta elección frente a usar espree/@typescript-
+// eslint/parser aquí).
+const MODULE_REEXPORT_PATTERN =
+  /export\s*(?:\*|\{[^}]*\})\s*from\s*["']([^"']+)["']/g;
+
+/** Extrae los especificadores de módulo de las sentencias de re-export de `filePath`. */
+function readModuleReexportTargets(filePath) {
+  let source;
+  try {
+    source = fs.readFileSync(filePath, "utf8");
+  } catch {
+    return [];
+  }
+  return Array.from(
+    source.matchAll(MODULE_REEXPORT_PATTERN),
+    (match) => match[1],
+  );
+}
+
+/**
+ * BL-016: sigue la cadena de re-exports vía módulo desde `filePath` hasta
+ * encontrar un fichero con la directiva "use client" — cierra el hueco que
+ * dejaba BL-001, que solo miraba la directiva del fichero al que resolvía
+ * DIRECTAMENTE el import, no la de un barrel intermedio sin directiva
+ * propia que a su vez reexporta de un módulo cliente. Devuelve la ruta del
+ * fichero "use client" encontrado (el primero en profundidad), o null si la
+ * cadena termina sin encontrar ninguno: fichero "use server" (límite
+ * explícito, no sigue reexportando), fichero sin más re-exports, un
+ * eslabón que no resuelve a fichero del proyecto, o un ciclo ya visitado
+ * (protección vía `visited`, compartido en toda la travesía).
+ */
+function findTransitiveClientFile(filePath, visited) {
+  if (visited.has(filePath)) {
+    return null;
+  }
+  visited.add(filePath);
+
+  const directive = readLeadingDirective(filePath);
+  if (directive === DIRECTIVE_CLIENT) {
+    return filePath;
+  }
+  if (directive === DIRECTIVE_SERVER) {
+    return null;
+  }
+
+  for (const target of readModuleReexportTargets(filePath)) {
+    const resolved = resolveImportToFile(filePath, target);
+    if (!resolved) {
+      continue;
+    }
+    const found = findTransitiveClientFile(resolved, visited);
+    if (found) {
+      return found;
+    }
+  }
+
+  return null;
 }
 
 // La anotación JSDoc es necesaria para que TypeScript infiera "problem"
@@ -259,6 +327,13 @@ const rule = {
     messages: {
       clientImportInServerFile:
         'No se puede importar "{{imported}}" desde "{{resolvedPath}}" (fichero "use client") en un módulo "use server". Ver DECISIONS.md 2026-07-19.',
+      // BL-015: mismo problema real (RSC no permite invocar código cliente
+      // desde el servidor), pero colado vía import() dinámico en vez de un
+      // import estático — mensaje separado para que quien lo lea en el
+      // editor/CI entienda de qué construcción viene sin tener que mirar la
+      // línea reportada.
+      clientDynamicImportInServerFile:
+        'No se puede importar dinámicamente "{{resolvedPath}}" (fichero "use client") en un módulo "use server". Ver DECISIONS.md 2026-07-19.',
     },
   },
 
@@ -282,7 +357,13 @@ const rule = {
           return;
         }
 
-        if (!fileStartsWithClientDirective(resolvedPath)) {
+        // BL-016: resolvedPath puede ser en sí mismo el fichero "use
+        // client" (caso directo, BL-001) o un barrel intermedio sin
+        // directiva propia que reexporta de uno — findTransitiveClientFile
+        // cubre ambos, devolviendo resolvedPath tal cual en el caso
+        // directo (primera comprobación de la recursión).
+        const clientFile = findTransitiveClientFile(resolvedPath, new Set());
+        if (!clientFile) {
           return;
         }
 
@@ -297,7 +378,41 @@ const rule = {
           messageId: "clientImportInServerFile",
           data: {
             imported,
-            resolvedPath: path.relative(process.cwd(), resolvedPath),
+            resolvedPath: path.relative(process.cwd(), clientFile),
+          },
+        });
+      },
+
+      // BL-015: import() dinámico (`await import("./modulo")`). A
+      // diferencia de ImportDeclaration, el argumento no siempre es un
+      // Literal de cadena estático (puede ser una variable o un template
+      // literal con interpolación) — si no podemos extraer un string
+      // literal del argumento, esta regla no tiene nada que decir sobre ese
+      // import, igual que ya ocurre con paquetes de node_modules.
+      ImportExpression(node) {
+        if (
+          node.source?.type !== "Literal" ||
+          typeof node.source.value !== "string"
+        ) {
+          return;
+        }
+
+        const resolvedPath = resolveImportToFile(filename, node.source.value);
+        if (!resolvedPath) {
+          return;
+        }
+
+        // BL-016: mismo criterio que el visitor ImportDeclaration de arriba.
+        const clientFile = findTransitiveClientFile(resolvedPath, new Set());
+        if (!clientFile) {
+          return;
+        }
+
+        context.report({
+          node,
+          messageId: "clientDynamicImportInServerFile",
+          data: {
+            resolvedPath: path.relative(process.cwd(), clientFile),
           },
         });
       },

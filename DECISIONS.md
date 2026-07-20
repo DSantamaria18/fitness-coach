@@ -737,6 +737,40 @@ nueva.
 
 ---
 
+- **Fecha:** 2026-07-20
+- **Decisión:** Implementa BL-015 añadiendo un visitor `ImportExpression` a
+  `local/no-client-import-in-server-file` (BL-001), reutilizando tal cual `resolveImportToFile`
+  y `fileStartsWithClientDirective` ya existentes. Si el argumento del `import()` no es un
+  `Literal` de cadena estático (variable, template literal con interpolación, etc.), la regla
+  no reporta nada — mismo criterio que ya aplicaba a paquetes de `node_modules` o alias sin
+  configurar: no es un error, la regla simplemente no tiene información suficiente para
+  pronunciarse. Mensaje de error nuevo (`clientDynamicImportInServerFile`, distinto de
+  `clientImportInServerFile`) para que el texto en el editor/CI deje claro que el import es
+  dinámico, aunque la causa raíz sea la misma.
+- **Alternativas consideradas:** reutilizar el mismo `messageId` para ambos casos (el texto ya
+  era genérico) — descartado porque el encargo pedía usar criterio y separar los mensajes
+  cuesta una línea de `meta.messages` sin complicar la regla, y ayuda a quien lee el error en CI
+  a localizar mentalmente qué construcción (`import(...)` vs. `import ... from ...`) están
+  viendo sin tener que abrir el fichero. Intentar evaluar parcialmente template literals sin
+  interpolación (p. ej. `` import(`./client-module`) ``) como si fueran un string literal —
+  descartado por sobre-ingeniería: no es un patrón presente ni previsto en el código real del
+  proyecto, y el propio encargo pedía no complicar la regla más de lo necesario.
+- **Justificación:** mantiene el principio ya sentado en BL-001 (ignorar lo que la regla no
+  puede resolver de forma estática, en vez de intentar adivinar) y evita duplicar la lógica de
+  resolución de imports/lectura de directivas entre los dos visitors.
+- **Verificación:** 4 casos nuevos con `RuleTester`
+  (`eslint-rules/no-client-import-in-server-file.test.ts`, TDD — escritos y en rojo antes de
+  tocar la regla): válido (`import()` a fichero sin directiva), válido (`import(variable)`
+  no-literal, confirma que no revienta ni reporta), inválido (`import()` relativo a fichero
+  `"use client"`), inválido (mismo caso vía alias `@/*`). Verificado también empíricamente
+  reproduciendo el bug real (misma pareja de ficheros que BL-001,
+  `build-initial-registros.ts`/`app/sesion/actions.ts`, cambiando el import de
+  `buildInitialRegistros` a `await import(...)`): `npx eslint` lo detecta con
+  `clientDynamicImportInServerFile`; el cambio se revirtió antes de commitear, sin diff
+  residual.
+
+---
+
 - **Fecha:** 2026-07-19
 - **Decisión:** Filtro de rango de fechas en `/informe` (BL-005). Tres decisiones de diseño no
   triviales, dentro del alcance ya aprobado por David:
@@ -999,6 +1033,75 @@ nueva.
   `/informe?ejercicio=Sentadilla` y `/informe?comparar=mes` — el PNG exportado en ambos casos
   ya muestra la opción correcta marcada ("Sentadilla" / "Este mes vs. anterior") en vez de la
   opción por defecto.
+
+---
+
+- **Fecha:** 2026-07-20
+- **Decisión:** Implementa BL-016 con una nueva función `findTransitiveClientFile` en
+  `local/no-client-import-in-server-file` (BL-001, BL-015): tras resolver el import a un
+  fichero real, si ese fichero no tiene ninguna directiva propia (ni `"use client"` ni `"use
+  server"`), lee sus sentencias de re-export a nivel de módulo (`export * from "..."` /
+  `export { a, b } from "..."`) con una **regex sobre el contenido completo del fichero**
+  (`readModuleReexportTargets`, patrón `export\s*(?:\*|\{[^}]*\})\s*from\s*["']([^"']+)["']`),
+  resuelve cada destino con `resolveImportToFile` (reutilizada tal cual) y repite el proceso
+  recursivamente, con un `Set` de rutas visitadas compartido en toda la travesía como
+  protección contra ciclos: si una ruta ya visitada vuelve a aparecer, la recursión corta ahí
+  sin reportar. La antigua `fileStartsWithClientDirective` se generalizó a
+  `readLeadingDirective` (devuelve el literal de la directiva o `null`, no solo un booleano
+  para `"use client"`), porque `findTransitiveClientFile` también necesita distinguir `"use
+  server"` (fin de cadena explícito) de "sin directiva" (sigue reexportando) — comportamiento
+  observable sin cambios para los tests ya existentes de BL-001/BL-015 (siguen en verde sin
+  tocarlos), solo cambia la implementación interna, que es justo lo que permite la regla 5 de
+  CLAUDE.md.
+- **Alternativas consideradas:**
+  - **Parser JS/TS completo (`espree`/`@typescript-eslint/parser`) para el fichero
+    intermedio**, en vez de regex — descartado por sobre-ingeniería para el caso real: un
+    barrel de este proyecto es, por convención, un fichero que solo contiene sentencias
+    `export ... from "..."` a nivel superior (nunca dentro de una función o bloque), así que
+    una regex global sobre el texto completo encuentra exactamente las mismas sentencias que
+    encontraría un parser, sin añadir una dependencia de parseo nueva ni el coste de invocarla
+    por cada fichero intermedio de la cadena. Si en el futuro apareciera un caso real con
+    re-exports condicionales o anidados en bloques (no es un patrón de JS válido para `export`
+    de todos modos — `export` solo es legal a nivel de módulo), este enfoque se quedaría corto,
+    pero no es una restricción real del lenguaje que un barrel pueda violar.
+  - **Reportar en el ciclo en cuanto se detecta, en vez de solo cortar en silencio** — evaluado
+    y descartado: un ciclo de re-exports sin ningún `"use client"` en la cadena (el caso de
+    test `cycle-a.ts`/`cycle-b.ts`) no es en sí mismo un bug de RSC — es simplemente un barrel
+    mal formado (probablemente un `export *` circular que en un bundler real fallaría o
+    resolvería a un módulo vacío), fuera del alcance de esta regla. Cortar sin reportar es
+    coherente con el resto de casos "sin información suficiente" (paquete de `node_modules`,
+    alias sin configurar, `import()` no-literal): la regla no inventa un diagnóstico nuevo para
+    un problema distinto al que existe para detectar.
+  - **Mensaje de error señalando el barrel intermedio (el `resolvedPath` directo) en vez del
+    fichero `"use client"` real** — descartado: mostrar el barrel como "(fichero use client)"
+    sería literalmente falso (el barrel no lleva esa directiva) y menos útil para depurar que
+    señalar el fichero real que causa el crash en runtime.
+- **Justificación:** cierra el hueco de cobertura que dejaba BL-001 (detectado por QA: la regla
+  solo miraba la directiva del fichero resuelto directamente, no la de un barrel intermedio sin
+  directiva propia) reutilizando al máximo la infraestructura ya existente
+  (`resolveImportToFile`), sin necesitar un parser nuevo para un caso que un escaneo textual
+  razonable ya cubre por completo.
+- **Verificación:** 5 casos nuevos con `RuleTester`
+  (`eslint-rules/no-client-import-in-server-file.test.ts`, TDD — escritos y en rojo antes de
+  tocar la regla): válido (barrel que reexporta de un fichero sin directiva, cadena
+  server-safe completa), válido (ciclo de barrels sin ningún `"use client"`, confirma que no
+  cuelga ni crashea), inválido (barrel con `export *` hacia un fichero `"use client"`),
+  inválido (mismo caso con re-export nombrado `export { x } from`, confirma que la regex cubre
+  ambas sintaxis), inválido (cadena de DOS barrels, confirma que la recursión sigue más de un
+  salto). Verificado también empíricamente: barrel real de un salto
+  (`src/lib/session-proposal/index.ts`, desechable, `export * from
+  "./build-initial-registros"`), reintroduciendo `"use client"` en `build-initial-registros.ts`
+  y enrutando el import de `actions.ts` a través del barrel (`@/lib/session-proposal` en vez de
+  `@/lib/session-proposal/build-initial-registros`) — `npx eslint` detecta el fichero `"use
+  client"` real al final de la cadena; barrel borrado y ambos ficheros revertidos antes de
+  commitear, sin diff residual.
+- **Nota sobre el encargo:** el encargo original describía el caso de re-export nombrado
+  (`export { algo } from "./fichero-cliente"`) como "válido" en su enumeración de tests, pero
+  el propio texto lo describe reexportando de un fichero `"use client"` — mismo caso de bug que
+  el de `export *`, solo con sintaxis distinta. Se interpretó como una errata (el resto de la
+  frase — "decide si tu regex cubre ambas formas" — solo tiene sentido si ambas formas deben
+  detectarse igual) y se implementó/testeó como **inválido** (debe reportar), igual que la
+  variante `export *`.
 
 ---
 

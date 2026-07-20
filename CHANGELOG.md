@@ -145,6 +145,37 @@ Proyecto sin versión publicada todavía.
   `RuleTester` de ESLint (`eslint-rules/no-client-import-in-server-file.test.ts`) y verificada
   empíricamente reproduciendo el bug real (ver DECISIONS.md 2026-07-19).
 
+- **[BL-015]** Ampliada `local/no-client-import-in-server-file` (BL-001) para detectar el mismo
+  bug también cuando se cuela vía `import()` dinámico (`ImportExpression`), no solo
+  `import`/`export` estático (`ImportDeclaration`). Nuevo visitor `ImportExpression` en la
+  misma regla, que reutiliza tal cual `resolveImportToFile` y
+  `fileStartsWithClientDirective`; si el argumento del `import()` no es un string literal
+  estático (p. ej. `import(variable)` o una template literal con interpolación), la regla no
+  tiene forma de saber a qué resuelve y lo ignora, igual que ya hacía con paquetes de
+  `node_modules`. Nuevo `messageId` `clientDynamicImportInServerFile` para distinguir en el
+  mensaje que el problema viene de un import dinámico. 4 casos nuevos vía `RuleTester`
+  (`eslint-rules/no-client-import-in-server-file.test.ts`) y verificada empíricamente
+  reproduciendo el bug real vía import dinámico (misma pareja de ficheros que BL-001).
+
+- **[BL-016]** Ampliada `local/no-client-import-in-server-file` (BL-001, BL-015) para seguir la
+  cadena de re-exports transitivos vía módulo (`export * from "..."` / `export { a, b } from
+  "..."`) cuando el fichero al que resuelve directamente el import es un barrel SIN directiva
+  propia: antes la regla se paraba ahí (ni "use client" ni "use server" en ese fichero) y
+  dejaba pasar el bug si el barrel a su vez reexportaba de un módulo `"use client"`. Nueva
+  función `findTransitiveClientFile`, que recorre esa cadena con un `Set` de rutas visitadas
+  compartido en toda la travesía (protección contra ciclos: un fichero ya visitado corta la
+  recursión ahí, sin reportar ni entrar en bucle infinito) hasta encontrar un `"use client"`
+  (reporta) o un `"use server"`/fin de la cadena/eslabón no resoluble (no reporta). El mensaje
+  de error ahora señala el fichero `"use client"` real encontrado al final de la cadena, no el
+  barrel intermedio. Los re-exports del fichero intermedio se leen con una regex sobre el
+  contenido completo (`readModuleReexportTargets`), no con un parser JS/TS completo — ver
+  DECISIONS.md para el porqué. 5 casos nuevos vía `RuleTester`
+  (`eslint-rules/no-client-import-in-server-file.test.ts`: barrel sin cliente en la cadena,
+  barrel con `export *` hacia cliente, barrel con `export { x }` hacia cliente, cadena de dos
+  barrels, ciclo sin cliente) y verificada empíricamente con un barrel real de un salto
+  (`src/lib/session-proposal/index.ts`, desechable) delante de la misma pareja de ficheros que
+  BL-001/BL-015.
+
 - **[BL-008]** Botón "Cerrar sesión" en la barra de navegación global (`nav-bar.tsx`), con
   confirmación nativa (`window.confirm`, mismo criterio que `DeleteSessionButton`/
   `DeleteWeightButton`) antes de invocar la nueva Server Action `logout()`

@@ -62,6 +62,62 @@ ruleTester.run("no-client-import-in-server-file", rule, {
       `,
       filename: path.join(relativeDir, "action.ts"),
     },
+    {
+      // BL-015: import() dinámico (ImportExpression) hacia un fichero sin
+      // directiva — mismo caso "sano" que el ImportDeclaration equivalente.
+      name: 'módulo "use server" con import() dinámico de un fichero sin directiva',
+      code: `
+        "use server";
+        export async function action() {
+          const { helper } = await import("./plain-module");
+          return helper();
+        }
+      `,
+      filename: path.join(relativeDir, "action.ts"),
+    },
+    {
+      // BL-015: el argumento de import() no siempre es un Literal estático
+      // (puede ser una variable, una template literal con interpolación,
+      // etc.) — un import dinámico genuino. La regla no tiene forma de saber
+      // a qué fichero resuelve, así que no debe reportar ni petar.
+      name: 'módulo "use server" con import() dinámico no-literal (variable)',
+      code: `
+        "use server";
+        export async function action(moduleName) {
+          const mod = await import(moduleName);
+          return mod.helper();
+        }
+      `,
+      filename: path.join(relativeDir, "action.ts"),
+    },
+    {
+      // BL-016: import de un barrel sin directiva propia que a su vez
+      // reexporta (export *) de un fichero SIN directiva — cadena
+      // completa "server-safe", no debe reportar en ningún punto.
+      name: 'módulo "use server" importando de un barrel que reexporta de un fichero sin directiva',
+      code: `
+        "use server";
+        import { helper } from "./plain-barrel";
+        export async function action() {
+          return helper();
+        }
+      `,
+      filename: path.join(relativeDir, "action.ts"),
+    },
+    {
+      // BL-016: protección contra ciclos — un barrel que reexporta de otro
+      // que a su vez reexporta del primero no debe colgar la regla ni
+      // reportar (no hay ningún "use client" en el ciclo).
+      name: 'módulo "use server" importando de un barrel con un ciclo de re-exports (sin cliente)',
+      code: `
+        "use server";
+        import { helper } from "./cycle-a";
+        export async function action() {
+          return helper();
+        }
+      `,
+      filename: path.join(relativeDir, "action.ts"),
+    },
   ],
   invalid: [
     {
@@ -91,6 +147,80 @@ ruleTester.run("no-client-import-in-server-file", rule, {
         }
       `,
       filename: path.join(aliasAppDir, "action.ts"),
+      errors: [{ messageId: "clientImportInServerFile" }],
+    },
+    {
+      // BL-015: mismo bug real que BL-001, pero colado vía import() dinámico
+      // (ruta relativa) en vez de un import estático — la brecha de
+      // cobertura que motiva esta ampliación.
+      name: 'módulo "use server" con import() dinámico (relativo) de un fichero "use client"',
+      code: `
+        "use server";
+        export async function action() {
+          const { helper } = await import("./client-module");
+          return helper();
+        }
+      `,
+      filename: path.join(relativeDir, "action.ts"),
+      errors: [{ messageId: "clientDynamicImportInServerFile" }],
+    },
+    {
+      // Mismo caso vía alias "@/*", reutilizando los fixtures de alias ya
+      // existentes.
+      name: 'módulo "use server" con import() dinámico (alias "@/*") de un fichero "use client"',
+      code: `
+        "use server";
+        export async function action() {
+          const clientThing = await import("@/lib/client-thing");
+          return clientThing.clientThing();
+        }
+      `,
+      filename: path.join(aliasAppDir, "action.ts"),
+      errors: [{ messageId: "clientDynamicImportInServerFile" }],
+    },
+    {
+      // BL-016: caso base del hueco — el import resuelve directamente a un
+      // barrel SIN directiva propia, que reexporta (export *) de un
+      // fichero "use client". BL-001 no seguía esta cadena y se lo saltaba.
+      name: 'módulo "use server" importando de un barrel que reexporta (export *) de un fichero "use client"',
+      code: `
+        "use server";
+        import { helper } from "./client-barrel";
+        export async function action() {
+          return helper();
+        }
+      `,
+      filename: path.join(relativeDir, "action.ts"),
+      errors: [{ messageId: "clientImportInServerFile" }],
+    },
+    {
+      // BL-016: mismo caso, pero con re-export nombrado ("export { x }
+      // from") en vez de "export *" — confirma que ambas formas de
+      // re-export vía módulo se detectan igual.
+      name: 'módulo "use server" importando de un barrel que reexporta (export { x }) de un fichero "use client"',
+      code: `
+        "use server";
+        import { helper } from "./client-named-barrel";
+        export async function action() {
+          return helper();
+        }
+      `,
+      filename: path.join(relativeDir, "action.ts"),
+      errors: [{ messageId: "clientImportInServerFile" }],
+    },
+    {
+      // BL-016: cadena de DOS barrels (actions -> barrel-a -> barrel-b ->
+      // client-module) — confirma que la recursión sigue más de un salto,
+      // no solo el primero.
+      name: 'módulo "use server" importando de una cadena de dos barrels hacia un fichero "use client"',
+      code: `
+        "use server";
+        import { helper } from "./barrel-a";
+        export async function action() {
+          return helper();
+        }
+      `,
+      filename: path.join(relativeDir, "action.ts"),
       errors: [{ messageId: "clientImportInServerFile" }],
     },
   ],
