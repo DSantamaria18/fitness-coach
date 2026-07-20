@@ -1610,4 +1610,83 @@ PR #32, no una hipótesis.
 
 ---
 
+## 2026-07-20 — Login roto en producción real: `MissingSecret` de Auth.js v5
+
+Trabajo de Developer. Diagnóstico a partir de logs reales de Vercel (producción y un preview),
+confirmado con Playwright contra la URL real, no una hipótesis.
+
+- **Síntoma real (log de Vercel, en cada intento de login):**
+
+  ```
+  [auth][error] MissingSecret: Please define a `secret`. Read more at https://errors.authjs.dev#missingsecret
+  ```
+
+  `POST /api/auth/callback/credentials` devolvía 500 de forma determinista, tanto en Production
+  como en un Preview deployment. `AUTH_SECRET` estaba correctamente configurada en ambos scopes
+  del dashboard de Vercel (confirmado con captura) — el problema no era la ausencia de la
+  variable, sino que el código no la estaba usando.
+
+- **Causa raíz (confirmada contra el propio código fuente de `next-auth@5.0.0-beta.31`, no solo
+  la documentación):** Auth.js v5 sí autodetecta `AUTH_SECRET`, pero el mecanismo
+  (`setEnvDefaults` en `next-auth/lib/env.js`) es un simple valor por defecto:
+
+  ```js
+  config.secret ?? (config.secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET);
+  ```
+
+  y solo se ejecuta **una vez**, en el momento en que `NextAuth(config)` evalúa su config — para
+  la forma "eager" (`NextAuth({...})`, la que usa este proyecto), eso es en el instante en que el
+  módulo se importa/evalúa, no de forma perezosa por request. El proyecto tiene **dos**
+  instancias separadas de `NextAuth(...)` (`src/auth.ts`, runtime Node, para el provider
+  Credentials; `src/proxy.ts`, runtime Edge, solo para verificar el JWT en el middleware), y
+  ninguna pasaba `secret` explícito — ambas dependían de que esa autodetección encontrara
+  `process.env.AUTH_SECRET` en ese instante concreto de evaluación del módulo. En el runtime real
+  de Vercel (Next.js 16 + Turbopack), esa autodetección no encontró la variable — un fallo
+  documentado como clase de problema en varios issues de `nextauthjs/next-auth` (p. ej. #10478,
+  #10538) y en reportes de la comunidad de Vercel sobre `AUTH_SECRET` no accesible en runtime de
+  producción pese a estar bien configurada en el dashboard.
+
+- **Por qué nunca se detectó en local/tests/CI ni en el code review de la PR original:** tanto
+  `e2e/global-setup.ts`/`e2e/env.ts` (Playwright) como el job `test` de CI (que fija
+  `AUTH_SECRET` para el paso `Build`) inyectan la variable en el `process.env` del proceso de
+  test/build **antes** de que se evalúen `auth.ts`/`proxy.ts`, así que la autodetección de
+  Auth.js siempre encontraba la variable ahí y el login "funcionaba" en todos los entornos donde
+  se había probado. El bug solo era observable en el runtime real y específico de Vercel — nunca
+  hubo un deployment de producción exitoso hasta la PR #33 (ver entrada anterior de este
+  documento), así que este bug de login llevaba roto desde siempre, invisible porque nunca antes
+  hubo oportunidad de ejercitar un login contra un build real desplegado.
+
+- **Corrección:** `secret: process.env.AUTH_SECRET` explícito, centralizado en `authConfig`
+  (`src/auth.config.ts`) en vez de duplicado en las dos llamadas a `NextAuth(...)` — `src/auth.ts`
+  ya lo hereda vía `{ ...authConfig, ... }` y `src/proxy.ts` lo usa directamente
+  (`NextAuth(authConfig)`), así que una única línea cubre ambas instancias sin romper la
+  separación documentada de `authConfig` como config "edge-safe" (sigue sin providers ni
+  adapter — leer una variable de entorno como string no añade ninguno de los dos). Al fijar
+  `config.secret` de antemano, el `??` de `setEnvDefaults` nunca necesita tocar `process.env` en
+  absoluto: se elimina la dependencia de en qué runtime/momento decide leer la env var cada
+  instancia.
+
+- **Test de regresión (`src/auth.config.test.ts`):** verifica la CONFIGURACIÓN en sí — que
+  `authConfig.secret` refleja explícitamente `process.env.AUTH_SECRET` (fijando la env var con
+  `vi.stubEnv` y reimportando el módulo con `vi.resetModules()`) — no que "el login funcione con
+  la env var ya presente", porque eso ya "pasaba" antes del fix y no habría detectado esta
+  regresión (ver punto anterior). Confirmado manualmente que el test falla si se retira la línea
+  `secret: process.env.AUTH_SECRET,` de `authConfig`, con la env var igualmente presente.
+
+- **Lección aprendida:** cuando una librería ofrece autodetección de configuración desde
+  variables de entorno, verificar en su propio código fuente (no solo la documentación de alto
+  nivel) en qué momento exacto se lee esa variable — aquí, en la evaluación del módulo, no por
+  request — y si el proyecto pasa por ese punto más de una vez (dos instancias de `NextAuth`,
+  runtimes distintos). Preferir pasar la configuración crítica de forma explícita en vez de
+  confiar en un fallback cuya única garantía documentada es "AUTH_SECRET es una variable
+  requerida en producción", sin detallar los límites de cuándo la autodetección puede fallar en
+  la práctica. Además, un test que solo verifica el comportamiento final ("el login funciona")
+  puede quedar enmascarado si el propio arnés de test ya resuelve por otra vía la condición que
+  causaba el fallo real (aquí, la env var siempre presente en local/CI) — cuando el bug depende
+  del *momento* o *runtime* en que se lee algo, el test de regresión debe apuntar a la
+  configuración explícita, no al resultado observable bajo las mismas condiciones que ya
+  ocultaban el bug.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
