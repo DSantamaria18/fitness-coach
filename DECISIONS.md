@@ -1539,4 +1539,75 @@ Requieren credenciales reales o acceso al dashboard, imposibles en fase 1:
 
 ---
 
+## 2026-07-20 — El build de Vercel nunca compiló: falta `prisma generate` (postinstall)
+
+Trabajo del TechOps Engineer. Diagnóstico a partir de logs reales del build de Vercel de la
+PR #32, no una hipótesis.
+
+- **Síntoma real (log de Vercel):**
+
+  ```
+  Error: Turbopack build failed with 1 errors:
+  ./src/lib/prisma.ts:6:1
+  Module not found: Can't resolve '@/generated/prisma/client'
+  ```
+
+- **Causa raíz:** el cliente de Prisma (`src/generated/prisma`) está en `.gitignore` — se genera
+  con `prisma generate`, nunca se commitea. En local y en CI nunca falla porque **cada worktree y
+  cada job de CI ejecuta `npx prisma generate` como paso explícito de setup** (ya documentado en
+  CLAUDE.md, y presente en los tres jobs de `.github/workflows/ci.yml`). Pero el build real de
+  Vercel es únicamente `npm install` → `npm run build` (`next build`): **no había ningún paso que
+  generara el cliente**, así que `@/generated/prisma/client` no existía cuando Turbopack intentaba
+  resolverlo.
+
+- **No es un bug de la PR #32 ni de ninguna PR concreta:** el fallo lleva ahí desde que se
+  introdujo el adapter de Prisma/Turso. No se había detectado porque los deployments de Vercel se
+  bloqueaban antes por un problema de permisos de la cuenta de GitHub (resuelto aparte), que se
+  creyó erróneamente que era la única causa de que producción no estuviera viva.
+
+- **Hallazgo confirmado — producción nunca ha compilado en Vercel:** revisando el historial de
+  deployments vía `gh api repos/.../deployments/<id>/statuses`, **todos** los deployments de
+  entorno `Production` están en estado `failure`. Los más recientes muestran "Deployment was
+  blocked" (el problema de permisos de GitHub), pero los anteriores (p. ej. los de 2026-07-20
+  09:38 y 11:00 UTC) muestran "Deployment has failed" de build real — coherente con este
+  `Module not found`. No existe un solo deployment de producción exitoso en el historial: el
+  problema de permisos y este de `prisma generate` se solapaban y ocultaban mutuamente.
+
+- **Corrección:** se añade a `package.json` el script **`"postinstall": "prisma generate"`**,
+  patrón recomendado por la documentación oficial de Prisma para despliegues en Vercel
+  ("Option 1: Custom postinstall script (Recommended)",
+  prisma.io/docs/orm/more/help-and-troubleshooting/help-articles/vercel-caching-issue —
+  verificado, no asumido). `postinstall` lo ejecuta npm automáticamente tras `npm install`/`npm
+  ci`, así que el cliente queda generado antes de que `next build` lo necesite, tanto en Vercel
+  como en cualquier `npm install` limpio.
+
+- **Confirmado que `prisma generate` recoge `prisma.config.ts` sin flags adicionales:** al
+  ejecutar `npm run postinstall` imprime "Loaded Prisma config from prisma.config.ts." y genera
+  el cliente correctamente. No hace falta pasar `--schema` ni ninguna otra opción.
+
+- **Decisión sobre la duplicación con CI:** los tres jobs de `ci.yml` seguirán teniendo su paso
+  explícito `npx prisma generate` tras `npm ci`. Con el `postinstall`, ese paso pasa a ser
+  redundante (el cliente ya se genera en el `npm ci`), pero `prisma generate` es **idempotente**
+  y barato (~90 ms), así que la duplicación es inocua. Se decide **no tocar `ci.yml`** en esta PR
+  de fix de Vercel: mantiene el cambio mínimo y acotado, deja la intención explícita en CI, y
+  evita mezclar un cambio de pipeline de CI en una PR cuyo objetivo es exclusivamente arreglar el
+  build de Vercel. (Nota: `prisma` es `devDependency`; Vercel instala devDependencies durante el
+  build por defecto, así que el CLI está disponible cuando corre `postinstall`.)
+
+- **Validación (excepción de infra, sin QA):** reproducción exacta de lo que hace Vercel — clone
+  limpio del repo (rama del fix) en un tmpdir aislado, **sin `node_modules` ni
+  `src/generated/prisma`**, y `npm install && npm run build` desde cero. El `postinstall` generó
+  el cliente durante el `npm install` y `next build` terminó en verde (ver descripción de la PR
+  para la evidencia). Además, en el worktree normal: `format:check`, `lint`, `typecheck` y `test`
+  en verde.
+
+- **Lección aprendida:** un pipeline de despliegue que solo hace `install` + `build` no hereda los
+  pasos de setup manual que damos por sentados en local/CI. Cualquier artefacto generado y
+  gitignored (cliente de Prisma, y en general codegen) que el build necesite debe generarse dentro
+  del propio ciclo de vida de `npm install` (vía `postinstall`), no como un paso externo que solo
+  existe en CI. Al añadir un entorno de build nuevo (aquí Vercel), verificar explícitamente que
+  reproduce **todos** los pasos de generación de artefactos, no solo `install`/`build`.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
