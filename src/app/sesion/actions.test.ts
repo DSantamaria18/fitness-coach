@@ -56,6 +56,31 @@ describe("generateSessionProposalAction", () => {
     });
   });
 
+  // El detalle completo del fallo ya lo loguea generateSessionProposal (ver
+  // generate-session-proposal.test.ts); aquí solo comprobamos que la Server
+  // Action deja constancia de que absorbió el fallo en esta capa, con el
+  // code identificable, sin acoplarnos al string exacto del mensaje.
+  it("loguea el fallo (con el code recibido) cuando generateSessionProposal falla", async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    authMock.mockResolvedValue({
+      user: { id: "user-1", username: "david" },
+      expires: "",
+    } as never);
+    generateSessionProposalMock.mockResolvedValue({
+      success: false,
+      error: { code: "TIMEOUT", message: "Se agotó el tiempo de espera." },
+    });
+
+    await generateSessionProposalAction();
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("TIMEOUT"),
+    );
+    consoleErrorSpy.mockRestore();
+  });
+
   // Regresión: buildInitialRegistros vive en session-entries-editor.tsx
   // ("use client"), y actions.ts es una Server Action ("use server"). RSC
   // sustituye las exportaciones de un módulo cliente por una referencia

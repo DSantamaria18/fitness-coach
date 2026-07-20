@@ -119,6 +119,31 @@ describe("generateSessionProposal", () => {
     }
   });
 
+  // Este es el fallo más opaco hoy (SPEC: el modelo respondió, pero con una
+  // forma que no encaja con sessionSchema) — verificamos que quede constancia
+  // en los logs de Vercel identificable por code, sin acoplarnos al string
+  // exacto del mensaje ni a los detalles internos de cómo se logea.
+  it("loguea el fallo con el code INVALID_OUTPUT cuando la salida no pasa validateSession", async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    toolRunnerMock.mockReturnValue(fakeExplorationRunner());
+    createMock.mockResolvedValue(
+      fakeFinalResponse({
+        fecha: "2026-01-01T00:00:00.000Z",
+        ejercicios: [],
+      }),
+    );
+
+    await generateSessionProposal("user-1");
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ code: "INVALID_OUTPUT" }),
+    );
+    consoleErrorSpy.mockRestore();
+  });
+
   it("rechaza como fallo cuando el turno final no contiene ningún tool_use de submit_session_proposal", async () => {
     toolRunnerMock.mockReturnValue(fakeExplorationRunner());
     createMock.mockResolvedValue({
@@ -131,6 +156,24 @@ describe("generateSessionProposal", () => {
     if (!result.success) {
       expect(result.error.code).toBe("NO_PROPOSAL");
     }
+  });
+
+  it("loguea el fallo con el code NO_PROPOSAL cuando el turno final no contiene submit_session_proposal", async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    toolRunnerMock.mockReturnValue(fakeExplorationRunner());
+    createMock.mockResolvedValue({
+      content: [{ type: "text", text: "No puedo generar la propuesta." }],
+    });
+
+    await generateSessionProposal("user-1");
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ code: "NO_PROPOSAL" }),
+    );
+    consoleErrorSpy.mockRestore();
   });
 
   it("trata el timeout como fallo (nunca lanza) cuando la generación excede el límite", async () => {
@@ -159,6 +202,33 @@ describe("generateSessionProposal", () => {
     expect(createMock).not.toHaveBeenCalled();
   });
 
+  it("loguea el fallo con el code TIMEOUT cuando se aborta la generación", async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    toolRunnerMock.mockReturnValue({
+      runUntilDone: vi.fn(
+        () =>
+          new Promise((_resolve, reject) => {
+            const lastCallArgs = toolRunnerMock.mock.calls.at(-1);
+            const signal = lastCallArgs?.[1]?.signal as AbortSignal | undefined;
+            signal?.addEventListener("abort", () => {
+              reject(new DOMException("Aborted", "AbortError"));
+            });
+          }),
+      ),
+      params: { messages: [] },
+    });
+
+    await generateSessionProposal("user-1", { timeoutMs: 5 });
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ code: "TIMEOUT" }),
+    );
+    consoleErrorSpy.mockRestore();
+  });
+
   it("trata un error de red/API como fallo (nunca lanza)", async () => {
     toolRunnerMock.mockReturnValue({
       runUntilDone: vi.fn().mockRejectedValue(new Error("network down")),
@@ -171,6 +241,24 @@ describe("generateSessionProposal", () => {
       success: false,
       error: expect.objectContaining({ code: "API_ERROR" }),
     });
+  });
+
+  it("loguea el fallo con el code API_ERROR cuando hay un error de red/API", async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    toolRunnerMock.mockReturnValue({
+      runUntilDone: vi.fn().mockRejectedValue(new Error("network down")),
+      params: { messages: [] },
+    });
+
+    await generateSessionProposal("user-1");
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ code: "API_ERROR" }),
+    );
+    consoleErrorSpy.mockRestore();
   });
 
   it("nunca lanza una excepción, incluso ante un fallo inesperado en la fase final", async () => {

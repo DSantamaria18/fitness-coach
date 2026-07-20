@@ -1753,4 +1753,33 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-07-21
+- **Decisión:** Añadir `console.error` en cada punto de fallo de
+  `generateSessionProposal()`/`generateSessionProposalAction()`, sin loguear el historial
+  completo de mensajes de la conversación con el modelo ni el contenido del `formData` del
+  formulario.
+- **Alternativas consideradas:** loguear el array `messages` completo de la fase de exploración
+  del `toolRunner` (descartado: puede ser verboso — incluye el contenido íntegro del historial
+  de sesiones y catálogo de ejercicios devuelto por las tools de solo lectura — y no aporta más
+  señal que el `code` + causa real ya identificados; si hiciera falta más detalle en un caso
+  concreto, se puede añadir puntualmente sin dejarlo como comportamiento por defecto).
+- **Justificación:** el incidente que motivó este fix (`ANTHROPIC_API_KEY` ausente en Vercel
+  Production) tardó en diagnosticarse precisamente porque no había ningún rastro en los logs de
+  Vercel más allá de un 200 sin efecto visible — el `try/catch` único de
+  `generateSessionProposal()` colapsaba cualquier causa en un `{ success: false, error }` mudo.
+  De los cuatro códigos de error posibles, `INVALID_OUTPUT` es el más opaco de diagnosticar sin
+  logging: a diferencia de `TIMEOUT`/`API_ERROR` (causas externas, con mensaje/status propio),
+  aquí el modelo sí respondió con éxito pero con una forma que no encajaba con `sessionSchema` —
+  sin los `issues` de Zod (`validation.error.issues`) no hay forma de saber qué campo falló ni
+  por qué sin reproducir la llamada real. La Server Action (`actions.ts`) añade solo una línea de
+  confirmación con `userId` + `code`, sin duplicar el detalle ya logueado una capa más abajo.
+- **Lecciones aprendidas:** un `try/catch` que devuelve siempre un resultado tipado sin logging
+  interno es indistinguible desde fuera entre "no ha pasado nada" y "ha fallado en silencio" —
+  cualquier función que absorbe errores para devolver un `Result`/`{ success: false }` en vez de
+  relanzar debe loguear en el punto donde tiene el contexto completo (antes de descartarlo),
+  no asumir que el caller (aquí, la Server Action) tendrá suficiente información para hacerlo
+  igual de bien.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

@@ -114,6 +114,11 @@ export async function generateSessionProposal(
 
     const proposalBlock = finalResponse.content.find(isSubmitProposalBlock);
     if (!proposalBlock) {
+      console.error(
+        "[generateSessionProposal] NO_PROPOSAL: el turno final no incluyó " +
+          "ningún bloque tool_use de submit_session_proposal.",
+        { code: "NO_PROPOSAL", stopReason: finalResponse.stop_reason },
+      );
       return {
         success: false,
         error: {
@@ -127,6 +132,16 @@ export async function generateSessionProposal(
     // la misma validación que el registro manual antes de poder usarse.
     const validation = validateSession(proposalBlock.input);
     if (!validation.success) {
+      // Este es el fallo más opaco sin logging: el modelo sí respondió, pero
+      // con una forma que no encaja con sessionSchema. `validation.error` es
+      // un ZodError; `.issues` da la ruta y el motivo concretos de cada
+      // discrepancia, imprescindible para saber qué cambió en el prompt/tool
+      // sin tener que reproducir la llamada real contra la API.
+      console.error(
+        "[generateSessionProposal] INVALID_OUTPUT: la salida de " +
+          "submit_session_proposal no pasó validateSession.",
+        { code: "INVALID_OUTPUT", issues: validation.error.issues },
+      );
       return {
         success: false,
         error: {
@@ -139,11 +154,34 @@ export async function generateSessionProposal(
     return { success: true, data: validation.data };
   } catch (error) {
     if (controller.signal.aborted) {
+      console.error(
+        "[generateSessionProposal] TIMEOUT: se abortó la petición al superar " +
+          `${timeoutMs}ms.`,
+        { code: "TIMEOUT" },
+      );
       return {
         success: false,
         error: { code: "TIMEOUT", message: "La generación tardó demasiado." },
       };
     }
+    // Si el SDK ha lanzado un Anthropic.APIError, `.status` y `.message`
+    // identifican la causa real (rate limit, auth, 5xx, ...) sin necesidad de
+    // loguear el historial completo de mensajes de la conversación (puede
+    // ser verboso y no aporta más que el error ya identifica).
+    console.error(
+      "[generateSessionProposal] API_ERROR: fallo inesperado generando la propuesta.",
+      {
+        code: "API_ERROR",
+        message: error instanceof Error ? error.message : String(error),
+        // Guardado con typeof (no solo instanceof) porque en tests el SDK va
+        // mockeado por completo y Anthropic.APIError puede no existir como
+        // constructor real; en producción sí es siempre una función.
+        ...(typeof Anthropic.APIError === "function" &&
+        error instanceof Anthropic.APIError
+          ? { status: error.status }
+          : {}),
+      },
+    );
     return {
       success: false,
       error: {
