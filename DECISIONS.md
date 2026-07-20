@@ -1539,6 +1539,70 @@ Requieren credenciales reales o acceso al dashboard, imposibles en fase 1:
 
 ---
 
+## 2026-07-20 — BL-018: SQLite efímero en `/tmp` para preview deployments sin Turso
+
+- **Decisión:** David eligió SQLite efímero (no fail-fast) para resolver BL-018. Cuando
+  `resolveDatasourceConfig()` detecta `VERCEL_ENV` definida y distinta de `"production"` (un
+  preview o un deployment de desarrollo de Vercel) y no hay `TURSO_DATABASE_URL` (el caso normal:
+  las credenciales de Turso tienen scope Production-only en el dashboard de Vercel, guardrail
+  deliberado — ver la entrada "Infra fase 1" de esta misma fecha), la app usa
+  `file:/tmp/preview.db` en vez de caer en silencio a `DATABASE_URL ?? "file:./dev.db"`. Como
+  `/tmp` está vacío en cada cold start de la función serverless, `src/lib/prisma.ts` aplica el
+  esquema completo (`prisma/migrations/*.sql`) contra ese fichero antes de servir la primera
+  petición, una única vez por instancia (mismo patrón de guarda `globalForPrisma` que ya evita
+  duplicar el singleton de Prisma en el hot-reload de desarrollo).
+- **Excepción documentada a "`resolveDatasourceConfig` es agnóstico de entorno"**: la entrada del
+  pivote a Turso (2026-07-20, "Capa de datos del pivote a Turso") fijó como principio que esta
+  función decide solo por qué variables están *presentes*, nunca ramificando por
+  `NODE_ENV`/`VERCEL_ENV`, para que el comportamiento sea tan determinista en producción como en
+  local/tests. BL-018 rompe ese principio a propósito, y aquí se explica por qué hace falta: sin
+  mirar `VERCEL_ENV`, "preview sin `TURSO_DATABASE_URL`" y "producción sin `TURSO_DATABASE_URL`
+  por un error de configuración" son exactamente la misma señal (ausencia de la variable) — no
+  hay ninguna otra forma de distinguirlas. Sin esta rama, ambos casos caerían igual a
+  `file:./dev.db`: el primero es el comportamiento deseado (poder revisar la UI de un preview),
+  pero el segundo sería un fallo silencioso gravísimo en producción real, que pasaría
+  desapercibido hasta que alguien notara que los datos no persisten. Ramificar por `VERCEL_ENV`
+  solo en este caso concreto (y solo como fallback cuando ya no hay Turso, nunca por delante de
+  `TURSO_DATABASE_URL`, que sigue teniendo prioridad absoluta) hace que ambos escenarios vuelvan a
+  ser distinguibles sin reintroducir el problema general que la regla original evitaba.
+- **Por qué SQLite efímero y no fail-fast**: la alternativa "fallar rápido con un mensaje claro"
+  (la otra opción que planteaba BL-018 en BACKLOG.md) habría dejado los preview deployments
+  inservibles para revisar visualmente un cambio de UI antes de mergear — justo el caso de uso
+  principal de un preview de Vercel. Al ser un fichero completamente efímero (se destruye con la
+  instancia serverless, nunca compartido entre peticiones de invocaciones distintas ni con
+  producción), no hay riesgo de fuga de datos reales ni de persistencia accidental que justifique
+  el coste de UX de bloquear el preview.
+- **Por qué el bootstrap usa `@libsql/client` (async) y no `better-sqlite3` (síncrono)**: la
+  entrada de esta misma fecha sobre el rediseño del backup ya descartó explícitamente usar
+  `better-sqlite3` para *escribir* en el propio código de runtime de producción, por el riesgo de
+  compatibilidad de binarios nativos compilados en el runtime serverless de Vercel — un riesgo
+  que en aquel caso no compensaba frente a generar el backup como SQL de texto plano vía Prisma.
+  Ese mismo riesgo aplica aquí igual de directamente (el bootstrap SÍ es código de runtime de
+  producción — corre en cada cold start de un preview real en Vercel, no solo en tests locales).
+  Por eso `src/lib/bootstrap-preview-schema.ts` reutiliza `applyPendingMigrations()` de
+  `scripts/apply-turso-migrations.ts` con `@libsql/client` — el mismo cliente que ya usa
+  `@prisma/adapter-libsql` en producción, ya verificado funcionando en el Vercel real desde el
+  pivote a Turso — en vez de `better-sqlite3`, evitando reintroducir un riesgo de compatibilidad
+  ya identificado y evitado antes en este mismo proyecto (conecta con la regla 10 de CLAUDE.md:
+  revisar DECISIONS.md antes de repetir un error ya detectado). El coste de esta elección es que
+  `bootstrapPreviewSchema()` es async, y como ~35 ficheros importan `prisma` desde
+  `src/lib/prisma.ts` de forma síncrona a nivel de módulo, aplicar el bootstrap antes de construir
+  el cliente exige un `await` a nivel de módulo (top-level await) en vez de envolver todo el
+  fichero en una función async — válido en ESM y confirmado sin problemas contra `next build`
+  (Turbopack) en este worktree; el módulo nunca se carga en el runtime Edge (Prisma no está
+  soportado ahí, ver `auth.config.ts`), así que no hay restricción de bundle Edge que lo impida.
+- **Riesgo pendiente de verificar fuera de este entorno**: aunque `@libsql/client` ya está
+  verificado en producción vía el adapter de Prisma, el propio *bootstrap* (crear el esquema
+  desde cero contra un `/tmp/preview.db` vacío en un cold start real) solo se ha probado en local
+  (Vitest, con ficheros temporales) — no contra un preview real de Vercel. QA debe verificarlo
+  contra un preview generado por la propia PR de BL-018 antes del sign-off, no darlo por bueno
+  solo con los tests locales en verde.
+- **Alcance explícitamente fuera de esta decisión**: no se ha tocado ninguna variable de entorno
+  del dashboard de Vercel — `VERCEL_ENV` ya la inyecta la plataforma automáticamente en todo
+  deployment, y `/tmp` no requiere ninguna credencial ni configuración adicional.
+
+---
+
 ## 2026-07-20 — El build de Vercel nunca compiló: falta `prisma generate` (postinstall)
 
 Trabajo del TechOps Engineer. Diagnóstico a partir de logs reales del build de Vercel de la

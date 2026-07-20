@@ -18,7 +18,13 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   (fichero SQLite, `DATABASE_URL`) — `resolveDatasourceConfig()` decide cuál usar según qué
   variables de entorno estén presentes, sin ramificar por `NODE_ENV`. Antes del pivote de
   despliegue (ver DECISIONS.md 2026-07-20) se usaba `@prisma/adapter-better-sqlite3`, solo
-  válido contra fichero local.
+  válido contra fichero local. Excepción puntual a "sin ramificar por entorno": si `VERCEL_ENV`
+  está definida y no es `"production"` y no hay `TURSO_DATABASE_URL` (un preview deployment sin
+  credenciales, el caso normal — ver más abajo), usa `file:/tmp/preview.db` en vez de caer a
+  `DATABASE_URL`/`file:./dev.db` (BL-018, ver DECISIONS.md 2026-07-20). Como `/tmp` empieza
+  vacío en cada cold start, `src/lib/prisma.ts` aplica el esquema de `prisma/migrations/` contra
+  ese fichero antes de servir la primera petición (`src/lib/bootstrap-preview-schema.ts`, vía
+  `@libsql/client`, reutilizando la misma lógica que `scripts/apply-turso-migrations.ts`).
 - **Validación**: Zod (compartirá esquemas entre rutas API web y tools MCP en fases futuras).
 - **Testing**: Vitest (unit + integración) + Testing Library (componentes) + jsdom para
   lógica/componentes aislados; Playwright para E2E en un navegador real (ver sección "Tests
@@ -655,11 +661,20 @@ propósito — no sobre-diseñar la más simple, regla 4 CLAUDE.md).
   RSC no permite llamar desde el servidor a una función exportada por un módulo cliente, ver
   DECISIONS.md 2026-07-19.
 - `src/lib/prisma.ts` — instancia singleton del cliente Prisma (evita agotar conexiones SQLite
-  por hot-reload en desarrollo) y construye el adapter `@prisma/adapter-libsql`.
+  por hot-reload en desarrollo) y construye el adapter `@prisma/adapter-libsql`. También aplica,
+  con `await` a nivel de módulo, el bootstrap del esquema de preview cuando corresponde (BL-018,
+  ver `bootstrap-preview-schema.ts` más abajo) — guardado con el mismo patrón `globalForPrisma`
+  que el propio singleton, para que ocurra una única vez por instancia.
 - `src/lib/prisma-datasource-config.ts` — función pura `resolveDatasourceConfig()` que decide
   la URL/authToken del adapter según las variables de entorno presentes (Turso en producción,
-  fichero local en dev/tests); separada de `prisma.ts` para que `prisma/seed.ts` pueda
-  reutilizarla sin arrastrar una segunda instancia de `PrismaClient`.
+  fichero local en dev/tests, `file:/tmp/preview.db` en previews de Vercel sin Turso — BL-018);
+  separada de `prisma.ts` para que `prisma/seed.ts` pueda reutilizarla sin arrastrar una segunda
+  instancia de `PrismaClient`.
+- `src/lib/bootstrap-preview-schema.ts` — aplica el esquema de `prisma/migrations/` contra el
+  fichero SQLite efímero de un preview (BL-018), reutilizando `applyPendingMigrations()` de
+  `scripts/apply-turso-migrations.ts` vía `@libsql/client` — deliberadamente no usa
+  `better-sqlite3` pese a ser código de runtime síncrono más simple, ver DECISIONS.md 2026-07-20
+  sobre el riesgo de binarios nativos en el runtime serverless de Vercel.
 - `prisma/schema.prisma` — esquema de dominio (ver SPEC.md §3 para la definición funcional).
 - `prisma/migrations/` — migraciones versionadas.
 - `prisma/seed.ts` — siembra el catálogo cerrado de ejercicios (`npm run prisma:seed`).

@@ -315,3 +315,23 @@ cambio relevante.
   descartó de forma permanente al pivotar el despliegue a Vercel (serverless, no puede unirse a
   una VPN) — token Bearer es la única capa, decisión explícita de David (ver DECISIONS.md
   2026-07-20).
+
+## Preview deployments de Vercel sin Turso: SQLite efímero en `/tmp` (BL-018)
+
+- Las credenciales de Turso (`TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN`) tienen scope
+  Production-only en el dashboard de Vercel (guardrail deliberado, ver DECISIONS.md
+  2026-07-20 "Infra fase 1"), así que un preview deployment (uno por PR) nunca las recibe.
+  `resolveDatasourceConfig()` (`src/lib/prisma-datasource-config.ts`) detecta ese caso —
+  `VERCEL_ENV` definida y distinta de `"production"`, sin `TURSO_DATABASE_URL` — y usa
+  `file:/tmp/preview.db` en vez de caer en silencio a un fichero local que no persiste en el
+  runtime serverless. Sin cambios en producción (Turso) ni en local/CI (sin `VERCEL_ENV`).
+- Como `/tmp` está vacío en cada cold start de la función serverless, `src/lib/prisma.ts`
+  aplica el esquema completo de `prisma/migrations/` contra ese fichero antes de servir la
+  primera petición (`src/lib/bootstrap-preview-schema.ts`, reutilizando la misma lógica de
+  aplicación de migraciones que ya usa `scripts/apply-turso-migrations.ts` para Turso), una
+  única vez por instancia — mismo patrón de guarda que el singleton anti-hot-reload de Prisma.
+  El fichero es completamente efímero: se destruye con la instancia serverless, nunca
+  compartido entre invocaciones ni con producción.
+- Ver DECISIONS.md 2026-07-20 ("BL-018: SQLite efímero en `/tmp` para preview deployments sin
+  Turso") para la justificación completa, incluida la excepción documentada a la regla de que
+  `resolveDatasourceConfig` es agnóstico de entorno.
