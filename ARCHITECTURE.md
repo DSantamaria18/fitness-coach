@@ -340,7 +340,8 @@ propósito — no sobre-diseñar la más simple, regla 4 CLAUDE.md).
   serializado a ISO string, mismo criterio que `ProgressCharts` de no cruzar `Date` por la
   frontera server/client).
 - Autenticación/coste: `ANTHROPIC_API_KEY` (variable de entorno, pago por token — ver
-  `.env.example`), nunca en código ni logs. En producción se configura como secret de Fly.io.
+  `.env.example`), nunca en código ni logs. En producción se configura como variable de
+  entorno de Vercel (ver SPEC.md §10, pivote 2026-07-20 desde Fly.io).
 
 ### Exportar como imagen PNG (BL-007)
 
@@ -627,6 +628,7 @@ propósito — no sobre-diseñar la más simple, regla 4 CLAUDE.md).
 
 ## Pendiente de definir en fases futuras del roadmap
 
-- Gráficos de progreso, Dockerfile/despliegue en Fly.io — ver el plan de fases y BACKLOG.md.
+- Despliegue en Vercel + Turso (ver SPEC.md §8-11, pivote 2026-07-20 desde Fly.io) — ver el
+  plan de fases y BACKLOG.md.
   El servidor MCP ya está implementado (ver sección "Servidor MCP" arriba); pendiente solo la
   capa VPN Tailscale sobre él (ver BACKLOG.md).

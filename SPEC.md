@@ -120,40 +120,59 @@ nunca abierta directamente a internet.
 
 ## 8. Persistencia
 
-- **SQLite**, un único fichero. Tablas: `users`, `body_weight`, `exercises` (catálogo),
-  `sessions`, `strength_sets`, `cardio_entries`, con relaciones de sesión → registros de
-  ejercicio → series (para fuerza).
-- Migraciones versionadas gestionadas por el ORM/librería que se elija en el plan de
-  implementación.
+- **Turso** (libSQL, compatible con SQLite): base de datos alojada, sin fichero local en
+  producción. Tablas: `users`, `body_weight`, `exercises` (catálogo), `sessions`,
+  `strength_sets`, `cardio_entries`, con relaciones de sesión → registros de ejercicio →
+  series (para fuerza) — el esquema no cambia respecto al SQLite original.
+- Cliente Prisma vía `@prisma/adapter-libsql` en producción; en local/tests se sigue usando
+  SQLite de fichero (compatible con el mismo adapter en modo local, o con
+  `@prisma/adapter-better-sqlite3` si conviene mantenerlo — se decide en el plan de
+  implementación). Revisado el 2026-07-20 (ver DECISIONS.md): pivote desde el Fly.io + SQLite
+  con volumen originalmente planeado, tras confirmar que Fly.io ya no ofrece free tier.
+- **Migraciones**: `prisma migrate dev`, `db push` y `migrate deploy` no funcionan contra
+  Turso remoto (libSQL habla HTTP, incompatible con Prisma Migrate — confirmado en
+  documentación oficial). Flujo: se generan localmente contra SQLite de fichero
+  (`prisma migrate dev`, sin cambios ahí) y se aplican a Turso vía su CLI (`turso db shell`).
+  Antes de aplicar a producción, el mismo SQL se aplica y verifica en CI contra una instancia
+  real de `libsql-server` (imagen oficial de Turso) levantada con testcontainers — así se
+  valida contra el protocolo real de libSQL, no solo contra SQLite puro.
 
 ## 9. Observabilidad
 
-- Solo logs (los que provee Fly.io de forma gratuita). Sin alertas activas en el MVP — se
-  puede añadir más adelante si hace falta (anotado en BACKLOG.md si se decide después).
+- Solo logs (los que provee Vercel de forma gratuita en el plan Hobby). Sin alertas activas en
+  el MVP — se puede añadir más adelante si hace falta (anotado en BACKLOG.md si se decide
+  después).
 
 ## 10. Despliegue
 
-- Empaquetado en **Docker estándar**, sin dependencias específicas de Fly.io más allá del
-  volumen persistente para el fichero SQLite — para poder migrar sin fricción.
-- Despliegue inicial en **Fly.io** (free tier). Migración futura al NAS/servidor propio de
-  David cuando esté montado, documentada como paso explícito en DECISIONS.md llegado el
-  momento (config de despliegue rehecha, fichero SQLite copiado desde backup).
-- Dominio: subdominio por defecto de Fly.io al principio; la URL/dominio nunca se hardcodea en
+- **Vercel** (plan Hobby, gratuito para uso personal/no comercial), integración nativa con
+  GitHub: cada merge a `master` despliega automáticamente a producción, sin paso manual
+  intermedio. Revisado el 2026-07-20 (ver DECISIONS.md): sustituye el plan original de
+  Docker + Fly.io tras confirmar que Fly.io eliminó su free tier en 2024.
+- Sin Docker ni volumen persistente — la persistencia vive en Turso (ver §8), no en el
+  contenedor de despliegue.
+- Dominio: subdominio por defecto de Vercel al principio; la URL/dominio nunca se hardcodea en
   el código (siempre vía variable de entorno), para poder cambiarlo sin fricción.
-- **CI**: GitHub Actions — corre tests y typecheck en cada push. Sin entorno de staging
-  separado (justificado por ser un proyecto single-user).
+- **CI**: GitHub Actions — corre tests, typecheck y (nuevo) la verificación de migraciones
+  contra `libsql-server` real (ver §8) en cada push. El despliegue en sí lo dispara
+  directamente la integración Git de Vercel, no un job de GitHub Actions. Sin entorno de
+  staging separado (justificado por ser un proyecto single-user).
 
 ## 11. Backup y restore
 
 - Backup **manual bajo demanda**, no automático: un botón "Descargar backup" en `/ajustes` de
-  la webapp genera al momento una copia consistente del fichero SQLite (API de backup online de
-  `better-sqlite3`, segura con escrituras concurrentes) y la sirve como descarga del navegador,
-  sin subirla a ningún almacenamiento externo ni conservar copia en el servidor. Revisado el
-  2026-07-18 (ver DECISIONS.md): al ser un único usuario, se prioriza simplicidad operativa
-  (sin cuenta cloud adicional) sobre automatización.
+  la webapp genera al momento una copia consistente de la base de datos y la sirve como
+  descarga del navegador, sin subirla a ningún almacenamiento externo ni conservar copia en el
+  servidor. Al ser un único usuario, se prioriza simplicidad operativa (sin cuenta cloud
+  adicional) sobre automatización.
+- **Pendiente de rediseño** (ver DECISIONS.md 2026-07-20): la implementación actual usa la API
+  de backup online de `better-sqlite3` leyendo el fichero local, que deja de funcionar contra
+  Turso (no hay fichero local en un despliegue serverless). El mecanismo de exportación real
+  contra Turso (CLI, API de plataforma, o volcado por tablas vía Prisma) se investiga como
+  tarea explícita del plan de implementación, no se asume una solución todavía.
 - `/ajustes` avisa si han pasado más de 30 días desde el último backup, o si nunca se ha hecho
   ninguno — red de seguridad mínima frente al olvido.
-- Restore manual: sustituir el fichero del volumen por el backup descargado.
+- Restore manual: importar el backup descargado en la base de datos Turso.
 
 ## 12. Fuera de alcance del MVP (backlog)
 

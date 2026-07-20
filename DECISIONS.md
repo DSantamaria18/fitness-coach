@@ -1198,4 +1198,67 @@ nueva.
 
 ---
 
+## 2026-07-20 — Pivote de despliegue: Fly.io + Docker → Vercel + Turso
+
+- **Decisión:** se abandona el plan original de SPEC.md (Docker + Fly.io con volumen
+  persistente para el fichero SQLite) en favor de **Vercel (plan Hobby) + Turso** (libSQL,
+  compatible con SQLite, base de datos alojada).
+- **Alternativas consideradas:**
+  - **Fly.io tal cual estaba en SPEC.md** — descartada tras verificar contra la documentación
+    oficial de precios (no solo asumir que "free tier" seguía vigente, lección ya aprendida en
+    esta misma sección con "Claude Agent SDK"): Fly.io eliminó su free tier permanente en 2024;
+    una VM mínima 24/7 con volumen cuesta ~$3-5/mes. David prefirió buscar una alternativa
+    gratuita antes de aceptar ese coste.
+  - **Oracle Cloud "Always Free"** — descartada: aunque es gratis de verdad (VM ARM sin límite
+    de tiempo), es una VM cruda sin plataforma de despliegue, con la carga operativa de
+    administrar el servidor a mano (SSH, actualizaciones) que Fly.io/Vercel evitan.
+  - **Render (free tier)** — no elegida explícitamente, pero descartada implícitamente frente a
+    Vercel: Render duerme el servicio tras 15 min de inactividad (cold start de ~1 min en la
+    siguiente petición), mientras que Vercel no tiene ese problema y además es la propia
+    empresa de Next.js (soporte de primera para App Router/Server Actions/Auth.js).
+- **Justificación:** Vercel Hobby es gratuito para uso personal/no comercial (encaja con este
+  proyecto de un único usuario), sin "sleep", con hasta 300s de duración de función (de sobra
+  para los ~44-60s que tardan las llamadas de IA de `/sesion` y `/informe`), e integración
+  nativa con GitHub para despliegue automático en cada merge a `master` (decisión explícita de
+  David: sin paso manual intermedio, a diferencia de la recomendación inicial del Tech Lead de
+  requerir aprobación manual). Turso da el free tier necesario para no depender de un volumen
+  persistente (que Vercel, al ser serverless, no ofrece de todas formas).
+- **Impacto en documentación viva:** SPEC.md §8-11 reescritas (persistencia, observabilidad,
+  despliegue, backup); ARCHITECTURE.md pendiente de actualizar sus referencias sueltas a
+  Fly.io como parte de la implementación.
+- **Migraciones — problema real, no solo teórico:** confirmado contra la documentación oficial
+  de Prisma y Turso que **ni `migrate dev`, ni `db push`, ni `migrate deploy`** funcionan
+  directamente contra una base de datos Turso remota (libSQL habla HTTP, incompatible con
+  Prisma Migrate). Se decidió, a propuesta de David, no limitarse al flujo mínimo documentado
+  por Turso (generar en local + `turso db shell` a mano) sino añadir una verificación real en
+  CI: Turso publica una imagen Docker oficial de su propio servidor (`libsql-server`,
+  `ghcr.io/tursodatabase/libsql-server`) que habla el mismo protocolo HTTP que Turso en la
+  nube — se levanta vía testcontainers en CI, se le aplica el SQL de la migración recién
+  generada, y solo si eso pasa se aplica el mismo SQL a la Turso de producción. Esto es más
+  riguroso que lo que había hoy con SQLite puro (donde no existía ninguna verificación
+  separada antes de aplicar una migración).
+  - **Alternativa descartada:** una segunda base de datos Turso remota dedicada a tests/CI (en
+    vez de un servidor local vía testcontainers) — descartada porque Turso no tiene "esquemas"
+    al estilo Postgres (cada base es su propia instancia), y un segundo Turso real solo
+    trasladaría el mismo problema de migraciones a una segunda instancia sin resolverlo, además
+    de gastar cuota del free tier y añadir latencia de red a cada ejecución de CI.
+  - **Pendiente de resolver en el plan de implementación:** cómo se lleva el control de qué
+    migraciones ya se aplicaron a Turso, dado que `_prisma_migrations` asume que el propio CLI
+    de Prisma hizo el trabajo y aquí se aplica el SQL a mano.
+- **Impacto en features ya mergeadas:** el backup manual de `/ajustes` (mergeado el
+  2026-07-18) queda roto por este cambio — su implementación actual
+  (`src/lib/create-backup.ts`) abre el fichero SQLite local directamente con la API de backup
+  online de `better-sqlite3`, algo que no existe en un despliegue serverless contra Turso. Se
+  marca explícitamente como pendiente de rediseño en SPEC.md §11 en vez de asumir una solución
+  sin haberla investigado — lección de esta misma sección (verificar contra documentación
+  oficial antes de comprometer un mecanismo concreto) aplicada también aquí: no se ha
+  investigado todavía si el mecanismo correcto es la API de plataforma de Turso, su CLI, o un
+  volcado manual por tablas vía Prisma.
+- **Bloqueantes externos:** el despliegue requiere que David cree las cuentas de Turso y
+  Vercel (ninguna de las dos se puede crear en su nombre), y que genere el hash de la
+  contraseña de admin de producción en local (`npm run hash-password`) — pendientes antes de
+  poder despachar trabajo de implementación.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
