@@ -21,11 +21,30 @@ avanza el roadmap de implementación (ver plan de fases acordado).
 - **CI**: GitHub Actions (`.github/workflows/ci.yml`) — en cada push/PR, el job `test` instala
   dependencias, genera el cliente Prisma, y corre `format:check`, `lint`, `typecheck`, `test` y
   `build` (con variables de entorno ficticias, solo para que el build pueda arrancar); un job
-  `e2e` en paralelo instala Chromium y corre `npm run test:e2e`.
+  `e2e` en paralelo instala Chromium y corre `npm run test:e2e`; un job `verify-turso-migrations`
+  (independiente, no bloquea a los otros) prepara la verificación de migraciones contra un
+  `libsql-server` real — en fase 1 solo un *smoke* no bloqueante que arranca la imagen oficial de
+  Turso; la invocación real al script de migraciones se conecta en fase 2 (ver SPEC.md §8/§10 y
+  DECISIONS.md 2026-07-20 infra fase 1).
+- **Despliegue**: Vercel (Hobby) + Turso (ver SPEC.md §8-11, pivote 2026-07-20 desde Fly.io). Los
+  preview deployments (uno por PR) no reciben las credenciales de la Turso de producción (scope
+  Production en el dashboard de Vercel) para no escribir en la base de datos real. `vercel.json`
+  versiona solo lo posible (`$schema` + `framework`); el scoping de env vars es dashboard/CLI.
 - **Autenticación**: Auth.js (NextAuth) v5, provider Credentials + bcrypt. Usuario único
   sembrado desde `ADMIN_USERNAME`/`ADMIN_PASSWORD_HASH` (ver `prisma/seed.ts` y
   `scripts/hash-password.ts`). Sesión JWT en cookie httpOnly (`AUTH_SECRET`), sin adapter de
   base de datos en NextAuth (no hace falta persistir sesiones para un solo usuario).
+
+## Healthcheck
+
+- `src/app/api/health/route.ts` (`GET /api/health`) responde `200 { status: "ok" }` para que
+  Vercel y cualquier monitorización externa comprueben que el servidor está vivo. Es un check de
+  **liveness**, no de readiness: deliberadamente sin round-trip a la base de datos (no gasta
+  cuota de lectura de Turso ni da falsos negativos por latencia de red) y sin exponer versión,
+  entorno ni dato sensible. Excluida del middleware de sesión en el matcher de `src/proxy.ts`
+  (como `api/mcp`), porque Vercel y los monitores externos que la sondean no llevan cookie de
+  sesión: sin esa exclusión recibirían un 307 a `/login` en vez del 200. Consistente con
+  SPEC.md §9.
 
 ## Autenticación y protección de rutas
 

@@ -22,6 +22,27 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   volver a esto en cuanto el NAS con Tailscale esté disponible. Dificultad: baja (es
   configuración de red del despliegue, no cambia el código del servidor MCP).
 
+- **[BL-017]** **Revisar el modelo de red tras el pivote a Vercel (Tailscale → internet
+  público).** Justificación: SPEC.md §2, §5 y §7 asumen que la webapp y el servidor MCP están
+  expuestos **solo a través de la VPN Tailscale, nunca abiertos a internet**. Vercel (Hobby)
+  sirve la app en internet público (no ofrece Tailscale), así que la protección pasa a ser
+  login + token en lugar de una frontera de red — cambio de postura de seguridad que la entrada
+  del pivote (DECISIONS.md 2026-07-20) no abordó. Hay que decidir: (a) aceptar login/token como
+  única capa para la web, y (b) qué pasa con el servidor MCP, que dependía explícitamente de la
+  VPN (SPEC.md §5/§7) — ¿se queda solo con Bearer token en Vercel, se mantiene fuera de Vercel,
+  o se pospone su exposición hasta tener el NAS con Tailscale (relacionado con BL-003)?
+  Dificultad: baja-media (es sobre todo una decisión de producto/seguridad de David y actualizar
+  §2/§5/§7, no código nuevo).
+
+- **[BL-018]** **Definir qué reciben los preview deployments de Vercel sin la Turso de
+  producción.** Justificación: por el guardrail de seguridad (las credenciales de Turso son
+  scope Production únicamente, ver DECISIONS.md 2026-07-20 infra fase 1), los preview
+  deployments no tienen `TURSO_DATABASE_URL`. Hay que decidir el comportamiento: fallar rápido
+  con un mensaje claro, o conectar a un SQLite efímero de `/tmp` para poder revisar la UI en el
+  preview. Toca el adapter de Prisma para Turso (`feature/despliegue-turso-adapter`), por eso se
+  resuelve en fase 2 y no a ciegas ahora. Dificultad: baja (leer `VERCEL_ENV` y ramificar la
+  construcción del cliente Prisma).
+
 ## Iteraciones futuras ya acordadas (no implementar todavía)
 
 - **[BL-011]** **Integración con wearable** (pasos, sueño, frecuencia cardiaca). Justificación: ampliar el
