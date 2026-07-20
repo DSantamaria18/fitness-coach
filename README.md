@@ -37,6 +37,10 @@ Requisitos: Node.js 20+ y npm.
      pago de [console.anthropic.com](https://console.anthropic.com), separada de una suscripción
      de Claude.ai.
 
+   `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` no hacen falta en local: solo se usan en producción
+   (ver `.env.example` y ARCHITECTURE.md, "Persistencia") — en local/tests el cliente Prisma usa
+   `DATABASE_URL` (fichero SQLite normal).
+
 3. Aplica las migraciones y siembra el usuario administrador:
 
    ```bash

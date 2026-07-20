@@ -131,18 +131,22 @@ servidor MCP a un host aparte.
   producción. Tablas: `users`, `body_weight`, `exercises` (catálogo), `sessions`,
   `strength_sets`, `cardio_entries`, con relaciones de sesión → registros de ejercicio →
   series (para fuerza) — el esquema no cambia respecto al SQLite original.
-- Cliente Prisma vía `@prisma/adapter-libsql` en producción; en local/tests se sigue usando
-  SQLite de fichero (compatible con el mismo adapter en modo local, o con
-  `@prisma/adapter-better-sqlite3` si conviene mantenerlo — se decide en el plan de
-  implementación). Revisado el 2026-07-20 (ver DECISIONS.md): pivote desde el Fly.io + SQLite
-  con volumen originalmente planeado, tras confirmar que Fly.io ya no ofrece free tier.
+- Cliente Prisma vía un único adapter, `@prisma/adapter-libsql`, tanto en producción (Turso
+  remoto) como en local/tests (SQLite de fichero): el mismo adapter soporta ambos modos porque
+  libSQL habla el mismo protocolo de cliente en los dos casos — decisión tomada e implementada
+  el 2026-07-20 (ver DECISIONS.md), en vez de mantener `@prisma/adapter-better-sqlite3` en
+  paralelo solo para local. Revisado el 2026-07-20 (ver DECISIONS.md): pivote desde el Fly.io +
+  SQLite con volumen originalmente planeado, tras confirmar que Fly.io ya no ofrece free tier.
 - **Migraciones**: `prisma migrate dev`, `db push` y `migrate deploy` no funcionan contra
   Turso remoto (libSQL habla HTTP, incompatible con Prisma Migrate — confirmado en
   documentación oficial). Flujo: se generan localmente contra SQLite de fichero
-  (`prisma migrate dev`, sin cambios ahí) y se aplican a Turso vía su CLI (`turso db shell`).
-  Antes de aplicar a producción, el mismo SQL se aplica y verifica en CI contra una instancia
-  real de `libsql-server` (imagen oficial de Turso) levantada con testcontainers — así se
-  valida contra el protocolo real de libSQL, no solo contra SQLite puro.
+  (`prisma migrate dev`, sin cambios ahí) y se aplican al SQL crudo con
+  `scripts/apply-turso-migrations.ts` (vía `@libsql/client`, no el CLI `turso`, para no
+  depender de tener ese binario instalado en el runner de CI) contra cualquier target libSQL —
+  la Turso real de producción, o un `libsql-server` (imagen oficial de Turso) levantado en CI
+  para verificar la migración antes de tocar producción. El script lleva su propia tabla de
+  control (`_turso_migrations_applied`, no `_prisma_migrations`) para saber qué migraciones ya
+  se aplicaron a cada target y ser idempotente en reintentos — ver DECISIONS.md 2026-07-20.
 
 ## 9. Observabilidad
 

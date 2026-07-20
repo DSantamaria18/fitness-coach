@@ -7,10 +7,15 @@ avanza el roadmap de implementación (ver plan de fases acordado).
 
 - **Framework**: Next.js 16 (App Router) + React 19 + TypeScript estricto.
 - **Estilos**: Tailwind CSS v4 (mobile-first).
-- **Persistencia**: SQLite, accedida vía Prisma ORM (generador `prisma-client`, cliente TS en
-  `src/generated/prisma/`, no committeado — se regenera con `npm run prisma:generate`).
-  Conexión mediante el driver adapter `@prisma/adapter-better-sqlite3` (Prisma 7 requiere un
-  adapter explícito; no hay motor Rust embebido por defecto).
+- **Persistencia**: SQLite (compatible con libSQL), accedida vía Prisma ORM (generador
+  `prisma-client`, cliente TS en `src/generated/prisma/`, no committeado — se regenera con
+  `npm run prisma:generate`). Conexión mediante un único driver adapter,
+  `@prisma/adapter-libsql` (exportado como `PrismaLibSql`, ver `src/lib/prisma.ts`), tanto en
+  producción (Turso remoto, `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN`) como en local/tests
+  (fichero SQLite, `DATABASE_URL`) — `resolveDatasourceConfig()` decide cuál usar según qué
+  variables de entorno estén presentes, sin ramificar por `NODE_ENV`. Antes del pivote de
+  despliegue (ver DECISIONS.md 2026-07-20) se usaba `@prisma/adapter-better-sqlite3`, solo
+  válido contra fichero local.
 - **Validación**: Zod (compartirá esquemas entre rutas API web y tools MCP en fases futuras).
 - **Testing**: Vitest (unit + integración) + Testing Library (componentes) + jsdom para
   lógica/componentes aislados; Playwright para E2E en un navegador real (ver sección "Tests
@@ -173,8 +178,9 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   de `update-session.ts` (que sustituye entradas y por eso necesita `deleteMany` explícito), el
   borrado no toca `StrengthEntry`/`CardioEntry`/`StrengthSet` directamente: el esquema declara
   `onDelete: Cascade` en esas relaciones, y se comprobó empíricamente (no solo leyendo
-  `schema.prisma`) que el adapter `@prisma/adapter-better-sqlite3` aplica esas cascadas en
-  runtime — ver DECISIONS.md.
+  `schema.prisma`) que esas cascadas se aplican en runtime — primero contra
+  `@prisma/adapter-better-sqlite3`, y re-verificado contra `@prisma/adapter-libsql` tras el
+  pivote a Turso (`src/lib/prisma.integration.test.ts`) — ver DECISIONS.md.
 - **UI web (`/historial`)**: `session-history-section.tsx` (`SessionHistorySection`) lista las
   sesiones del usuario (fecha + resumen legible de sus ejercicios), con acciones "Editar"
   (formulario in-place) y "Borrar" (confirmación nativa) — mismo patrón estructural que
@@ -641,15 +647,25 @@ propósito — no sobre-diseñar la más simple, regla 4 CLAUDE.md).
   RSC no permite llamar desde el servidor a una función exportada por un módulo cliente, ver
   DECISIONS.md 2026-07-19.
 - `src/lib/prisma.ts` — instancia singleton del cliente Prisma (evita agotar conexiones SQLite
-  por hot-reload en desarrollo).
+  por hot-reload en desarrollo) y construye el adapter `@prisma/adapter-libsql`.
+- `src/lib/prisma-datasource-config.ts` — función pura `resolveDatasourceConfig()` que decide
+  la URL/authToken del adapter según las variables de entorno presentes (Turso en producción,
+  fichero local en dev/tests); separada de `prisma.ts` para que `prisma/seed.ts` pueda
+  reutilizarla sin arrastrar una segunda instancia de `PrismaClient`.
 - `prisma/schema.prisma` — esquema de dominio (ver SPEC.md §3 para la definición funcional).
 - `prisma/migrations/` — migraciones versionadas.
 - `prisma/seed.ts` — siembra el catálogo cerrado de ejercicios (`npm run prisma:seed`).
+- `scripts/apply-turso-migrations.ts` — aplica el SQL de `prisma/migrations/` contra cualquier
+  target libSQL (Turso real o un `libsql-server` de CI), con su propia tabla de control para
+  idempotencia (`_turso_migrations_applied`) — ver cabecera del fichero para el porqué y cómo se
+  invoca, y DECISIONS.md 2026-07-20 para el porqué no se reutiliza `_prisma_migrations`.
 
 ## Pendiente de definir en fases futuras del roadmap
 
-- Despliegue en Vercel + Turso (ver SPEC.md §8-11, pivote 2026-07-20 desde Fly.io) — ver el
-  plan de fases y BACKLOG.md.
+- Despliegue en Vercel + Turso (ver SPEC.md §8-11, pivote 2026-07-20 desde Fly.io): capa de
+  datos ya implementada (adapter `@prisma/adapter-libsql` + `scripts/apply-turso-migrations.ts`
+  — ver DECISIONS.md); pendiente la infraestructura real (conectar Vercel, aplicar migraciones
+  a la Turso de producción, backup manual rediseñado para Turso) — ver BACKLOG.md.
   El servidor MCP ya está implementado (ver sección "Servidor MCP" arriba), protegido solo por
   token Bearer de forma permanente — la segunda capa de VPN Tailscale se descartó al pivotar a
   Vercel (ver DECISIONS.md 2026-07-20).

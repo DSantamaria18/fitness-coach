@@ -1261,6 +1261,68 @@ nueva.
 
 ---
 
+## 2026-07-20 — Capa de datos del pivote a Turso: adapter único y control de migraciones
+
+- **Contexto:** primera tanda de implementación del pivote de despliegue (ver entrada anterior
+  de esta misma fecha), a cargo de un Developer: el adapter de Prisma y el script de aplicación
+  de migraciones. No hay credenciales reales de Turso disponibles en este entorno (intencional
+  — ver "Bloqueantes externos" en la entrada anterior), así que toda la verificación es contra
+  SQLite/libSQL de fichero local, sin red real.
+- **Adapter único (`@prisma/adapter-libsql`) en vez de dos adapters condicionados por
+  entorno:** confirmado contra la documentación oficial de Prisma/Turso que
+  `@prisma/adapter-libsql` acepta tanto una URL remota (`libsql://...` + `authToken`) como una
+  URL de fichero local (`file:...`, sin `authToken`) con el mismo constructor — es el mismo
+  cliente `@libsql/client` por debajo en ambos casos. Se descartó mantener
+  `@prisma/adapter-better-sqlite3` en paralelo solo para local/tests: un único código de
+  conexión en todos los entornos reduce el riesgo de que dev/tests validen un comportamiento
+  que producción no reproduce (motivo ya citado en la entrada anterior de Fly.io→Vercel para
+  justificar la verificación en CI contra `libsql-server` real). `resolveDatasourceConfig()`
+  (`src/lib/prisma-datasource-config.ts`) decide la URL/authToken según qué variables de
+  entorno están presentes — `TURSO_DATABASE_URL` tiene prioridad sobre `DATABASE_URL` — en vez
+  de ramificar por `NODE_ENV`, para que el comportamiento sea determinista y no dependa de en
+  qué modo cree Next.js que está corriendo.
+  - **Lección de nombre de export, no solo de paquete:** la documentación pública de Prisma (y
+    la de Turso) muestra la clase como `PrismaLibSQL`, pero la v7.8.0 instalada la exporta como
+    `PrismaLibSql` (casing distinto) — comprobado contra `node_modules/@prisma/adapter-libsql`
+    tras un primer intento fallido (`TypeError: PrismaLibSQL is not a constructor`). Mismo
+    principio ya recogido en esta sección para "Claude Agent SDK": verificar contra lo
+    realmente instalado, no solo contra la documentación, cuando ambas podrían haber divergido
+    entre versiones.
+- **`_turso_migrations_applied` (tabla de control propia) en vez de reutilizar
+  `_prisma_migrations`:** quedaba pendiente de resolver en la entrada anterior. Se descartó
+  replicar el esquema de `_prisma_migrations` (columnas de checksum, contador de pasos
+  aplicados, etc.) porque ese formato es un detalle interno no documentado como API pública de
+  Prisma, sujeto a cambiar entre versiones, y no aporta ningún beneficio real aquí: ninguna
+  orden de Prisma CLI (`migrate status` incluida) puede ejecutarse contra Turso remoto de todas
+  formas, así que no hay ningún flujo futuro que fuera a leer esa tabla esperando el formato
+  exacto de Prisma. La tabla propia (`migration_name TEXT PRIMARY KEY, applied_at TEXT`) solo
+  necesita responder "¿esta carpeta de `prisma/migrations/` ya se aplicó a este target?" — cada
+  migración se marca aplicada inmediatamente después de ejecutarse con éxito (no al final del
+  lote), así que una migración que falla a mitad dejaría las anteriores correctamente marcadas
+  y un reintento retomaría justo desde la que falló, sin reaplicar nada.
+- **`@libsql/client` (`executeMultiple`) en vez del CLI `turso db shell`:** aunque el mecanismo
+  "de referencia" documentado por Turso es `turso db shell <target> < migration.sql`, se optó
+  por aplicar el SQL programáticamente con `@libsql/client` (mismo paquete del que depende
+  `@prisma/adapter-libsql`, ya en el árbol de dependencias) por dos motivos: (1) el runner de CI
+  no necesita tener el binario `turso` instalado, y (2) el mismo código sirve sin cambios tanto
+  para el `libsql-server` efímero de CI como para la Turso real de producción, con solo cambiar
+  la URL/token — evita mantener dos mecanismos distintos. `executeMultiple()` está documentado
+  explícitamente por Turso como pensado para "scripts SQL existentes, como migraciones", que es
+  justo el caso de uso de los ficheros `migration.sql` que genera `prisma migrate dev`.
+- **Impacto en documentación viva:** SPEC.md §8 (persistencia/migraciones), ARCHITECTURE.md
+  (stack técnico, estructura de carpetas, comentario de cascada de `delete-session.ts` que
+  citaba el adapter anterior por nombre) y `.env.example` (nuevas `TURSO_DATABASE_URL`/
+  `TURSO_AUTH_TOKEN`, y corregida la referencia obsoleta a "secret de Fly.io" en el comentario
+  de `ANTHROPIC_API_KEY`).
+- **No tocado en esta tanda (deliberado):** `src/lib/create-backup.ts` y
+  `src/app/api/backup/route.ts` — el rediseño del backup manual para Turso lo aborda en
+  paralelo el otro Developer en una rama distinta (ver SPEC.md §11, todavía marcado como
+  pendiente de rediseño). El script `scripts/apply-turso-migrations.ts` documenta en su propia
+  cabecera cómo invocarlo (variables de entorno) para que el TechOps Engineer lo integre en CI
+  en la siguiente tanda, sin más contexto que ese comentario.
+
+---
+
 ## 2026-07-20 — Infra fase 1: CI de migraciones Turso, healthcheck, guardrail de preview en Vercel
 
 Trabajo del TechOps Engineer preparando el terreno del despliegue Vercel + Turso **sin
