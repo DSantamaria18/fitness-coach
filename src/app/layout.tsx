@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { NavBarGate } from "@/components/nav-bar-gate";
+import { SectionIndicator } from "@/components/section-indicator";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,6 +34,11 @@ export default function RootLayout({
             nav por completo si no hay usuario autenticado (estará en
             /login). Ver src/components/nav-bar-gate.tsx. */}
         <NavBarGate />
+        {/* BL-010: indicador de sección activa, una sola vez aquí en vez de
+            repetido en cada page.tsx — se autooculta (devuelve null) en
+            rutas que no son ninguna de las 5 secciones (/login, /). Ver
+            src/components/section-indicator.tsx. */}
+        <SectionIndicator />
         {children}
       </body>
     </html>

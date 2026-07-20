@@ -54,6 +54,14 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   clases Tailwind `hidden`/`flex` (+ `sm:flex` fijo), **no** el atributo nativo `hidden` del
   elemento — ver DECISIONS.md para el porqué (Tailwind v4 lo neutraliza con `!important` en su
   Preflight, descubierto en la verificación en navegador real de esta misma tarea).
+- **[BL-010]** `src/lib/nav-links.ts` extrae `NAV_LINKS` (antes definido solo dentro de
+  `nav-bar.tsx`) a un módulo compartido, para que `SectionIndicator`
+  (`src/components/section-indicator.tsx`) derive el label de la sección activa de la misma
+  fuente que resalta el enlace activo en la nav, sin duplicar el mapeo href/label. Se renderiza
+  una única vez en `src/app/layout.tsx` (justo debajo de `NavBarGate`), no repetido en cada
+  `page.tsx` — la app solo tiene un layout raíz compartido por todas las rutas (autenticadas y
+  `/login`), así que un componente ahí cubre las 5 secciones automáticamente y se autooculta
+  (`null`) fuera de ellas comparando `usePathname()` contra `NAV_LINKS`.
 
 ## Registro de peso corporal
 

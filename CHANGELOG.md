@@ -198,6 +198,19 @@ Proyecto sin versión publicada todavía.
   navegador real con Playwright MCP a 375px (abrir/cerrar, Escape, clic fuera, navegación) y a
   1024px (confirma que la barra de escritorio no cambia).
 
+- **[BL-010]** Indicador de sección activa, visible junto al título de cada página: nuevo
+  componente `SectionIndicator` (`src/components/section-indicator.tsx`), renderizado una sola
+  vez en `src/app/layout.tsx` (no repetido en cada `page.tsx`) justo debajo de `NavBarGate`.
+  Deriva el label de `NAV_LINKS` (extraído a `src/lib/nav-links.ts`, fuente única compartida
+  ahora con `nav-bar.tsx`) comparando con `usePathname()`; se autooculta (`null`) en rutas que
+  no son ninguna de las 5 secciones (`/login`, `/`). No es un breadcrumb jerárquico —
+  interpretación deliberada del encargo original, ver DECISIONS.md — sino un refuerzo textual
+  plano de la sección activa, útil sobre todo en `/peso`, `/sesion` e `/informe`, cuyo `<h1>`
+  (“Registrar peso”, “Registrar sesión”, “Informe de progreso”) no repite literalmente el label
+  de la nav (“Peso”, “Sesión”, “Informe”). TDD (`section-indicator.test.tsx`, 7 casos: las 5
+  secciones + `/login` + `/`) y verificado en navegador real con Playwright MCP en las 5
+  secciones, en claro/oscuro, y en móvil con el menú hamburguesa abierto y cerrado.
+
 - **[BL-005]** Filtro de rango de fechas (`desde`/`hasta`) en `/informe`: nuevo componente
   `DateRangeFilter` (`informe/date-range-filter.tsx`, dos `<input type="date">` nativos,
   mismo patrón controlado-por-URL que `ExerciseSelector`) que actualiza la URL vía

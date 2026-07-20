@@ -22,12 +22,6 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   volver a esto en cuanto el NAS con Tailscale esté disponible. Dificultad: baja (es
   configuración de red del despliegue, no cambia el código del servidor MCP).
 
-- **[BL-010]** **Breadcrumbs o indicador de sección dentro de cada página.** Justificación: la navegación
-  global resalta la ruta activa en la propia barra fija, pero puede no ser obvio en qué sección
-  está el usuario sin mirar arriba (p. ej. tras recargar la página o llegar desde un enlace
-  externo). Dificultad: baja (es un indicador adicional en cada página, no cambia la
-  navegación en sí).
-
 ## Iteraciones futuras ya acordadas (no implementar todavía)
 
 - **[BL-011]** **Integración con wearable** (pasos, sueño, frecuencia cardiaca). Justificación: ampliar el
