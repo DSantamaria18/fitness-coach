@@ -183,14 +183,23 @@ servidor MCP a un host aparte.
   descarga del navegador, sin subirla a ningún almacenamiento externo ni conservar copia en el
   servidor. Al ser un único usuario, se prioriza simplicidad operativa (sin cuenta cloud
   adicional) sobre automatización.
-- **Pendiente de rediseño** (ver DECISIONS.md 2026-07-20): la implementación actual usa la API
-  de backup online de `better-sqlite3` leyendo el fichero local, que deja de funcionar contra
-  Turso (no hay fichero local en un despliegue serverless). El mecanismo de exportación real
-  contra Turso (CLI, API de plataforma, o volcado por tablas vía Prisma) se investiga como
-  tarea explícita del plan de implementación, no se asume una solución todavía.
+- **Mecanismo (revisado el 2026-07-20, ver DECISIONS.md)**: el backup es un volcado de **solo
+  datos** (`INSERT` por fila, en orden de dependencia por clave foránea), generado consultando
+  todas las tablas vía el cliente Prisma — no un fichero `.db` binario. Se descarga como
+  `fitness-coach-backup-YYYY-MM-DD.sql`. Este mecanismo se investigó y eligió tras confirmar
+  contra documentación oficial de Turso que ni `turso db export`/`db shell .dump` (exigen el
+  binario del CLI, inviable en una función serverless de Vercel sin empaquetarlo) ni la
+  Platform API de Turso (sin endpoint de exportación de datos) son viables desde el propio
+  servidor de producción. Al apoyarse solo en Prisma, el mismo código genera el backup igual en
+  local (SQLite de fichero) que en producción (Turso), sin ramas de código por entorno.
+- **Alcance**: el volcado asume que el esquema ya existe en la base de datos destino (las
+  migraciones se gestionan por otra vía, ver §8) — no incluye `CREATE TABLE` ni
+  `_prisma_migrations`, solo los datos de las tablas de dominio.
 - `/ajustes` avisa si han pasado más de 30 días desde el último backup, o si nunca se ha hecho
   ninguno — red de seguridad mínima frente al olvido.
-- Restore manual: importar el backup descargado en la base de datos Turso.
+- Restore manual: aplicar el `.sql` descargado sobre la base de datos Turso con
+  `turso db shell <database> < fitness-coach-backup-YYYY-MM-DD.sql` (mismo mecanismo ya usado
+  para aplicar migraciones a mano, ver §8), sobre una base con el esquema ya migrado.
 
 ## 12. Fuera de alcance del MVP (backlog)
 

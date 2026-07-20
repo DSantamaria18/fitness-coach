@@ -194,13 +194,14 @@ avanza el roadmap de implementación (ver plan de fases acordado).
 
 ## Backup manual
 
-- `src/lib/create-backup.ts` — usa la API de backup online de `better-sqlite3` (`db.backup()`,
-  añadido como dependencia directa junto a `@types/better-sqlite3`) contra una conexión
-  read-only separada de la de Prisma, para obtener una copia consistente del fichero SQLite
-  incluso con escrituras concurrentes. Tras copiar, registra una fila en el modelo `Backup`
-  (`userId` + `createdAt`) — no guarda el fichero, solo la fecha. El path de origen es
-  inyectable (parámetro opcional, por defecto derivado de `DATABASE_URL`) para poder testear
-  contra un fichero SQLite temporal real en vez de mockear la operación de fichero.
+- `src/lib/create-backup.ts` — genera un volcado de solo datos consultando todas las tablas vía
+  el cliente Prisma (`findMany()` por modelo, en orden de dependencia por clave foránea) y
+  serializando cada fila como una sentencia SQL `INSERT`, envueltas en una transacción. Revisado
+  el 2026-07-20 (ver DECISIONS.md): sustituye a la API de backup online de `better-sqlite3`
+  (`db.backup()` sobre el fichero local), inviable contra Turso al no existir fichero local en
+  un despliegue serverless; al depender solo de Prisma, el mismo código sirve para local y
+  producción. Tras generar el volcado, registra una fila en el modelo `Backup` (`userId` +
+  `createdAt`) — no guarda el fichero, solo la fecha.
 - `src/lib/get-last-backup.ts` — devuelve la fecha del backup más reciente del usuario (o
   `null` si nunca se ha hecho ninguno).
 - `src/app/api/backup/route.ts` (`GET`) — genera el backup en un fichero temporal
