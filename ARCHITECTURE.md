@@ -9,7 +9,10 @@ avanza el roadmap de implementación (ver plan de fases acordado).
 - **Estilos**: Tailwind CSS v4 (mobile-first).
 - **Persistencia**: SQLite (compatible con libSQL), accedida vía Prisma ORM (generador
   `prisma-client`, cliente TS en `src/generated/prisma/`, no committeado — se regenera con
-  `npm run prisma:generate`). Conexión mediante un único driver adapter,
+  `npm run prisma:generate`, y automáticamente en cada `npm install`/`npm ci` vía el script
+  `postinstall` de `package.json`, para que cualquier entorno que solo haga `install` + `build`
+  (Vercel) tenga el cliente generado antes de `next build`; ver DECISIONS.md 2026-07-20 sobre el
+  build de Vercel). Conexión mediante un único driver adapter,
   `@prisma/adapter-libsql` (exportado como `PrismaLibSql`, ver `src/lib/prisma.ts`), tanto en
   producción (Turso remoto, `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN`) como en local/tests
   (fichero SQLite, `DATABASE_URL`) — `resolveDatasourceConfig()` decide cuál usar según qué
@@ -41,6 +44,10 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   preview deployments (uno por PR) no reciben las credenciales de la Turso de producción (scope
   Production en el dashboard de Vercel) para no escribir en la base de datos real. `vercel.json`
   versiona solo lo posible (`$schema` + `framework`); el scoping de env vars es dashboard/CLI.
+  El build de Vercel es `npm install` → `npm run build`: el cliente Prisma lo genera el script
+  `postinstall` durante el `npm install` (no hay paso de codegen separado como en CI), sin lo
+  cual `next build` fallaba con `Module not found: Can't resolve '@/generated/prisma/client'`
+  (ver DECISIONS.md 2026-07-20).
 - **Autenticación**: Auth.js (NextAuth) v5, provider Credentials + bcrypt. Usuario único
   sembrado desde `ADMIN_USERNAME`/`ADMIN_PASSWORD_HASH` (ver `prisma/seed.ts` y
   `scripts/hash-password.ts`). Sesión JWT en cookie httpOnly (`AUTH_SECRET`), sin adapter de

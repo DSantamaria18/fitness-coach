@@ -322,3 +322,11 @@ Proyecto sin versión publicada todavía.
   `get-session-history.ts`, y fusionando (en vez de concatenar en dos bloques) las entradas de
   fuerza y cardio por su `order` en el nuevo `src/lib/to-session-history-entry.ts` (extraído de
   `historial/page.tsx` para poder testearlo de forma aislada). Ver DECISIONS.md 2026-07-19.
+- El build de producción en Vercel nunca había compilado con éxito: faltaba un paso que generase
+  el cliente de Prisma (`src/generated/prisma`, gitignored) antes de `next build`, algo que en
+  local/CI se daba por hecho vía un `npx prisma generate` manual que Vercel nunca ejecutaba
+  (`npm install` → `npm run build`, sin más). `Module not found:
+  Can't resolve '@/generated/prisma/client'` en todo intento de build real. Enmascarado hasta
+  ahora por un problema de permisos de la cuenta de GitHub que bloqueaba el deployment antes de
+  llegar a intentar el build. Corregido añadiendo `"postinstall": "prisma generate"` a
+  `package.json` (patrón oficial de Prisma para Vercel). Ver DECISIONS.md 2026-07-20.
