@@ -330,3 +330,13 @@ Proyecto sin versión publicada todavía.
   ahora por un problema de permisos de la cuenta de GitHub que bloqueaba el deployment antes de
   llegar a intentar el build. Corregido añadiendo `"postinstall": "prisma generate"` a
   `package.json` (patrón oficial de Prisma para Vercel). Ver DECISIONS.md 2026-07-20.
+- **[Crítico]** Login roto en producción real (`fitness-coach-drab.vercel.app`): todo intento de
+  inicio de sesión devolvía 500 (`POST /api/auth/callback/credentials`), con
+  `[auth][error] MissingSecret: Please define a \`secret\`` en los logs de Vercel, pese a que
+  `AUTH_SECRET` estaba correctamente configurada (Production y Preview). Causa: las dos
+  instancias de `NextAuth(...)` del proyecto (`src/auth.ts`, runtime Node; `src/proxy.ts`,
+  runtime Edge, para el middleware) confiaban en la autodetección de `AUTH_SECRET` que hace
+  Auth.js v5 internamente (`setEnvDefaults`), que no la encontró en el runtime real de Vercel
+  (Next.js 16 + Turbopack). Corregido pasando `secret: process.env.AUTH_SECRET` explícito en
+  `authConfig` (`src/auth.config.ts`), compartido por ambas instancias. Ver DECISIONS.md
+  2026-07-20.
