@@ -74,6 +74,15 @@ export async function generateSessionProposalAction(): Promise<GenerateSessionPr
 
   const result = await generateSessionProposal(userId);
   if (!result.success) {
+    // El detalle (code, causa real, issues de Zod si aplica) ya se logueó
+    // dentro de generateSessionProposal; aquí solo dejamos constancia de que
+    // la Server Action absorbió el fallo en este punto para el usuario
+    // `userId`, sin repetir el mensaje completo (evita duplicar ruido en los
+    // logs de Vercel).
+    console.error(
+      `[generateSessionProposalAction] La generación con IA falló para userId=${userId}, ` +
+        `code=${result.error.code}. Se devuelve aviso genérico al usuario.`,
+    );
     return {
       success: false,
       message:

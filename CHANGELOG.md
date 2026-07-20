@@ -349,3 +349,15 @@ Proyecto sin versión publicada todavía.
   (Next.js 16 + Turbopack). Corregido pasando `secret: process.env.AUTH_SECRET` explícito en
   `authConfig` (`src/auth.config.ts`), compartido por ambas instancias. Ver DECISIONS.md
   2026-07-20.
+- Generación de sesión con IA (botón "Generar propuesta con IA" en `/sesion`) totalmente opaca
+  ante cualquier fallo: `generateSessionProposal()` devolvía siempre `{ success: false, error }`
+  sin loguear nada server-side, así que un fallo real (p. ej. `ANTHROPIC_API_KEY` ausente en
+  Vercel Production, causa raíz del incidente que motivó este fix) no dejaba ningún rastro en
+  Vercel Runtime Logs — solo un aviso genérico en el navegador. Añadido `console.error` antes de
+  cada `return { success: false, ... }` en `generate-session-proposal.ts` (uno por cada código
+  `TIMEOUT`/`API_ERROR`/`NO_PROPOSAL`/`INVALID_OUTPUT`), incluyendo los `issues` de Zod en el
+  caso `INVALID_OUTPUT` (el fallo más opaco: el modelo respondió, pero con una forma que no
+  encajaba con `sessionSchema`) y el `status` de `Anthropic.APIError` cuando aplica, y un
+  `console.error` de confirmación en `generateSessionProposalAction()`
+  (`src/app/sesion/actions.ts`) dejando constancia del `userId` y `code` antes de devolver el
+  mensaje genérico al usuario. Ver DECISIONS.md 2026-07-21.
