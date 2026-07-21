@@ -263,7 +263,14 @@ export function SessionEntriesEditor({
             id="exercise-picker"
             value={selectedExercise}
             onChange={(event) => setSelectedExercise(event.target.value)}
-            className="flex-1 rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/20"
+            // min-w-0 anula el min-width:auto por defecto de los hijos flex:
+            // sin él, un <select> con una opción larga (p. ej. "Elevaciones
+            // laterales con mancuernas", añadida al ampliar el catálogo de
+            // 12 a 27 ejercicios) no encoge por debajo de su ancho de
+            // contenido, desborda la fila junto al botón "Añadir" y lo
+            // empuja fuera del viewport en pantallas móviles estrechas
+            // (~412px) — ver DECISIONS.md.
+            className="min-w-0 flex-1 rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/20"
           >
             <optgroup label="Fuerza">
               {fuerzaExercises.map((exercise) => (

@@ -386,3 +386,12 @@ Proyecto sin versión publicada todavía.
   `console.error` de confirmación en `generateSessionProposalAction()`
   (`src/app/sesion/actions.ts`) dejando constancia del `userId` y `code` antes de devolver el
   mensaje genérico al usuario. Ver DECISIONS.md 2026-07-21.
+- **[CI]** El botón "Añadir" ejercicio de `/sesion` quedaba fuera del área clicable en
+  viewports móviles estrechos (~412px) al ampliarse el catálogo de 12 a 27 ejercicios: el
+  `<select>` de ejercicio (`flex-1` dentro de una fila flex junto al botón) no encogía por
+  debajo del ancho de su opción más larga (p. ej. "Elevaciones laterales con mancuernas"),
+  desbordando la fila y empujando el botón fuera de la pantalla — un bug de UX real en el móvil
+  de David, no solo un fallo de test (detectado porque rompía `e2e/sesion.spec.ts` en CI, solo
+  en el proyecto `mobile-chromium`, en 6 pushes seguidos desde el commit directo a `master` que
+  amplió el catálogo). Corregido añadiendo `min-w-0` al `<select>` en
+  `src/components/session-entries-editor.tsx`. Ver DECISIONS.md 2026-07-21.
