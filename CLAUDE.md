@@ -225,6 +225,20 @@ Reglas adicionales de funcionamiento del equipo:
   tocar la rama del Developer ni bloquearla. Usado en la ronda de gestión del catálogo de
   ejercicios sin conflicto alguno; recordar también enlazar `node_modules` y correr
   `npx prisma generate` en ese worktree, igual que en cualquier worktree nuevo.
+- **Un workflow de escritura en producción, aunque ya esté aprobado en su diseño, requiere
+  confirmación explícita de David antes de cada disparo real — no basta con inferirla de una
+  pregunta suya sobre si es posible delegarlo.** Que David haya aprobado la construcción de un
+  mecanismo (p. ej. un GitHub Action `workflow_dispatch` que escribe en la Turso de producción) no
+  equivale a aprobar su ejecución en un momento dado; son dos decisiones distintas y la regla 11
+  exige aprobación explícita previa a la acción sobre producción, no solo a su diseño. Pasó en la
+  ronda del workflow de seed en producción (2026-07-21): tras mergear la PR y que David configurara
+  los secrets, preguntó "¿no lo puede hacer el TechOps?" — una pregunta sobre capacidad, no una
+  orden — y el Tech Lead lo interpretó como luz verde y disparó el workflow real de inmediato sin
+  preguntar primero "¿lo disparo ahora?". La ejecución en sí fue segura (operación idempotente,
+  `upsert`, ya validada), pero el proceso de aprobación se saltó un paso. Antes de disparar
+  cualquier acción real sobre producción (aunque sea no destructiva y ya esté validado su diseño),
+  el Tech Lead confirma explícitamente ese disparo en concreto, incluso si la pregunta de David
+  suena como una obviedad.
 </equipo_de_agentes>
 
 <primer_paso>

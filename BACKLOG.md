@@ -23,6 +23,13 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   (requiere antes una propuesta de nueva estructura de navegación/flujos a validar con David,
   más el trabajo de implementación en sí — no se aborda sin una fase de diseño previa acordada).
 
+- **[BL-020]** **Actualizar `actions/checkout` y `actions/setup-node` de v4 a v5** en todos los
+  workflows de GitHub Actions (`ci.yml` y `seed-prod.yml`). Justificación: GitHub avisa de que v4
+  targetea una versión de Node deprecada (detectado por TechOps al validar la primera ejecución
+  real de `seed-prod.yml`, 2026-07-21); no rompe nada hoy, es mantenimiento de rutina. Dificultad:
+  baja (cambio mecánico de versión en los workflows existentes, verificar que el CI sigue en
+  verde tras el bump).
+
 ## Iteraciones futuras ya acordadas (no implementar todavía)
 
 - **[BL-011]** **Integración con wearable** (pasos, sueño, frecuencia cardiaca). Justificación: ampliar el
