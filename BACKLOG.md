@@ -40,6 +40,43 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   para `/sesion`, y decidir qué acciones expone el bot reutilizando las Server Actions/el servidor
   MCP ya existentes en vez de duplicar lógica de negocio).
 
+- **[BL-022]** **Adaptar los campos de registro de cardio por ejercicio**: hoy el formulario de
+  cardio muestra los mismos 10 campos fijos (duración, distancia, velocidad media, ritmo medio,
+  FC media, FC máxima, pasos, cadencia, kcal, RPE) para cualquier ejercicio CARDIO — para
+  "Natación" aparecen Pasos/Cadencia sin sentido, para "Surf" casi todos son irrelevantes salvo
+  duración. Justificación: detectado al valorar el ajuste real de la app al caso de uso de David
+  (2026-07-21); empeorará según crece la variedad de cardio (Escaladores, Jumping jacks, Rodillas
+  altas, Burpees, Surf). Dificultad: media (definir qué campos aplican por ejercicio/categoría y
+  adaptar `CARDIO_FIELDS` en `session-entries-editor.tsx`, posiblemente añadiendo metadata al
+  modelo `Exercise`).
+- **[BL-023]** **Documentar/forzar una convención explícita de series unilaterales vs.
+  bilaterales**: ni el esquema (`Exercise`/`StrengthSet`), ni la UI, ni la skill distinguen hoy
+  ejercicios unilaterales (Sentadilla búlgara, Remo a un brazo, Puente de glúteos a una pierna) de
+  bilaterales — "Series" no tiene semántica definida de "por lado" o "total", queda a
+  interpretación libre en cada registro. Justificación: mismo análisis de ajuste al caso de uso
+  (2026-07-21). Dificultad: baja-media (puede resolverse solo documentando la convención en
+  `SKILL.md`/README, o subir a un campo explícito en `Exercise` si se quiere forzar en el
+  esquema).
+- **[BL-024]** **Sincronizar `SKILL.md` con el catálogo real de ejercicios de la app**: la skill
+  standalone (usada fuera de la webapp, en otro chat) no tiene visibilidad del catálogo cerrado de
+  la app — a diferencia de la generación asistida por IA dentro de la app, que sí usa la tool
+  `list_exercises` — y puede proponer nombres de ejercicio que no existen en la BD; como `/sesion`
+  no permite crear ejercicios al vuelo desde el desplegable, David no podría registrar ese
+  ejercicio sin pasar antes por `/ajustes`. Justificación: mismo análisis de ajuste al caso de uso
+  (2026-07-21); evita que la skill se "invente" ejercicios fuera del catálogo. Dificultad: media
+  (decidir mecanismo: listar los ejercicios literalmente en `SKILL.md` y mantenerlo sincronizado a
+  mano en cada cambio de catálogo, o dar a la skill standalone acceso de lectura al catálogo real
+  vía el servidor MCP — solapa parcialmente con [BL-025]).
+- **[BL-025]** **Conectar de verdad la skill standalone al servidor MCP**: hoy la skill fuera de
+  la app sigue dependiendo de `entrenamiento-historial.json` local como fuente de estado por
+  defecto, con solo un acuerdo condicional/manual ("si tienes la app conectada, trata lo que te
+  diga como fuente de verdad") en vez de una conexión real al servidor MCP que ya existe
+  (`MCP_BEARER_TOKEN`). Justificación: no cumple el objetivo original del proyecto (CLAUDE.md) de
+  que la app sea la fuente de verdad única que cualquier chat pueda leer/escribir; detectado en el
+  mismo análisis de ajuste al caso de uso (2026-07-21). Dificultad: alta (reescribir `SKILL.md`
+  para usar las herramientas MCP en vez del JSON local, gestionar el bearer token desde el entorno
+  de la skill, y decidir qué pasa con el histórico ya acumulado en el JSON legacy).
+
 ## Iteraciones futuras ya acordadas (no implementar todavía)
 
 - **[BL-011]** **Integración con wearable** (pasos, sueño, frecuencia cardiaca). Justificación: ampliar el
