@@ -30,6 +30,16 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   baja (cambio mecánico de versión en los workflows existentes, verificar que el CI sigue en
   verde tras el bump).
 
+- **[BL-021]** **Bot de Telegram como canal adicional de entrada/salida**: poder registrar peso
+  corporal y sesiones de entreno, y consultar el informe de progreso, conversando con un bot de
+  Telegram — además de la webapp, no en sustitución de ella. Justificación: canal más rápido e
+  inmediato desde el móvil (sin abrir navegador) para registrar datos justo al acabar el entreno,
+  propuesto por David. Dificultad: alta (requiere integrar la Telegram Bot API vía webhook con
+  endpoint público, autenticar que el chat es el de David y no de un tercero, interpretar mensajes
+  en lenguaje natural reutilizando la misma lógica de generación asistida por IA ya construida
+  para `/sesion`, y decidir qué acciones expone el bot reutilizando las Server Actions/el servidor
+  MCP ya existentes en vez de duplicar lógica de negocio).
+
 ## Iteraciones futuras ya acordadas (no implementar todavía)
 
 - **[BL-011]** **Integración con wearable** (pasos, sueño, frecuencia cardiaca). Justificación: ampliar el
