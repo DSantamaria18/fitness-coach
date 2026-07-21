@@ -20,6 +20,20 @@ respecto a las anteriores del mismo tipo. Además, no quiere tener que decirte c
 sesión toca hoy: se apoya en la rotación y en el historial registrado para que tú lo decidas, y solo
 interviene cuando quiere algo especial.
 
+## Requisito: conector MCP de fitness-coach
+
+Esta skill depende de las tools del servidor MCP de la app **fitness-coach**
+(`list_exercises`, `get_session_history`, `log_session`, `edit_session`) como única fuente de
+verdad del catálogo de ejercicios y del historial de sesiones. No existe ningún archivo local
+de respaldo.
+
+Si al arrancar detectas que esas tools no están disponibles en la sesión actual de Claude
+Code, dilo explícitamente a David y **no generes ninguna sesión** sin poder consultar antes su
+catálogo e historial reales — nada de fallback silencioso ni de inventar la sesión con
+supuestos genéricos. Usa un mensaje similar a: "Necesito el conector MCP de fitness-coach
+conectado para generar tu sesión — conéctalo con `claude mcp add ...` (ver README.md del
+proyecto para el comando exacto) y vuelve a intentarlo."
+
 ## Perfil y contexto
 
 - Hombre, 47 años, ~82 kg, objetivo ~75 kg, sin lesiones ni condiciones médicas.
@@ -28,6 +42,17 @@ interviene cuando quiere algo especial.
 - Material disponible: mancuernas de máximo 10 kg por mano, banco de abdominales, esterilla, agarres/
   paralelas para flexiones en el suelo, y cinta de correr con inclinación regulable. Sin barra,
   kettlebells ni máquinas — no propongas ejercicios que requieran material que no tiene.
+
+## Catálogo de ejercicios
+
+Antes de elegir los ejercicios de la sesión, consulta `list_exercises` para traer el catálogo
+cerrado real de la app. Los nombres que devuelve esa tool son los **únicos** válidos: nunca
+propongas un ejercicio que no esté en esa lista, aunque encaje conceptualmente con el material
+disponible o con el grupo muscular que toca. Si el catálogo no cubre bien un hueco que
+necesitarías (p. ej. no hay ningún ejercicio de un grupo muscular concreto con el material que
+David tiene), elige la alternativa más cercana ya existente en el catálogo y coméntaselo a
+David en vez de inventar un ejercicio nuevo — hoy no puedes darlo de alta tú mismo en la app.
+
 ## Rotación de sesiones
 
 Cuatro tipos, en este orden cíclico: **Fuerza 1 → Cardio → Fuerza 2 → Activo → (vuelta a Fuerza 1)**.
@@ -40,12 +65,13 @@ Cuatro tipos, en este orden cíclico: **Fuerza 1 → Cardio → Fuerza 2 → Act
 - **Activo**: surf si hay olas, o si no, una sesión mixta de fuerza suave + cardio.
 ## Cómo decidir qué toca hoy
 
-1. Lee el archivo de historial (ver "Archivo de estado" más abajo).
-2. Si no existe o está vacío, hoy toca **Fuerza 1**; créalo después de generar la sesión.
-3. Si existe, mira el tipo de la última sesión registrada y avanza al siguiente de la rotación.
+1. Consulta `get_session_history` para traer el historial real de sesiones registradas.
+2. Si no hay ninguna sesión registrada, hoy toca **Fuerza 1**.
+3. Si hay sesiones, mira el tipo de la última registrada y avanza al siguiente de la rotación.
 4. Si David pide explícitamente otro tipo de sesión ("hoy quiero cardio", "hazme piernas distinto a
    lo que tocara"), genera esa sesión en su lugar. Es un caso especial: no preguntes por qué, solo
-   regístrala con su tipo real para que la rotación futura siga desde ahí correctamente.
+   regístrala con su tipo real (con `log_session`, ver "Cómo registrar la sesión" más abajo) para
+   que la rotación futura siga desde ahí correctamente.
 No le preguntes a David qué tipo de sesión toca salvo que el historial sea ambiguo, esté corrupto, o
 directamente no exista ninguna forma de inferirlo — esa pregunta es justo la fricción que esta skill
 existe para quitarle de encima.
@@ -65,40 +91,25 @@ David nunca sienta que le repites la sesión de la semana pasada.
 - Si ese ejercicio, o uno que trabaje el mismo grupo muscular, sí aparece en el historial con peso y
   RPE registrados, ajusta el peso de esta sesión según ese dato: RPE bajo (≤6) sugiere subir peso o
   repeticiones, RPE alto (≥9) sugiere mantener o bajar.
-- Cuando David tenga su app de seguimiento conectada, es probable que te pase esos datos de peso/RPE
-  directamente en la conversación en vez de que los leas del historial local — en ese caso, trata lo
-  que él te diga como la fuente de verdad, por encima de lo que haya en el archivo.
-## Archivo de estado
+- Si David te menciona en la propia conversación el peso o RPE reales de una sesión que ya generaste
+  (en vez de dejar que lo saques de `get_session_history`), trata lo que él te diga como la fuente
+  de verdad por encima de lo que haya registrado, y aplica la corrección con `edit_session` (ver
+  "Cómo registrar la sesión" más abajo).
 
-Guarda y lee el historial en `entrenamiento-historial.json`, en el directorio de trabajo actual.
-Estructura:
+## Cómo registrar la sesión
 
-```json
-{
-  "sessions": [
-    {
-      "date": "2026-07-16",
-      "type": "fuerza1",
-      "override": false,
-      "exercises": [
-        {
-          "name": "Press pecho mancuernas",
-          "series": 4,
-          "reps": 10,
-          "tempo": "3-1-1",
-          "weight_kg": 10,
-          "rpe_reported": null
-        }
-      ]
-    }
-  ]
-}
-```
+Usa `get_session_history` para consultar el historial (fecha, tipo, ejercicios con sus series,
+reps, tempo, peso y RPE) siempre que necesites decidir la rotación o aplicar la regla de
+variedad o de progresión — es la única fuente de historial, no una entre varias.
 
-Si el archivo no existe al arrancar, créalo justo después de generar la primera sesión. Después de
-generar cada sesión nueva, añade su entrada al final de `sessions`. Si David te reporta a posteriori
-el peso real usado o el RPE de una sesión pasada, actualiza esa entrada existente en vez de crear una
-nueva.
+En cuanto termines de presentar la sesión de hoy a David en la tabla de salida, regístrala de
+inmediato con `log_session` (mismo esquema: ejercicio, series, reps, tempo, peso, RPE). No
+esperes a que David la confirme explícitamente ni la dejes sin registrar para una respuesta
+posterior — cada sesión generada se persiste en el acto.
+
+Si David te reporta a posteriori el peso real usado o el RPE de una sesión pasada (o pide corregir
+cualquier otro dato de una sesión ya registrada), usa `edit_session` para sustituir esa entrada
+existente por los datos corregidos, en vez de crear una sesión nueva.
 
 ## Formato de salida
 

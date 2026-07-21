@@ -339,6 +339,26 @@ cambio relevante.
   una VPN) — token Bearer es la única capa, decisión explícita de David (ver DECISIONS.md
   2026-07-20).
 
+## Skill "sesion-entrenamiento" standalone usa el servidor MCP real (BL-024/BL-025)
+
+- `skills/sesion-entrenamiento/SKILL.md` (usada por David en cualquier chat de Claude Code
+  fuera de la webapp) ya no depende de `entrenamiento-historial.json` local: usa las tools
+  `list_exercises` (catálogo cerrado real, nunca propone un ejercicio inexistente en la BD),
+  `get_session_history` (rotación de sesiones y regla de variedad de las 2 sesiones anteriores
+  del mismo tipo), `log_session` (persiste la sesión generada de inmediato) y `edit_session`
+  (corrige a posteriori el peso real o RPE de una sesión ya registrada) del servidor MCP de la
+  app como única fuente de verdad.
+- Sin fallback: si el conector MCP no está disponible en una sesión de Claude Code dada, la
+  skill lo dice explícitamente y no genera ninguna sesión sin poder consultar antes el catálogo
+  e historial reales — nunca cae de vuelta al JSON local en silencio.
+- README.md documenta cómo conectar de verdad Claude Code al servidor MCP desplegado
+  (`claude mcp add --scope user --transport http --header "Authorization: Bearer <token>" ...`)
+  y cómo verificar la conexión (`claude mcp list`, `/mcp`).
+- Este mismo `SKILL.md` sigue siendo también el `system` prompt literal de la generación
+  asistida por IA in-app (`read-skill.ts`); su comportamiento no cambia, porque esa integración
+  ya usaba internamente el equivalente de `get_session_history`/`list_exercises` y fuerza su
+  propio turno final con `submit_session_proposal` (ver DECISIONS.md 2026-07-21).
+
 ## Preview deployments de Vercel sin Turso: SQLite efímero en `/tmp` (BL-018)
 
 - Las credenciales de Turso (`TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN`) tienen scope

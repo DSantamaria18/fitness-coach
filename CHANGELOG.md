@@ -306,6 +306,15 @@ Proyecto sin versión publicada todavía.
   en el runner aislado (nunca vistos por ningún agente ni pegados en un chat). Restringido a
   propósito a scripts idempotentes/no destructivos. Disparo: `gh workflow run seed-prod.yml`
   (ver README.md y DECISIONS.md 2026-07-21).
+- **[BL-024]/[BL-025]** La skill de Claude "sesion-entrenamiento" **standalone** (usada fuera
+  de la webapp, en otro chat de Claude Code) pasa a usar las tools del servidor MCP real de la
+  app (`list_exercises`, `get_session_history`, `log_session`, `edit_session`) como única fuente
+  de verdad de catálogo e historial, sustituyendo a `entrenamiento-historial.json` local. Sin
+  fallback: si el conector MCP no está disponible en una sesión dada, la skill avisa
+  explícitamente y no genera ninguna sesión. No hizo falta migrar histórico: la app ya tenía
+  registradas todas las sesiones relevantes. README.md documenta el comando real de conexión
+  (`claude mcp add --scope user --transport http ...`) y cómo verificarla (`claude mcp list` /
+  `/mcp`). Ver DECISIONS.md 2026-07-21.
 
 ### Fixed
 
