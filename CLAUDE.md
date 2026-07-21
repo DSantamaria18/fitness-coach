@@ -206,6 +206,25 @@ Reglas adicionales de funcionamiento del equipo:
   regresión antes de confirmar que era un falso positivo. Revisar las restricciones del campo (o
   reutilizar los valores que ya usan los tests E2E existentes) antes de dar por bueno un valor de
   prueba.
+- **El Tech Lead evalúa primero si una feature es realmente separable antes de repartirla entre
+  los 2 Developers en paralelo.** La regla de paralelizar (ver más arriba) asume tareas
+  independientes que no tocan los mismos ficheros; si backend y frontend de una feature pequeña
+  comparten los mismos ficheros clave (p. ej. la Server Action y la página que la consume), dividirla
+  entre dos Developers solo introduce el riesgo de "pisarse" que la propia coordinación del Tech
+  Lead existe para evitar. Pasó en la ronda de gestión del catálogo de ejercicios: al ser una
+  feature pequeña y acoplada (mismo `actions.ts`, mismo `page.tsx`), se asignó a un único
+  Developer en vez de partirla, sin ningún coste de velocidad ni conflictos de merge. Repartir
+  entre 2 Developers es la opción por defecto solo cuando el trabajo se separa en módulos o
+  ficheros genuinamente distintos.
+- **QA puede levantar su propio worktree en HEAD desacoplado sobre el commit exacto de la PR
+  cuando la rama de esa PR ya está en uso en el worktree del Developer.** Git no permite tener la
+  misma rama activa (no desacoplada) en dos worktrees a la vez (`git worktree add` falla con "ya
+  está registrado"), así que QA no puede simplemente añadir un worktree sobre la misma rama para
+  validar en paralelo. La solución es `git worktree add --detach <path> <sha-del-commit-de-la-PR>`
+  (tras `git fetch origin <rama>`): un worktree en HEAD desacoplado sobre ese commit exacto, sin
+  tocar la rama del Developer ni bloquearla. Usado en la ronda de gestión del catálogo de
+  ejercicios sin conflicto alguno; recordar también enlazar `node_modules` y correr
+  `npx prisma generate` en ese worktree, igual que en cualquier worktree nuevo.
 </equipo_de_agentes>
 
 <primer_paso>
