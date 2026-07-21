@@ -1867,4 +1867,41 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-07-21
+- **Decisión:** [BL-024/BL-025] La skill "sesion-entrenamiento" **standalone** (usada fuera de
+  la webapp, en cualquier otro chat de Claude Code) pasa a usar las tools del servidor MCP real
+  de la app (`list_exercises`, `get_session_history`, `log_session`, `edit_session`) como única
+  fuente de verdad de catálogo e historial, en vez de `entrenamiento-historial.json` local. Sin
+  fallback: si el conector MCP no está disponible en una sesión dada, la skill avisa
+  explícitamente del problema y no genera ninguna sesión, no cae de vuelta al JSON en silencio.
+  No hace falta migrar el histórico acumulado en el JSON: David confirmó que la app ya tiene
+  registradas todas las sesiones relevantes, no hay ninguna que solo exista en el archivo local.
+- **Alternativas consideradas:** mantener el JSON local como fallback cuando el conector MCP no
+  esté disponible — descartada explícitamente por David: mantener dos fuentes de verdad que
+  pueden divergir (la app y el JSON) es justo el problema que este cambio busca eliminar, y un
+  fallback silencioso escondería esa divergencia en vez de hacerla visible; listar los
+  ejercicios del catálogo literalmente dentro de `SKILL.md` y mantenerlos sincronizados a mano
+  en cada cambio — descartada por implicar un segundo punto de mantenimiento manual cuando la
+  tool `list_exercises` ya expone el catálogo real bajo demanda.
+- **Justificación:** completa el objetivo original del proyecto (CLAUDE.md: "la app debe
+  convertirse en la fuente de verdad... para que esa skill, o cualquier chat, pueda leer y
+  escribir datos ahí en vez de depender de un archivo suelto"), que hasta ahora solo cubría la
+  generación asistida por IA *dentro* de la app (ver DECISIONS.md 2026-07-19, "servidor MCP
+  propio de la app como fuente de tools en proceso") y dejaba sin cubrir el uso standalone de la
+  skill en otros chats, que en la práctica es el uso diario real de David. Exigir el conector
+  MCP sin fallback evita que la skill genere sesiones con un historial parcial o desactualizado
+  sin que David se dé cuenta.
+- **Lecciones aprendidas:** el mismo fichero `SKILL.md` cumple dos roles a la vez — prompt para
+  Claude Code standalone (vía convención de skills + conector MCP real) y `system` prompt
+  literal de la generación in-app (`read-skill.ts`, que solo le quita el frontmatter). Los
+  nombres de tool elegidos aquí (`get_session_history`, `list_exercises`) coinciden a propósito
+  con los de `src/lib/session-proposal/tools.ts`, y las instrucciones de "cuándo persistir la
+  sesión" se apoyan en que la orquestación in-app (`generate-session-proposal.ts`) siempre fuerza
+  su propio turno final con `submit_session_proposal` independientemente de lo que diga el
+  prompt — así que mencionar aquí tools de escritura que no existen en el contexto in-app
+  (`log_session`, `edit_session`) no rompe ese flujo, porque el modelo solo puede llamar a las
+  tools que se le registran en cada contexto concreto.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

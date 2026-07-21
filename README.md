@@ -85,6 +85,33 @@ escribir el historial de entreno directamente, en vez de depender de un archivo 
 Requiere configurar la variable de entorno `MCP_BEARER_TOKEN` (ver `.env.example`) antes de
 usarlo — sin ella, el endpoint no autentica ninguna petición.
 
+### Conectar Claude Code al servidor MCP desplegado
+
+Desde cualquier directorio (`--scope user` lo deja disponible en cualquier proyecto, no solo en
+este repo):
+
+```bash
+claude mcp add --scope user --transport http --header "Authorization: Bearer <token>" fitness-coach https://<tu-url-de-produccion>/api/mcp
+```
+
+- `<token>` es el mismo valor que `MCP_BEARER_TOKEN` en producción. No lo compartas en texto
+  plano innecesariamente (chats, tickets, capturas de pantalla) más allá de lo imprescindible
+  para configurar el conector.
+- `<tu-url-de-produccion>` es la URL pública del despliegue (Vercel).
+
+Para comprobar que la conexión funciona:
+
+```bash
+claude mcp list
+```
+
+o, dentro de una sesión de Claude Code, con el comando `/mcp` — ambos deben mostrar
+`fitness-coach` como conector activo con sus 7 tools (`log_weight`, `get_weight_history`,
+`log_session`, `edit_session`, `get_session_history`, `list_exercises`,
+`get_progress_report`). Sin este conector conectado, la skill "sesion-entrenamiento" avisa
+explícitamente del problema y no genera ninguna sesión — no hay fallback a ningún archivo
+local (ver DECISIONS.md 2026-07-21).
+
 ## Ampliar el catálogo de ejercicios en producción
 
 El catálogo de ejercicios (`prisma/seed.ts`) se siembra con `upsert` por nombre: crea o
