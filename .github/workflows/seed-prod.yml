@@ -1,0 +1,86 @@
+# Siembra manual del catálogo de ejercicios contra la base de datos de
+# PRODUCCIÓN (Turso remoto).
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# RESTRICCIÓN DE SEGURIDAD DELIBERADA (no es una limitación técnica accidental):
+# este workflow SOLO debe ejecutar scripts IDEMPOTENTES Y NO DESTRUCTIVOS.
+# `npm run prisma:seed` (prisma/seed.ts) usa exclusivamente `upsert` por nombre
+# de ejercicio y por username: crea o actualiza, NUNCA borra ni trunca. No añadir
+# aquí migraciones destructivas, `deleteMany`, resets ni ningún paso que pueda
+# perder datos de producción — para eso haría falta un flujo distinto con backup
+# previo y aprobación explícita de David (ver CLAUDE.md regla 11).
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Disparo manual (nunca en push/PR: esto ESCRIBE en producción):
+#   gh workflow run seed-prod.yml
+#
+# Secrets del repositorio que David debe configurar UNA sola vez (nunca se pegan
+# en un chat ni los ve ningún agente; el runner los inyecta solo en su entorno
+# aislado):
+#   gh secret set TURSO_DATABASE_URL
+#   gh secret set TURSO_AUTH_TOKEN
+name: Seed producción (catálogo de ejercicios)
+
+on:
+  # Solo disparo manual: este workflow escribe en la base de datos real.
+  workflow_dispatch:
+
+# Al escribir en producción, no dejamos que dos ejecuciones simultáneas
+# pisen la misma base de datos (aunque el seed es idempotente, evitamos
+# carreras y logs entrelazados).
+concurrency:
+  group: seed-prod
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    # Mismo entorno que el job `test` de ci.yml (Node 24 + cache npm) para no
+    # divergir del resto del pipeline.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # Necesario antes de cualquier script que use el cliente generado de
+      # Prisma (src/generated/prisma, gitignored) — ver CLAUDE.md.
+      - name: Generar cliente Prisma
+        run: npx prisma generate
+
+      # `prisma/seed.ts` resuelve la datasource con resolveDatasourceConfig():
+      # al estar presente TURSO_DATABASE_URL, apunta a la Turso de producción.
+      # Los secrets se inyectan SOLO como env de este step; nunca se imprimen
+      # (no hay ningún echo/debug que pudiera filtrarlos, y GitHub además los
+      # enmascara en los logs). El seed solo hace upsert: no borra nada.
+      #
+      # ADMIN_USERNAME/ADMIN_PASSWORD_HASH no se inyectan a propósito: el
+      # usuario admin ya existe en producción y este workflow solo amplía el
+      # catálogo de ejercicios. Sin esas variables, seed.ts omite la siembra
+      # del usuario con un warning (comportamiento no destructivo, ya previsto
+      # en el propio script).
+      - name: Sembrar catálogo de ejercicios (upsert, no destructivo)
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: npm run prisma:seed
+
+      # Confirmación segura de que el seed corrió: solo se ejecuta si el step
+      # anterior terminó con exit code 0. No imprime ningún dato: la propia
+      # semántica de "job en verde" es la señal de éxito (ver CLAUDE.md, punto
+      # sobre confiar en el exit code de npm run seed).
+      - name: Resumen
+        if: success()
+        run: |
+          {
+            echo "### Seed de producción completado"
+            echo ""
+            echo "\`npm run prisma:seed\` terminó con éxito (exit 0) contra la"
+            echo "Turso de producción. El catálogo de ejercicios quedó al día"
+            echo "vía \`upsert\` (creaciones/actualizaciones, sin borrados)."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -299,6 +299,13 @@ Proyecto sin versión publicada todavía.
   cambio se revalida también `/sesion`, cuyo desplegable de "añadir ejercicio" lee del mismo
   catálogo. Motivado por un bug real: "press de banca con mancuernas" no se podía registrar por
   no estar en el catálogo cerrado original.
+- Workflow de GitHub Actions de disparo manual (`.github/workflows/seed-prod.yml`,
+  `workflow_dispatch`) para ampliar en caliente el catálogo de ejercicios en la base de datos de
+  **producción** (Turso) ejecutando `npm run prisma:seed` (`upsert`, no destructivo). Usa
+  `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` como GitHub Actions secrets del repo, inyectados solo
+  en el runner aislado (nunca vistos por ningún agente ni pegados en un chat). Restringido a
+  propósito a scripts idempotentes/no destructivos. Disparo: `gh workflow run seed-prod.yml`
+  (ver README.md y DECISIONS.md 2026-07-21).
 
 ### Fixed
 
