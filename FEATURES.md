@@ -144,6 +144,29 @@ cambio relevante.
   DECISIONS.md): al ser una app de un único usuario, un recordatorio en la UI es suficiente y
   evita depender de una cuenta/credenciales de un proveedor cloud.
 
+## Gestión del catálogo de ejercicios
+
+- Nueva sección "Catálogo de ejercicios" en `/ajustes`, junto a `BackupStatus`: permite dar de
+  alta, renombrar (nombre y/o tipo) y borrar ejercicios sin tocar `prisma/seed.ts` ni
+  re-sembrar la base de datos — soluciona el problema real que lo motivó (ejercicios que
+  faltaban o sobraban en el desplegable de "añadir ejercicio" de `/sesion`, p. ej. "press de
+  banca con mancuernas" ausente o "Bicicleta" sobrante).
+- Capa de dominio (`src/lib/create-exercise.ts`, `rename-exercise.ts`, `delete-exercise.ts`),
+  mismo estilo de result type `{success:true,data}|{success:false,error:{code,message}}` que
+  `create-session.ts`/`update-session.ts`/`delete-session.ts`. Validación compartida
+  (`validate-exercise.ts`, Zod): nombre no vacío (recortado) y tipo `STRENGTH`/`CARDIO`.
+  Catálogo global, sin `userId` (igual que `list-exercises.ts`) — la autenticación se exige en
+  la Server Action (`src/app/ajustes/actions.ts`), no en la capa de dominio.
+- El borrado es real (no soft-delete): si el ejercicio ya tiene `StrengthEntry`/`CardioEntry`
+  asociadas, la FK constraint de la base de datos lo bloquea (Prisma `P2003`), traducido a un
+  mensaje claro ("No se puede eliminar: ya tiene sesiones registradas.") en vez de un error 500
+  — ver DECISIONS.md para la justificación completa.
+- Tras cualquier alta/renombrado/borrado con éxito se revalida tanto `/ajustes` como `/sesion`:
+  el desplegable de "añadir ejercicio" de `/sesion` lee del mismo catálogo y debe reflejar el
+  cambio de inmediato.
+- El comentario de `schema.prisma` sobre `Exercise` ("catálogo cerrado") queda desactualizado
+  por esta feature y se corrige en el propio esquema.
+
 ## Navegación global
 
 - Barra de navegación (`src/components/nav-bar.tsx`, client component) con enlaces a Peso,

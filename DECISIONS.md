@@ -1782,4 +1782,48 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+---
+
+- **Fecha:** 2026-07-21
+- **Decisión:** Gestión del catálogo de ejercicios (`Exercise`) desde `/ajustes` con borrado
+  **real** (no soft-delete) cuando el ejercicio no tiene entradas asociadas. Si
+  `StrengthEntry`/`CardioEntry` ya lo referencian, el borrado se bloquea a nivel de base de
+  datos (la relación hacia `Exercise` no declara `onDelete: Cascade`, a diferencia de las
+  relaciones de `Session`) y Prisma lo traduce en un error `P2003` (foreign key constraint),
+  capturado por `delete-exercise.ts` para devolver `{code:"IN_USE", message:"No se puede
+  eliminar: ya tiene sesiones registradas."}` en vez de dejarlo propagar como un error 500 sin
+  contexto.
+- **Alternativas consideradas:**
+  - *Soft-delete* (columna `deletedAt`/`activo` en `Exercise`, filtrando en `list-exercises.ts`
+    y en la resolución de ejercicios de una sesión): descartado. Añade una migración de schema
+    y una condición de filtrado que hay que recordar replicar en cada query futura contra
+    `Exercise` (el propio historial de este proyecto muestra que ese tipo de guarda se olvida
+    fácilmente — ver más abajo por qué el borrado real es más simple de razonar). Para una app
+    de un único usuario, con un catálogo pequeño y sin necesidad de "recuperar" un ejercicio
+    borrado, no compensa la complejidad añadida.
+  - `onDelete: Cascade` desde `StrengthEntry`/`CardioEntry` hacia `Exercise` (borrar el
+    ejercicio borraría en cascada las entradas de sesión que lo usan): descartado de forma
+    explícita y permanente. Borrar un ejercicio del catálogo (p. ej. porque se creó con un
+    nombre erróneo, o porque ya no se usa) no debe borrar silenciosamente el historial de
+    entrenamiento real que lo registró — ese historial es la fuente de verdad que esta app
+    existe para preservar (ver `<contexto>` de CLAUDE.md). Bloquear el borrado y pedir acción
+    explícita (p. ej. renombrar en vez de borrar, o editar antes las sesiones afectadas) es más
+    seguro que perder datos de entreno de forma irreversible sin aviso.
+- **Justificación:** el bug que motivó esta feature (catálogo cerrado, solo editable tocando
+  `prisma/seed.ts` y re-sembrando — ver comentario corregido en `schema.prisma`) hacía que
+  cualquier corrección del catálogo (ejercicio mal escrito, tipo incorrecto, ejercicio que ya
+  no se usa) requiriera una intervención manual fuera de la UI. Dejar el borrado bloqueado por
+  la FK (en vez de silenciarlo con un cascade o esconderlo con soft-delete) hace que el propio
+  motor de datos sea la garantía de integridad: es imposible perder entradas de sesión por un
+  borrado de catálogo, sin necesidad de acordarse de añadir una comprobación equivalente a mano
+  en cada función que toque `Exercise`.
+- **Lecciones aprendidas:** cuando un dominio tiene una relación de "catálogo referenciado por
+  historial" (aquí, `Exercise` ← `StrengthEntry`/`CardioEntry`), dejar que la ausencia de
+  `onDelete: Cascade` haga de guarda por defecto es más robusto que confiar en que cada
+  función de aplicación futura recuerde comprobar "¿tiene entradas asociadas?" antes de
+  borrar — el error de Prisma (`P2003`) ya lo garantiza al nivel más bajo posible, y la capa de
+  aplicación solo necesita traducirlo a un mensaje entendible, no reimplementar la comprobación.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
