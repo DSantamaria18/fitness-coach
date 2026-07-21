@@ -40,6 +40,15 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   si se pierde el dispositivo).
 - **[BL-014]** **Gamificación (logros)**: sistema de logros/hitos (ej. rachas de entrenamiento, récords
   personales de peso o volumen) para motivar el uso continuado. Justificación: propuesta por
-  David como refuerzo de motivación. Pospuesto explícitamente a la iteración justo después del
-  MVP, para diseñarlo con datos reales ya registrados. Dificultad: media (requiere definir
-  catálogo de logros, lógica de detección y UI de visualización).
+  David como refuerzo de motivación. Dificultad: media (requiere definir catálogo de logros,
+  lógica de detección y UI de visualización). Diseño ya cerrado en conversación (2026-07-21, sin
+  llegar a implementarse): 4 categorías de logro (rachas de constancia reutilizando
+  `currentStreakWeeks`, PRs de peso/volumen por ejercicio, hitos de volumen acumulado, hitos de
+  variedad), tabla `UnlockedAchievement` (sin `@unique` en BD — los logros de una vez se protegen
+  por lógica de aplicación, los PRs son repetibles por diseño), logros permanentes (no se
+  revocan al editar/borrar datos), detección best-effort enganchada a `createSession`/
+  `createBodyWeight`, página propia `/logros` con criterios visibles también para lo bloqueado.
+  Pospuesto explícitamente por David dos veces: primero a la iteración justo después del MVP
+  para diseñarlo con datos reales ya registrados, y ahora (2026-07-21) explícitamente a **después**
+  de completar el rediseño de UX (ver [BL-019]) y de acumular más datos reales de uso — no
+  retomar antes de que ambas condiciones se cumplan.
