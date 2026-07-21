@@ -39,7 +39,12 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   (independiente, no bloquea a los otros) prepara la verificación de migraciones contra un
   `libsql-server` real — en fase 1 solo un *smoke* no bloqueante que arranca la imagen oficial de
   Turso; la invocación real al script de migraciones se conecta en fase 2 (ver SPEC.md §8/§10 y
-  DECISIONS.md 2026-07-20 infra fase 1).
+  DECISIONS.md 2026-07-20 infra fase 1). Además, un workflow independiente de disparo **manual**
+  (`.github/workflows/seed-prod.yml`, `workflow_dispatch`) ejecuta `npm run prisma:seed` contra la
+  Turso de producción para ampliar el catálogo de ejercicios en caliente, usando
+  `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` como GitHub Actions secrets del repo (inyectados solo en
+  el runner, nunca vistos por ningún agente ni pegados en un chat). Restringido a propósito a
+  scripts idempotentes/no destructivos (`upsert`); ver DECISIONS.md 2026-07-21.
 - **Despliegue**: Vercel (Hobby) + Turso (ver SPEC.md §8-11, pivote 2026-07-20 desde Fly.io). Los
   preview deployments (uno por PR) no reciben las credenciales de la Turso de producción (scope
   Production en el dashboard de Vercel) para no escribir en la base de datos real. `vercel.json`

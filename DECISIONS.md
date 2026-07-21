@@ -1826,4 +1826,45 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-07-21
+- **Decisión:** Ampliar el catálogo de ejercicios en la base de datos de **producción** (Turso)
+  mediante un workflow de GitHub Actions de disparo **manual** (`workflow_dispatch`,
+  `.github/workflows/seed-prod.yml`) que ejecuta `npm run prisma:seed` inyectando
+  `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` como **GitHub Actions secrets** del repo. El workflow
+  queda restringido a propósito a scripts idempotentes/no destructivos (`upsert`, nunca
+  migraciones destructivas ni borrados). Disparo futuro: `gh workflow run seed-prod.yml`.
+- **Alternativas consideradas:** (1) que David (o un agente) exporte el token de Turso de
+  producción en el terminal local y corra `npm run prisma:seed` a mano cada vez — descartado:
+  obliga a manejar el token de producción en claro, fuera de un entorno aislado, y a repetir un
+  paso manual propenso a error; (2) disparar el seed en cada push/PR — descartado: escribe en la
+  base de datos real, no puede ser automático ni correr en previews; (3) contar los ejercicios
+  tras el seed abriendo una segunda conexión a Turso desde el runner para mostrar el número —
+  descartado por ahora: añade superficie de conexión/leak sin valor real, cuando el exit code 0
+  de `npm run prisma:seed` ya es señal suficiente de éxito (se deja un job-summary basado en
+  `if: success()`).
+- **Justificación:** el token de producción nunca pasa por un chat ni lo ve ningún agente
+  (Developer, QA, TechOps o Tech Lead) — David lo configura una sola vez desde la web de GitHub
+  o `gh secret set`, y el runner lo inyecta solo dentro de su entorno aislado y enmascarado. A
+  partir de ahí, ampliar el catálogo en producción es un único comando (`gh workflow run`) sin
+  credenciales a la vista. La restricción explícita a `upsert`/no destructivo (documentada en el
+  propio YAML como decisión de seguridad, no como limitación accidental) alinea el workflow con
+  la regla 11 de CLAUDE.md: cualquier operación que pudiera perder datos de producción exigiría
+  un flujo distinto con backup previo y aprobación explícita.
+- **Lecciones aprendidas:** cuidado al leer `package.json`, porque el nombre `seed` aparece dos
+  veces pero son cosas distintas: hay UN solo **script npm** de seed, `scripts["prisma:seed"]`
+  (`"prisma:seed": "tsx prisma/seed.ts"`), y además una clave `prisma.seed`
+  (`"prisma": { "seed": "tsx prisma/seed.ts" }`), que NO es un script npm sino la configuración
+  nativa que usa `npx prisma db seed`. Es decir, `npm run seed` **no funciona** (no existe
+  `scripts.seed`); lo que se ejecuta es `npm run prisma:seed`. Se eligió `npm run prisma:seed` en
+  el workflow porque es el script npm real y el que ya usa el resto del repo (README pasos de
+  setup, ARCHITECTURE §referencias, no hay ninguna referencia a `npm run seed`). Al verificar el
+  nombre de un script antes de cablearlo en un workflow, mirar el objeto `scripts` de forma
+  programática (`node -e "require('./package.json').scripts"`), no a ojo, para no confundir un
+  script npm con la clave homónima de configuración de otra herramienta. El seed, además, omite
+  de forma segura la siembra del usuario admin cuando `ADMIN_USERNAME`/`ADMIN_PASSWORD_HASH` no
+  están presentes (solo un warning, sin borrar nada), así que el workflow no necesita inyectar
+  esos secretos: se limita a lo estrictamente necesario para el catálogo de ejercicios.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

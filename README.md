@@ -85,6 +85,32 @@ escribir el historial de entreno directamente, en vez de depender de un archivo 
 Requiere configurar la variable de entorno `MCP_BEARER_TOKEN` (ver `.env.example`) antes de
 usarlo — sin ella, el endpoint no autentica ninguna petición.
 
+## Ampliar el catálogo de ejercicios en producción
+
+El catálogo de ejercicios (`prisma/seed.ts`) se siembra con `upsert` por nombre: crea o
+actualiza, **nunca borra**. Para ampliarlo en la base de datos de producción (Turso) sin teclear
+credenciales sensibles a mano, hay un workflow de GitHub Actions de disparo manual
+(`.github/workflows/seed-prod.yml`).
+
+Configuración previa (una sola vez, por David, nunca se pegan valores en un chat — el runner los
+inyecta solo en su entorno aislado):
+
+```bash
+gh secret set TURSO_DATABASE_URL
+gh secret set TURSO_AUTH_TOKEN
+```
+
+Para lanzar el seed contra producción a partir de ahí:
+
+```bash
+gh workflow run seed-prod.yml
+```
+
+Flujo: para añadir ejercicios nuevos, se editan en `prisma/seed.ts`, se mergea a `master`, y se
+dispara el workflow. El workflow está restringido **a propósito** a scripts idempotentes/no
+destructivos (`upsert`): nunca debe usarse para migraciones destructivas ni borrados (ver
+[DECISIONS.md](DECISIONS.md)).
+
 ## Alcance por iteraciones
 
 - **Iteración 1 (MVP, en curso):** registro de peso corporal y de sesiones de entreno
