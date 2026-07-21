@@ -15,6 +15,14 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   credenciales, y decidir el disparador — cron interno choca con el auto-stop de Fly.io free
   tier, así que probablemente un GitHub Actions programado contra un endpoint propio).
 
+- **[BL-019]** **Rediseño de UX**: reorganizar la navegación y los flujos entre las secciones
+  existentes (`/sesion`, `/historial`, `/peso`, `/informe`, `/ajustes`), no solo un pulido visual.
+  Justificación: la navegación actual (barra plana en `nav-bar.tsx`) se pensó para un puñado de
+  páginas; a medida que crecen las funcionalidades (catálogo de ejercicios, informes, futuras
+  iteraciones 2/3 de wearables/fotos/comidas) puede quedarse corta o confusa. Dificultad: media
+  (requiere antes una propuesta de nueva estructura de navegación/flujos a validar con David,
+  más el trabajo de implementación en sí — no se aborda sin una fase de diseño previa acordada).
+
 ## Iteraciones futuras ya acordadas (no implementar todavía)
 
 - **[BL-011]** **Integración con wearable** (pasos, sueño, frecuencia cardiaca). Justificación: ampliar el
