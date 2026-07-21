@@ -1850,10 +1850,18 @@ confirmado con Playwright contra la URL real, no una hipótesis.
   propio YAML como decisión de seguridad, no como limitación accidental) alinea el workflow con
   la regla 11 de CLAUDE.md: cualquier operación que pudiera perder datos de producción exigiría
   un flujo distinto con backup previo y aprobación explícita.
-- **Lecciones aprendidas:** el nombre real del script de seed es `npm run prisma:seed` (no existe
-  `npm run seed` en `package.json`) — verificar el nombre exacto del script en `package.json`
-  antes de cablearlo en un workflow, en vez de asumir el nombre por convención. El seed omite de
-  forma segura la siembra del usuario admin cuando `ADMIN_USERNAME`/`ADMIN_PASSWORD_HASH` no
+- **Lecciones aprendidas:** cuidado al leer `package.json`, porque el nombre `seed` aparece dos
+  veces pero son cosas distintas: hay UN solo **script npm** de seed, `scripts["prisma:seed"]`
+  (`"prisma:seed": "tsx prisma/seed.ts"`), y además una clave `prisma.seed`
+  (`"prisma": { "seed": "tsx prisma/seed.ts" }`), que NO es un script npm sino la configuración
+  nativa que usa `npx prisma db seed`. Es decir, `npm run seed` **no funciona** (no existe
+  `scripts.seed`); lo que se ejecuta es `npm run prisma:seed`. Se eligió `npm run prisma:seed` en
+  el workflow porque es el script npm real y el que ya usa el resto del repo (README pasos de
+  setup, ARCHITECTURE §referencias, no hay ninguna referencia a `npm run seed`). Al verificar el
+  nombre de un script antes de cablearlo en un workflow, mirar el objeto `scripts` de forma
+  programática (`node -e "require('./package.json').scripts"`), no a ojo, para no confundir un
+  script npm con la clave homónima de configuración de otra herramienta. El seed, además, omite
+  de forma segura la siembra del usuario admin cuando `ADMIN_USERNAME`/`ADMIN_PASSWORD_HASH` no
   están presentes (solo un warning, sin borrar nada), así que el workflow no necesita inyectar
   esos secretos: se limita a lo estrictamente necesario para el catálogo de ejercicios.
 
