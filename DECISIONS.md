@@ -1915,4 +1915,56 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-07-21
+- **Decisión:** [fix CI] En el selector "Añadir ejercicio" de `SessionEntriesEditor`
+  (`src/components/session-entries-editor.tsx`), el `<select id="exercise-picker">` pasa a
+  llevar también la clase Tailwind `min-w-0` además de `flex-1`.
+- **Causa raíz real (confirmada, no solo hipotética):** CI llevaba 6 pushes seguidos en rojo
+  (`8fdc857` → `a57d3b6`) por el mismo fallo, siempre en `e2e/sesion.spec.ts`, siempre solo en
+  el proyecto `mobile-chromium` (viewport ~412px de "Pixel 7"): el click en el botón "Añadir"
+  hacía timeout porque Playwright reportaba que el punto de clic estaba intercepted, alternando
+  entre el propio contenedor del selector y el `<form>` de la página. Un script de diagnóstico
+  (`page.evaluate` con `getBoundingClientRect`/`scrollWidth` en un test temporal, borrado tras
+  el diagnóstico) confirmó la causa exacta: el `<select>` de ejercicio usa `flex-1` dentro de un
+  `<div className="flex gap-2">` junto al botón "Añadir", pero los hijos flex tienen por
+  defecto `min-width: auto`, que en un `<select>` cerrado equivale al ancho intrínseco de su
+  opción más larga. El commit directo a `master` `8fdc857` amplió el catálogo de 12 a 27
+  ejercicios e introdujo nombres largos (p. ej. "Elevaciones laterales con mancuernas"), lo
+  bastante anchos para que el `<select>` no encogiera por debajo de ~338px — más de lo que cabe
+  junto al botón en un viewport de 412px. El resultado: la fila desborda horizontalmente,
+  empujando el botón "Añadir" fuera del área visible/clicable, y el navegador (real, no solo el
+  emulado de Playwright) expande el "layout viewport" para acomodar el contenido desbordado —
+  esto explica también la pista previa, ya observada por el Tech Lead pero sin causa raíz
+  confirmada entonces, de que `window.innerWidth` no coincidía de forma consistente con el
+  viewport configurado (412px): no era un problema de emulación del sandbox, sino un síntoma
+  del propio desbordamiento de contenido. Confirmado revirtiendo mentalmente la causa: con
+  `min-w-0` añadido, `document.documentElement.scrollWidth` pasa de 447px a 412px (igual que
+  `clientWidth`, cero overflow) y el botón queda dentro de los límites de su contenedor; sin el
+  fix, revertir `prisma/seed.ts` al catálogo corto de 12 ejercicios también hacía pasar el test
+  (confirmando la relación causal con el contenido del catálogo antes de indagar en el CSS).
+- **Alternativas descartadas:** subir el timeout del test, o forzar el click con
+  `{ force: true }` — ambas ocultarían un bug de UX real: con el catálogo ampliado, el mismo
+  desbordamiento ocurre en el móvil real de David (SPEC.md: uso principal desde el navegador del
+  móvil), no solo en el test. El fix corregido ataca la causa (el `<select>` ahora encoge y dejar
+  ver solo una parte del texto de la opción seleccionada, en vez de desbordar la página).
+- **Justificación:** `min-w-0` es el parche estándar para el bug de flexbox "los hijos flex no
+  encogen por debajo del ancho de su contenido" — permite que `flex-1` funcione como se espera
+  (reparte el espacio disponible, encogiendo si hace falta) en vez de mantener el ancho
+  intrínseco del contenido. No afecta al resto de casos (catálogo corto): con opciones cortas
+  nunca se llega a necesitar encoger por debajo del espacio disponible.
+- **Lecciones aprendidas:** un commit directo a `master` que parecía "solo datos" (ampliar un
+  array de nombres de ejercicios en `prisma/seed.ts`) tuvo un efecto colateral de comportamiento
+  real en la UI, precisamente porque saltarse la PR/CI significó saltarse también la suite E2E
+  que lo habría detectado antes de llegar a `master`. La regla ya existente de "el Tech Lead
+  comprueba CI en verde antes de dar por buena una PR" no cubre este caso (no hubo PR), así que
+  se propone una regla adicional en CLAUDE.md: ningún commit directo a `master` que pueda tener
+  efectos colaterales de comportamiento (código de aplicación, datos que la UI consume y
+  renderiza, migraciones, config de build/runtime) se hace sin pasar por PR + CI, aunque el
+  cambio "parezca" de bajo riesgo — solo los cambios puramente descriptivos de documentación
+  (`.md`) son razonablemente seguros como commit directo. Además, esta ronda confirma de nuevo
+  el patrón "los tests fallan de forma consistente y reproducible, no es flakiness — antes de
+  añadir retries/timeouts hay que encontrar la causa real" ya aplicado en otras rondas.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
