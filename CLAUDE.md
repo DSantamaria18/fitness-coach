@@ -239,6 +239,23 @@ Reglas adicionales de funcionamiento del equipo:
   cualquier acción real sobre producción (aunque sea no destructiva y ya esté validado su diseño),
   el Tech Lead confirma explícitamente ese disparo en concreto, incluso si la pregunta de David
   suena como una obviedad.
+- **Ningún commit directo a `master` que pueda tener efectos colaterales de comportamiento
+  (código de aplicación, datos que la UI consume y renderiza, migraciones, configuración de
+  build/runtime) se hace sin pasar por PR + CI, aunque el cambio "parezca" de bajo riesgo.** El
+  precedente de commitear directamente a `master` cambios puramente descriptivos de
+  documentación (`.md`) no se extiende a cambios que, aunque parezcan solo datos, alimentan la UI
+  o el comportamiento real de la app — ahí la propia PR+CI (en concreto la suite E2E) es la red
+  de seguridad que detecta efectos colaterales antes de que lleguen a producción. Pasó en la
+  ronda de ampliación del catálogo de ejercicios (2026-07-21): el Tech Lead commiteó directamente
+  a `master` una ampliación de `prisma/seed.ts` (12→27 ejercicios, con nombres más largos) por
+  parecer "solo contenido", saltándose PR/CI — y ese cambio tuvo un efecto colateral real: un
+  nombre de ejercicio largo hacía que un `<select>` sin `min-w-0` desbordara su contenedor en
+  viewports móviles estrechos, empujando el botón "Añadir" fuera del área clicable (bug real en
+  el móvil de David, no solo de test). CI quedó en rojo durante 6 pushes seguidos sin que nadie
+  se diera cuenta hasta una comprobación posterior, porque saltarse la PR también saltó la propia
+  suite E2E que lo habría detectado antes de tocar `master`. Solo los cambios puramente
+  descriptivos de `.md` (BACKLOG, CHANGELOG, DECISIONS, FEATURES, README sin comandos ejecutables
+  nuevos) siguen siendo razonablemente seguros como commit directo.
 </equipo_de_agentes>
 
 <primer_paso>
