@@ -1901,6 +1901,17 @@ confirmado con Playwright contra la URL real, no una hipótesis.
   prompt — así que mencionar aquí tools de escritura que no existen en el contexto in-app
   (`log_session`, `edit_session`) no rompe ese flujo, porque el modelo solo puede llamar a las
   tools que se le registran en cada contexto concreto.
+  Además, QA encontró en su validación que el comando `claude mcp add` documentado en la
+  primera versión de este README.md fallaba de verdad contra la CLI real
+  (`error: missing required argument 'name'`): `--header`/`-H` es una opción variádica y,
+  colocada antes de los argumentos posicionales (`name`, `commandOrUrl`), se los "come" como
+  si fueran headers adicionales. El orden correcto es posicionales primero, opciones después
+  (`claude mcp add <name> <url> --scope ... --transport ... --header ...`), confirmado con
+  `claude mcp add --help` y probándolo contra un servidor de prueba antes de corregir el
+  README. Lección: un comando de CLI documentado para copiar/pegar (no solo prosa descriptiva)
+  necesita la misma verificación contra el comportamiento real de la herramienta que ya exige
+  este proyecto para nombres de SDK/librería (ver entrada anterior, 2026-07-19) — "suena
+  razonable" no es suficiente cuando alguien va a ejecutarlo literalmente.
 
 ---
 

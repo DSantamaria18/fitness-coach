@@ -91,8 +91,13 @@ Desde cualquier directorio (`--scope user` lo deja disponible en cualquier proye
 este repo):
 
 ```bash
-claude mcp add --scope user --transport http --header "Authorization: Bearer <token>" fitness-coach https://<tu-url-de-produccion>/api/mcp
+claude mcp add fitness-coach https://<tu-url-de-produccion>/api/mcp --scope user --transport http --header "Authorization: Bearer <token>"
 ```
+
+Importante: los argumentos posicionales (`fitness-coach` y la URL) van **antes** que las
+opciones. `--header`/`-H` es una opción variádica — si se coloca antes de los posicionales, se
+los "come" como si fueran headers adicionales y el comando falla con
+`error: missing required argument 'name'`.
 
 - `<token>` es el mismo valor que `MCP_BEARER_TOKEN` en producción. No lo compartas en texto
   plano innecesariamente (chats, tickets, capturas de pantalla) más allá de lo imprescindible
