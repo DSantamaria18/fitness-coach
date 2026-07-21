@@ -42,8 +42,11 @@ enum ExerciseType {
   CARDIO
 }
 
-// Catálogo cerrado (SPEC §3): sembrado por seed script, no editable desde
-// el registro de una sesión.
+// Sembrado inicialmente por seed script (SPEC §3), pero editable en runtime
+// desde /ajustes (alta, renombrado y borrado — ver src/lib/create-exercise.ts
+// /rename-exercise.ts/delete-exercise.ts y FEATURES.md): ya no es un catálogo
+// cerrado, solo desde el registro de una sesión (/sesion) sigue sin poder
+// crearse un ejercicio nuevo al vuelo.
 model Exercise {
   id        String       @id @default(cuid())
   name      String       @unique
