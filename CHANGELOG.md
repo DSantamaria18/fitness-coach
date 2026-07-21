@@ -290,6 +290,15 @@ Proyecto sin versión publicada todavía.
   `prisma/migrations/` contra ese fichero antes de servir la primera petición
   (`bootstrap-preview-schema.ts`), una única vez por instancia. Sin cambios en producción ni en
   local/CI. Ver DECISIONS.md 2026-07-20.
+- Gestión del catálogo de ejercicios desde `/ajustes`: nueva sección para dar de alta, renombrar
+  (nombre y/o tipo) y borrar ejercicios sin tocar `prisma/seed.ts` ni re-sembrar la base de
+  datos (`create-exercise.ts`, `rename-exercise.ts`, `delete-exercise.ts`, validación compartida
+  en `validate-exercise.ts`). El borrado es real, no soft-delete: si el ejercicio ya tiene
+  `StrengthEntry`/`CardioEntry` asociadas, la FK constraint de la base de datos lo bloquea
+  (Prisma `P2003`) y se traduce en un mensaje claro en vez de un error 500. Tras cualquier
+  cambio se revalida también `/sesion`, cuyo desplegable de "añadir ejercicio" lee del mismo
+  catálogo. Motivado por un bug real: "press de banca con mancuernas" no se podía registrar por
+  no estar en el catálogo cerrado original.
 
 ### Fixed
 
