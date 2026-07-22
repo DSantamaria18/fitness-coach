@@ -12,6 +12,7 @@ import {
   type RegistroState,
   type SessionEntryInitialData,
 } from "@/lib/session-proposal/build-initial-registros";
+import { formatSecondsAsMinutesSeconds } from "@/lib/duration-format";
 
 // Mismo DTO que SessionEntryInitialData (los campos que consume el editor
 // compartido): el Server Component padre serializa get-session-history.ts a
@@ -53,7 +54,19 @@ function formatCardioSummary(
   entry: Extract<SessionEntryInitialData, { tipo: "cardio" }>,
 ) {
   const parts = CARDIO_FIELDS.filter(({ field }) => entry[field] != null).map(
-    ({ field, label }) => `${label}: ${entry[field]}`,
+    ({ field, label, kind }) => {
+      const rawValue = entry[field];
+      // duracion/ritmo_medio se guardan en segundos, pero el label ya dice
+      // "(mm:ss)"/"(min:seg/km)" — mostrar el número crudo de segundos aquí
+      // sería inconsistente con lo que el propio label anuncia (y con lo que
+      // el formulario de edición ya muestra para el mismo dato). Ver
+      // DECISIONS.md.
+      const displayValue =
+        kind === "mm:ss" && rawValue != null
+          ? formatSecondsAsMinutesSeconds(rawValue)
+          : rawValue;
+      return `${label}: ${displayValue}`;
+    },
   );
   return parts.length > 0 ? parts.join(" · ") : "Sin métricas registradas";
 }

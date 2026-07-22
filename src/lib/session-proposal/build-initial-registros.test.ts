@@ -57,14 +57,29 @@ describe("buildInitialRegistros", () => {
       },
     ]);
 
+    // duracion se guarda en segundos (1800) pero se precarga en mm:ss
+    // ("30:00"): un corredor piensa la duración en minutos, no en segundos
+    // totales — ver DECISIONS.md.
     expect(registro).toMatchObject({
       tipo: "cardio",
       ejercicio: "Carrera",
-      duracion: "1800",
+      duracion: "30:00",
       distancia_km: "5",
       velocidad_media: "",
       RPE: "6",
     });
+  });
+
+  it("precarga ritmo_medio (segundos/km guardados) también en mm:ss", () => {
+    const [registro] = buildInitialRegistros([
+      {
+        tipo: "cardio",
+        ejercicio: "Carrera",
+        ritmo_medio: 330,
+      },
+    ]);
+
+    expect(registro).toMatchObject({ tipo: "cardio", ritmo_medio: "5:30" });
   });
 
   it("asigna una clave distinta y no vacía a cada registro convertido, en el mismo orden de entrada", () => {

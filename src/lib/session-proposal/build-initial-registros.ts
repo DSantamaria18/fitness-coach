@@ -8,6 +8,8 @@
 // lógica vive en un módulo sin directiva, importable desde ambos lados. Ver
 // DECISIONS.md 2026-07-19.
 
+import { formatSecondsAsMinutesSeconds } from "@/lib/duration-format";
+
 export type CardioMetricKey =
   | "duracion"
   | "distancia_km"
@@ -79,6 +81,15 @@ function toInputString(value: number | null | undefined): string {
   return value != null ? String(value) : "";
 }
 
+// duracion/ritmo_medio se guardan en segundos (contrato de
+// validate-session.ts/Prisma sin cambios), pero un corredor los piensa en
+// mm:ss ("8:30", no "510") — ver DECISIONS.md. Este conversor se usa tanto
+// para precargar una sesión ya guardada (edición en /historial) como una
+// propuesta de la IA, los dos puntos que consumen SessionEntryInitialData.
+function toMinutesSecondsInputString(value: number | null | undefined): string {
+  return value != null ? formatSecondsAsMinutesSeconds(value) : "";
+}
+
 // Contador simple para claves de React estables entre añadir/quitar bloques;
 // no necesita ser criptográfico, solo único dentro del ciclo de vida de
 // quien lo consume (una pestaña de navegador para SessionEntriesEditor, una
@@ -119,10 +130,10 @@ export function buildInitialRegistros(
       tipo: "cardio",
       ejercicio: entry.ejercicio,
       notas: entry.notas ?? "",
-      duracion: toInputString(entry.duracion),
+      duracion: toMinutesSecondsInputString(entry.duracion),
       distancia_km: toInputString(entry.distancia_km),
       velocidad_media: toInputString(entry.velocidad_media),
-      ritmo_medio: toInputString(entry.ritmo_medio),
+      ritmo_medio: toMinutesSecondsInputString(entry.ritmo_medio),
       frecuencia_cardiaca_media: toInputString(entry.frecuencia_cardiaca_media),
       frecuencia_cardiaca_maxima: toInputString(
         entry.frecuencia_cardiaca_maxima,

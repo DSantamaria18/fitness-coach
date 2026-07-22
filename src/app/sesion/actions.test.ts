@@ -130,10 +130,13 @@ describe("generateSessionProposalAction", () => {
       notas: "",
       series: [{ reps: "5", peso_kg: "100", tempo: "3-1-1", RPE: "8" }],
     });
+    // duracion llega en segundos (1800) desde la IA, pero se precarga en el
+    // editor en mm:ss ("30:00") — ver build-initial-registros.test.ts y
+    // DECISIONS.md.
     expect(result.registros[1]).toMatchObject({
       tipo: "cardio",
       ejercicio: "Carrera",
-      duracion: "1800",
+      duracion: "30:00",
       distancia_km: "5",
       RPE: "6",
     });
