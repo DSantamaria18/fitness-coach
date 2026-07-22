@@ -2022,6 +2022,21 @@ confirmado con Playwright contra la URL real, no una hipótesis.
     fix futuro de "aceptar un carácter que el usuario tecleó tal cual" debe revisar primero si
     el tipo de input nativo ya lo está filtrando en el propio DOM, antes de asumir que basta con
     tocar la función de parseo.
+  - El Tech Lead avisó a mitad de esta ronda de que la PR paralela de Developer 1 (peso
+    corporal opcional) ensancha `peso_kg` a `number | null` en este mismo DTO compartido
+    (`SessionEntryInitialData`, `build-initial-registros.ts`). En este fichero,
+    `buildInitialRegistros` convertía `peso_kg` con `String(serie.peso_kg)` en vez de con
+    `toInputString` (la misma función ya usada para `RPE`, que sí es nullable) — con el tipo
+    ensanchado tras el merge, un peso ausente habría mostrado literalmente el texto `"null"` en
+    el campo de edición de una serie de fuerza, en vez de dejarlo vacío. Corregido de forma
+    preventiva (usando `toInputString` también para `peso_kg`) antes de que el tipo llegue
+    ensanchado, con un test que fuerza el caso vía cast (`as unknown as
+    SessionEntryInitialData[]`, ya que el tipo declarado en esta rama todavía no admite
+    `null`). Confirma que compartir un mismo fichero de dominio entre dos PRs paralelas exige
+    que cada Developer revise activamente el impacto del cambio del otro en su propio código,
+    no solo confiar en que el conflicto de merge lo resolverá el Tech Lead — el conflicto de
+    líneas es trivial, pero el fallo de comportamiento (mostrar "null") no lo habría detectado
+    ningún test existente sin este aviso explícito.
 
 ---
 

@@ -118,7 +118,13 @@ export function buildInitialRegistros(
         notas: entry.notas ?? "",
         series: entry.series.map((serie) => ({
           reps: String(serie.reps),
-          peso_kg: String(serie.peso_kg),
+          // toInputString (no String()): peso_kg puede llegar null/undefined
+          // (peso opcional, ver DECISIONS.md/PR paralela de Developer 1) —
+          // String(null)/String(undefined) mostrarían literalmente "null"/
+          // "undefined" en el campo de edición en vez de dejarlo vacío, el
+          // mismo tipo de fallo silencioso (visible esta vez, no mudo) que
+          // motivó el bug de mm:ss/coma decimal de esta misma PR.
+          peso_kg: toInputString(serie.peso_kg),
           tempo: serie.tempo ?? "",
           RPE: toInputString(serie.RPE),
         })),
