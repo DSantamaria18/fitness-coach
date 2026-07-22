@@ -1967,4 +1967,62 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-07-22
+- **Decisión:** Corrección de dos fallos de formato en el formulario de cardio
+  (`session-entries-editor.tsx`), reportados por un corredor real: (1) `duracion` y
+  `ritmo_medio` pasan de segundos totales (`type="number"`) a texto libre en formato mm:ss
+  (`Duración (mm:ss)`, `Ritmo medio (min:seg/km)`, ej. "8:30"), convertidos con dos funciones
+  puras nuevas — `parseMinutesSeconds`/`formatSecondsAsMinutesSeconds` en
+  `src/lib/duration-format.ts` (no dentro de `session-entries-editor.tsx`, que es `"use
+  client"`: build-initial-registros.ts también las necesita para precargar una sesión ya
+  guardada, y el resumen de solo lectura de `/historial` para mostrarla — mismo criterio de
+  separación ya documentado el 2026-07-19 para `buildInitialRegistros`). El contrato interno en
+  segundos (`durationSeconds`/`avgPaceSecPerKm: Int?` de Prisma, `validate-session.ts`) no
+  cambia: la conversión ocurre solo en la capa de UI, en ambos sentidos (parseo al construir el
+  payload de guardado, formateo al precargar/mostrar un valor ya guardado). (2) `toNumber()`
+  normaliza coma decimal a punto (`"0,1".replace(",", ".")`) antes de `Number()`: sin
+  normalizar, `Number("0,1")` da `NaN` y el valor se descartaba en silencio sin avisar al
+  usuario — el fallo real que motivó el reporte, ya que un valor prellenado por la IA como
+  "0.1" podía acabar leyéndose con coma en algún dispositivo. Los campos con decimales
+  afectados por (2) (peso de fuerza, distancia, velocidad media, cadencia) pasan de
+  `type="number"` a `type="text"` con `inputMode="decimal"` y un placeholder de ejemplo ("ej:
+  82,5", "ej: 5,2"), con placeholders análogos en mm:ss ("ej: 8:30", "ej: 5:30").
+- **Alternativas consideradas:**
+  - Mantener los campos decimales como `type="number"` y solo tocar `toNumber()` — descartada
+    tras comprobar que un `<input type="number">` normaliza su `.value` a un número JS válido
+    (siempre con `.`, nunca con `,`) o lo deja vacío/inválido: el navegador nunca deja llegar
+    una coma literal a `.value` en ese tipo de input, así que la tolerancia de `toNumber()` no
+    tendría ningún efecto real sin este cambio de tipo — la corrección de (2) exige el cambio
+    de `type="number"` a `type="text"` para tener algún efecto observable.
+  - Normalizar en silencio los segundos fuera de rango dentro de un mm:ss (p. ej. "8:75" →
+    "9:15", arrastrando el minuto) en vez de rechazarlos — descartada por repetir el mismo tipo
+    de fallo mudo que motivó este cambio: un mm:ss real no permite segundos ≥ 60, así que
+    "corregirlo" en silencio sería una interpretación no solicitada del dato que el usuario
+    tecleó, sin decírselo.
+  - Bloquear el envío del formulario completo (deshabilitar el botón "Guardar" del padre)
+    cuando hay un mm:ss inválido, vía un prop `onValidationChange` adicional — descartada por
+    desproporcionada frente al problema real: el aviso inline (`role="alert"`) ya dice
+    claramente qué está mal y dónde, sin necesidad de propagar un estado de validez cruzando el
+    límite `SessionEntriesEditor` → `SessionForm`/`SessionEntryEditForm` (dos componentes que no
+    tenían ninguna razón previa para conocer nada más que el conteo de `registros`). Un mm:ss
+    inválido se resuelve a `undefined` al construir el payload — el mismo comportamiento que ya
+    tenía cualquier otro campo numérico vacío u opcional — pero ahora con un aviso visible
+    mientras se edita, en vez de sin ninguno.
+- **Justificación:** el contrato Zod/Prisma en segundos es el que ya consumen la skill
+  "sesion-entrenamiento" y el servidor MCP (`log_session`/`edit_session`), así que cambiarlo
+  habría exigido tocar `validate-session.ts`/`create-session.ts`/`update-session.ts` (fuera del
+  alcance de este cambio, asignado en paralelo a otro Developer) y desincronizar la app de la
+  skill. Resolverlo solo en la capa de UI (parseo/formato en la frontera del formulario) es la
+  superficie mínima de cambio que arregla la confusión real reportada sin tocar ese contrato.
+- **Lecciones aprendidas:**
+  - Confirmado en la práctica lo que ya predecía el razonamiento de la primera alternativa
+    descartada: la tolerancia a coma decimal de `toNumber()` es necesaria pero no suficiente
+    por sí sola — sin cambiar también el `type` del `<input>` de "number" a "text", el
+    navegador ya habría descartado la coma antes de que `toNumber()` llegara a verla. Cualquier
+    fix futuro de "aceptar un carácter que el usuario tecleó tal cual" debe revisar primero si
+    el tipo de input nativo ya lo está filtrando en el propio DOM, antes de asumir que basta con
+    tocar la función de parseo.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
