@@ -11,7 +11,11 @@ const rpeSchema = z.number().int().min(1).max(10);
 
 const serieSchema = z.object({
   reps: z.number().int().positive(),
-  peso_kg: z.number().positive(),
+  // Opcional: ejercicios a peso corporal (Burpees, Dominadas, Flexiones...)
+  // no tienen una carga externa que registrar. Cuando SÍ se informa, sigue
+  // teniendo que ser positivo — un peso de 0 kg o negativo no tiene sentido
+  // físico, así que solo cambia la ausencia del campo, no su validación.
+  peso_kg: z.number().positive().optional(),
   tempo: z.string().optional(),
   RPE: rpeSchema.optional(),
 });

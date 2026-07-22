@@ -93,7 +93,9 @@ model StrengthSet {
   strengthEntryId String
   order           Int
   reps            Int
-  weightKg        Float
+  // Nullable: ejercicios a peso corporal (Burpees, Dominadas, Flexiones...)
+  // no tienen una carga externa que registrar (ver DECISIONS.md).
+  weightKg        Float?
   tempo           String?
   rpe             Int?
 

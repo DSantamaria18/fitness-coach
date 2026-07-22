@@ -88,6 +88,32 @@ describe("SessionHistorySection", () => {
     expect(screen.getByText(/5×100kg · RPE 8, 5×105kg/)).toBeInTheDocument();
   });
 
+  // Ejercicios a peso corporal (Burpees, Dominadas...) guardan peso_kg null
+  // (ver DECISIONS.md): el listado de solo lectura no debe mostrar un "0kg"
+  // falso ni "nullkg" literal.
+  it("muestra una serie sin peso (peso corporal) sin inventar un número", () => {
+    const bodyweightSession = {
+      id: "s-3",
+      date: "2026-07-05T00:00:00.000Z",
+      ejercicios: [
+        {
+          tipo: "fuerza" as const,
+          ejercicio: "Burpees",
+          series: [{ reps: 12, peso_kg: null, tempo: null, RPE: null }],
+        },
+      ],
+    };
+
+    render(
+      <SessionHistorySection
+        entries={[bodyweightSession]}
+        exercises={exercises}
+      />,
+    );
+
+    expect(screen.getByText(/12 reps \(peso corporal\)/)).toBeInTheDocument();
+  });
+
   it("lista una sesión de cardio con la fecha y las métricas rellenas", () => {
     render(
       <SessionHistorySection entries={[cardioSession]} exercises={exercises} />,
