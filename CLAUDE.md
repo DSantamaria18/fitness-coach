@@ -274,6 +274,14 @@ Reglas adicionales de funcionamiento del equipo:
   Pasó en la ronda de "peso corporal opcional + formato mm:ss" (PR #41, 2026-07-24): un run se
   quedó ~17 minutos en ese paso mientras el run gemelo completó `e2e`/`test`/
   `verify-turso-migrations`/`Vercel` en menos de 2 minutos para el mismo commit exacto.
+- **Antes de `git worktree add`, confirmar que el directorio de trabajo actual es la raíz del
+  repo principal (o usar la ruta absoluta), no asumirlo.** Si el comando se ejecuta con el cwd
+  apuntando a otro worktree ya existente, el nuevo worktree se crea anidado dentro de él (a veces
+  en cadena de varios niveles) en vez de en `.claude/worktrees/<nombre>` al mismo nivel que los
+  demás. Ha pasado ya tres veces en rondas distintas (gestión del catálogo de ejercicios;
+  "peso corporal + mm:ss" con la PR de Developer 2; "tooltips + excepción SKILL.md" con los dos
+  worktrees de QA, uno anidado dentro del otro) — se detecta y se corrige con `git worktree move`
+  sin pérdida de trabajo, pero es un paso evitable de raíz.
 - ** los agentes compactarán su contexto a intervalos regulares
 
 </equipo_de_agentes>

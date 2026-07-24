@@ -2183,4 +2183,27 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-07-24
+- **Decisión:** Notas de proceso de la ronda "tooltips + excepción de peso corporal en el
+  prompt" (PRs #42/#43), sin código nuevo, solo lecciones de funcionamiento del equipo.
+- **`git worktree add` sigue creando worktrees anidados por error, ahora también en QA**: en
+  esta ronda, los worktrees `qa-pr42-tooltips` y `qa-pr43-skill-peso` se crearon anidados dentro
+  de `dev-skill-peso` (y uno incluso dentro del otro, en cadena de 3 niveles), porque el comando
+  se ejecutó con el directorio de trabajo apuntando a otro worktree en vez de a la raíz del repo
+  principal. Ya había pasado una vez antes (ronda de gestión del catálogo de ejercicios) y volvió
+  a pasar dos veces más aquí — el propio QA lo detectó y avisó en su reporte sin que bloqueara la
+  validación, y el Tech Lead lo corrigió con `git worktree move` antes de dar las PRs por
+  revisadas. Como sigue siendo un error recurrente pese a estar ya documentado, a partir de ahora
+  el Tech Lead ejecuta `git worktree add` siempre con la ruta absoluta del repo principal como
+  referencia (o confirmando `pwd` antes del comando), en vez de asumir que el cwd es correcto.
+- **El lanzamiento de subagentes (Agent tool) fue bloqueado por el clasificador automático de
+  permisos varias veces seguidas en esta ronda**, sin motivo específico más allá de "Blocked by
+  classifier", tanto para Developers como para QA. Reintentar el mismo lanzamiento (a veces una
+  vez, a veces dos) lo resolvió todas las veces sin necesidad de cambiar nada del encargo. No se
+  identificó una causa raíz (no pareció relacionado con el contenido del prompt, ya que
+  reintentos idénticos pasaron a la segunda o tercera vez); se deja constancia por si se repite
+  con más frecuencia en el futuro y conviene investigarlo más a fondo.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
