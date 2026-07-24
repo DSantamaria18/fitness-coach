@@ -407,6 +407,7 @@ export function SessionEntriesEditor({
                       type="text"
                       inputMode="decimal"
                       placeholder="ej: 82,5"
+                      title="Peso añadido a la serie, además de tu peso corporal. Déjalo vacío si el ejercicio es a peso corporal, sin lastre."
                       value={serie.peso_kg}
                       onChange={(event) =>
                         updateSerie(
@@ -505,7 +506,9 @@ export function SessionEntriesEditor({
                       title={
                         kind === "mm:ss"
                           ? "Formato minutos:segundos, ej. 8:30"
-                          : undefined
+                          : kind === "decimal"
+                            ? "Admite coma o punto como separador decimal, ej. 5,2 o 5.2"
+                            : undefined
                       }
                       aria-invalid={invalidMmSs || undefined}
                       value={value}

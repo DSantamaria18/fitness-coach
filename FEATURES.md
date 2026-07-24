@@ -71,6 +71,10 @@ cambio relevante.
   informado. Los campos numéricos con decimales (peso, distancia, velocidad media, cadencia)
   aceptan indistintamente coma o punto como separador decimal, con un placeholder de ejemplo
   ("ej: 82,5") para que el formato quede claro. Ver DECISIONS.md.
+- Tooltips nativos (atributo `title`) en los campos con formato ambiguo: mm:ss (ya existente),
+  los decimales de cardio (distancia, vel. media, cadencia) y el peso (kg) de fuerza, que
+  aclara que es el peso añadido a la serie (no el peso corporal) y que debe dejarse vacío —
+  nunca "0" — para un ejercicio a peso corporal.
 - Validación de forma con Zod (`validate-session.ts`) y de existencia del ejercicio en el
   catálogo, incluyendo que su tipo (fuerza/cardio) coincida (`create-session.ts`) — la
   existencia se valida contra la base de datos, no en el esquema Zod puro.
