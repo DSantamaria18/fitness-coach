@@ -2101,4 +2101,46 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-07-24
+- **Decisión:** Retrospectiva de la ronda "peso corporal opcional + formato mm:ss" (bug real
+  reportado por David en su segunda sesión de entrenamiento, PRs #40/#41).
+- **Qué fue bien:**
+  - Investigación de causa raíz en profundidad antes de proponer ningún fix (varios agentes de
+    investigación en paralelo, incluyendo rastrear el "0,1" hasta el `inputSchema` compartido con
+    la tool de IA) evitó quedarse en el síntoma superficial y encontró que un único cambio de
+    esquema arreglaba a la vez el formulario manual y la generación por IA.
+  - Coordinación a mitad de vuelo entre los 2 Developers en paralelo: cuando Developer 1 detectó
+    que tenía que tocar un fichero fuera de su alcance declarado (`build-initial-registros.ts`,
+    territorio de Developer 2), el Tech Lead usó `SendMessage` para avisar a Developer 2 antes de
+    que cerrara su propia PR, en vez de esperar a que el conflicto/bug se descubriera en review.
+    Developer 2 corrigió un problema real ("null" literal en el peso) de forma preventiva gracias
+    a ese aviso. Evitó una vuelta completa de review/vuelta atrás.
+  - El conflicto de merge esperado en `build-initial-registros.ts` se resolvió solo (`git merge`
+    automático, sin marcadores de conflicto) porque los cambios de ambos Developers vivían en
+    regiones distintas del fichero — la separación de scope por ficheros funcionó como se
+    pretendía.
+  - El recheck final en navegador real, con ambas PRs ya juntas en `master`, confirmó el
+    escenario exacto del bug original (ejercicio a peso corporal sin peso + Carrera en mm:ss/coma
+    decimal) de punta a punta — algo que ninguna PR aislada podía verificar por sí sola (QA de la
+    PR #41 ya lo señaló como pendiente al validarla en solitario).
+- **Qué mejorar / acción tomada:**
+  - Un job de CI duplicado (dos runs disparados por el mismo push a la rama de la PR #41) se
+    quedó colgado ~17 minutos en el paso "Instalar navegador de Playwright" (`npx playwright
+    install --with-deps`), mientras el run gemelo para el mismo commit completó los mismos checks
+    en verde en menos de 2 minutos. El Tech Lead canceló el run colgado (`gh run cancel`) y
+    procedió con el merge apoyándose en que el run gemelo ya cubría los 4 tipos de check
+    (`e2e`/`test`/`verify-turso-migrations`/`Vercel`) en verde para el mismo commit exacto — no
+    era necesario esperar indefinidamente a un run redundante. Se añade como regla nueva a
+    CLAUDE.md para no tener que redescubrir este criterio cada vez.
+  - El límite semanal de uso se agotó a mitad de la validación de QA de la PR #40, cortando su
+    ejecución sin aviso previo tras haber confirmado ya CI verde y 0 commits detrás de master. Se
+    reanudó con éxito vía `SendMessage` al mismo agente (no un relanzamiento desde cero), que
+    retomó exactamente donde lo había dejado sin perder el trabajo ya hecho ni repetir pasos.
+  - Aplicar una migración de Prisma sobre el `dev.db` local (no producción) para poder hacer el
+    recheck final en navegador quedó bloqueado por el clasificador automático de permisos y
+    requirió confirmación explícita de David — coherente con la regla 11, pero confirma que esa
+    regla aplica también a bases de datos de desarrollo local, no solo a producción.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

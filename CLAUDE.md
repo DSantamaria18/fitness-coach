@@ -256,6 +256,24 @@ Reglas adicionales de funcionamiento del equipo:
   suite E2E que lo habría detectado antes de tocar `master`. Solo los cambios puramente
   descriptivos de `.md` (BACKLOG, CHANGELOG, DECISIONS, FEATURES, README sin comandos ejecutables
   nuevos) siguen siendo razonablemente seguros como commit directo.
+- **Cuando un Developer descubre a mitad de tarea que tiene que tocar un fichero fuera de su
+  alcance declarado (territorio de otro Developer en paralelo), avisa por mensaje directo al otro
+  agente antes de que ese cierre su propia PR, no solo lo documenta para que el Tech Lead lo
+  detecte en review.** Pasó en la ronda de "peso corporal opcional + formato mm:ss" (PRs #40/#41,
+  2026-07-22): Developer 1 tuvo que ensanchar un tipo en `build-initial-registros.ts` (fuera de su
+  alcance) para que el build compilara; el Tech Lead retransmitió el aviso a Developer 2 mientras
+  seguía trabajando, y este corrigió preventivamente un "null" literal que ese mismo cambio de
+  tipo iba a producir en su propia UI — antes de dar su PR por lista, no después. Esperar al
+  review para que el Tech Lead conecte los dos hallazgos habría costado una vuelta completa.
+- **Un check de CI "pending" indefinidamente no bloquea el merge si existe un run duplicado para
+  el mismo commit que ya completó todos los tipos de check en verde.** GitHub a veces dispara más
+  de un run de un mismo workflow para el mismo push; si uno de ellos se queda colgado en un paso
+  de infraestructura (p. ej. `npx playwright install --with-deps` descargando/instalando
+  dependencias del sistema) mientras el otro ya pasó limpio, el Tech Lead puede cancelar el run
+  colgado (`gh run cancel`) y mergear apoyándose en el run gemelo, sin esperar indefinidamente.
+  Pasó en la ronda de "peso corporal opcional + formato mm:ss" (PR #41, 2026-07-24): un run se
+  quedó ~17 minutos en ese paso mientras el run gemelo completó `e2e`/`test`/
+  `verify-turso-migrations`/`Vercel` en menos de 2 minutos para el mismo commit exacto.
 </equipo_de_agentes>
 
 <primer_paso>
