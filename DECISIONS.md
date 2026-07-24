@@ -2143,4 +2143,44 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-07-24
+- **Decisión:** [fix] Añadida una excepción explícita en la sección "Reglas de peso y
+  progresión" de `skills/sesion-entrenamiento/SKILL.md`: si el ejercicio es a peso corporal
+  (sin carga externa — Burpees, Dominadas, Flexiones, Plancha, y cualquier otro que
+  conceptualmente no use mancuernas ni lastre), la IA no propone ningún peso orientativo ni
+  escribe un número, lo indica como "a peso corporal" (o equivalente) y deja el campo de peso
+  sin informar en la llamada a `log_session`/`edit_session`. La excepción se declara con
+  prioridad explícita sobre las dos reglas siguientes de la misma sección (que ahora se
+  circunscriben a "ejercicio con carga externa").
+- **Causa raíz real (no solo el síntoma ya arreglado):** la ronda anterior ("peso corporal
+  opcional", ver entradas de 2026-07-22/2026-07-24 más arriba) corrigió que `peso_kg` fuera
+  opcional en `serieSchema`/`StrengthSet.weightKg`, lo que permite que la IA *pueda* omitir el
+  peso sin que falle la validación — pero no tocó el prompt que la lleva a inventarlo. La
+  instrucción original de "Reglas de peso y progresión" decía, sin excepción, que ante
+  cualquier ejercicio sin historial había que "proponer un peso orientativo... y decirlo
+  explícitamente", sin distinguir un ejercicio con mancuernas de uno a peso corporal. Como
+  `skills/sesion-entrenamiento/SKILL.md` es literalmente el `system` prompt de la generación
+  in-app (`read-skill.ts` solo le quita el frontmatter, confirmado leyendo ese fichero antes de
+  tocar nada — ver también la lección de 2026-07-21 sobre este mismo fichero cumpliendo doble
+  rol), el modelo seguía la regla al pie de la letra e inventaba un peso (p. ej. "0,1") para
+  Burpees. El fix del esquema evitaba que ese dato inventado rompiera el guardado, pero no
+  evitaba que se generase.
+- **Alternativas consideradas:** dejar que la IA siga proponiendo un peso simbólico bajo (p.
+  ej. "0 kg" o "sin peso adicional") en vez de omitir el campo — descartada por ser la misma
+  clase de dato inventado que causó el bug original, solo con un número distinto; validar y
+  corregir el peso inventado en post-procesado del lado servidor en vez de en el prompt —
+  descartada por atacar el síntoma en un punto más tarde del flujo cuando la causa (la
+  instrucción del prompt) es directamente corregible y más simple de mantener.
+- **Justificación:** corregir la causa en el prompt, no solo el síntoma en el esquema, evita
+  que la IA siga generando datos semánticamente incorrectos (un peso donde no lo hay) aunque
+  ya no rompan la validación — relevante también para la skill standalone (fuera de la app),
+  que comparte el mismo fichero y nunca pasó por el fix de esquema de la app.
+- **Lecciones aprendidas:** ninguna nueva — esta ronda es la aplicación directa de la lección ya
+  registrada el 2026-07-21 ("el mismo fichero `SKILL.md` cumple dos roles a la vez... un cambio
+  de contenido aquí afecta el comportamiento real de la IA en producción"): se verificó nombre
+  y comportamiento exacto de `read-skill.ts` antes de asumir que un cambio de redacción era "solo
+  texto", y el cambio fue por PR + CI, no commit directo, precisamente por esa razón.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
