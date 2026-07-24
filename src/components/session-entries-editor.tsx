@@ -6,6 +6,7 @@ import {
   type CardioMetricKey,
   type RegistroState,
 } from "@/lib/session-proposal/build-initial-registros";
+import { parseMinutesSeconds } from "@/lib/duration-format";
 
 // Componente compartido entre /sesion (crear) y /historial (editar): antes
 // vivía duplicado dentro de session-form.tsx. Se extrajo aquí (en vez de a
@@ -20,17 +21,57 @@ import {
 export type ExerciseType = "STRENGTH" | "CARDIO";
 export type ExerciseOption = { id: string; name: string; type: ExerciseType };
 
-export const CARDIO_FIELDS: { field: CardioMetricKey; label: string }[] = [
-  { field: "duracion", label: "Duración (s)" },
-  { field: "distancia_km", label: "Distancia (km)" },
-  { field: "velocidad_media", label: "Vel. media (km/h)" },
-  { field: "ritmo_medio", label: "Ritmo medio (s/km)" },
-  { field: "frecuencia_cardiaca_media", label: "FC media" },
-  { field: "frecuencia_cardiaca_maxima", label: "FC máxima" },
-  { field: "pasos", label: "Pasos" },
-  { field: "frecuencia_paso", label: "Cadencia" },
-  { field: "kcal", label: "Kcal" },
-  { field: "RPE", label: "RPE" },
+// "mm:ss": texto libre en formato minutos:segundos (duración/ritmo), que el
+// corredor piensa así en vez de en segundos totales — ver DECISIONS.md.
+// "decimal": campos que admiten coma o punto (toNumber() normaliza) — deben
+// ser type="text", no type="number": un <input type="number"> nunca deja
+// llegar una coma a su .value (el navegador la descarta o la rechaza según
+// locale), así que la tolerancia de toNumber() no tendría ningún efecto real
+// si se dejaran como number. "integer": el resto de métricas (conteos:
+// pulsaciones, pasos, kcal, RPE), sin cambio de tipo ni placeholder.
+export type CardioFieldKind = "integer" | "decimal" | "mm:ss";
+
+export const CARDIO_FIELDS: {
+  field: CardioMetricKey;
+  label: string;
+  kind: CardioFieldKind;
+  placeholder?: string;
+}[] = [
+  {
+    field: "duracion",
+    label: "Duración (mm:ss)",
+    kind: "mm:ss",
+    placeholder: "ej: 8:30",
+  },
+  {
+    field: "distancia_km",
+    label: "Distancia (km)",
+    kind: "decimal",
+    placeholder: "ej: 5,2",
+  },
+  {
+    field: "velocidad_media",
+    label: "Vel. media (km/h)",
+    kind: "decimal",
+    placeholder: "ej: 10,5",
+  },
+  {
+    field: "ritmo_medio",
+    label: "Ritmo medio (min:seg/km)",
+    kind: "mm:ss",
+    placeholder: "ej: 5:30",
+  },
+  { field: "frecuencia_cardiaca_media", label: "FC media", kind: "integer" },
+  { field: "frecuencia_cardiaca_maxima", label: "FC máxima", kind: "integer" },
+  { field: "pasos", label: "Pasos", kind: "integer" },
+  {
+    field: "frecuencia_paso",
+    label: "Cadencia",
+    kind: "decimal",
+    placeholder: "ej: 170,5",
+  },
+  { field: "kcal", label: "Kcal", kind: "integer" },
+  { field: "RPE", label: "RPE", kind: "integer" },
 ];
 
 // Derivado de RegistroState (no redefinido a mano) para no desincronizarse
@@ -61,10 +102,28 @@ function emptyCardioMetrics(): Record<CardioMetricKey, string> {
   };
 }
 
+// Normaliza coma decimal a punto antes de Number(): un valor prellenado por
+// la IA (o tecleado en un dispositivo con locale es-ES) como "0,1" da NaN en
+// Number("0,1") sin normalizar, descartando el dato en silencio sin avisar
+// — el fallo que reportó el usuario. Aplica a todos los campos numéricos
+// del editor (peso, distancia, velocidad, FC, cadencia, kcal, RPE).
 function toNumber(value: string): number | undefined {
-  if (value.trim() === "") return undefined;
-  const parsed = Number(value);
+  const trimmed = value.trim();
+  if (trimmed === "") return undefined;
+  const normalized = trimmed.replace(",", ".");
+  const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+// duracion/ritmo_medio se teclean en mm:ss pero el contrato de
+// validate-session.ts/Prisma sigue siendo segundos totales — ver
+// DECISIONS.md. Un formato inválido no lanza aquí (se resuelve a
+// `undefined`, igual que el resto de campos opcionales), pero el usuario ya
+// ve un aviso inline mientras edita (ver CARDIO_FIELDS/JSX más abajo) en vez
+// de que el dato se descarte sin explicación.
+function toSecondsFromMinutesSeconds(value: string): number | undefined {
+  const result = parseMinutesSeconds(value);
+  return result.success ? result.seconds : undefined;
 }
 
 function toOptionalText(value: string): string | undefined {
@@ -94,10 +153,10 @@ function buildSessionEntriesPayload(registros: RegistroState[]) {
       tipo: "cardio" as const,
       ejercicio: registro.ejercicio,
       notas: toOptionalText(registro.notas),
-      duracion: toNumber(registro.duracion),
+      duracion: toSecondsFromMinutesSeconds(registro.duracion),
       distancia_km: toNumber(registro.distancia_km),
       velocidad_media: toNumber(registro.velocidad_media),
-      ritmo_medio: toNumber(registro.ritmo_medio),
+      ritmo_medio: toSecondsFromMinutesSeconds(registro.ritmo_medio),
       frecuencia_cardiaca_media: toNumber(registro.frecuencia_cardiaca_media),
       frecuencia_cardiaca_maxima: toNumber(registro.frecuencia_cardiaca_maxima),
       pasos: toNumber(registro.pasos),
@@ -339,10 +398,15 @@ export function SessionEntriesEditor({
                   </label>
                   <label className="flex flex-col text-xs">
                     Peso (kg)
+                    {/* type="text" (no "number"): un <input type="number">
+                        nunca deja llegar una coma a su .value, así que la
+                        tolerancia a coma decimal de toNumber() no tendría
+                        ningún efecto real si este campo siguiera siendo
+                        number — ver comentario de CardioFieldKind. */}
                     <input
-                      type="number"
-                      step="0.5"
+                      type="text"
                       inputMode="decimal"
+                      placeholder="ej: 82,5"
                       value={serie.peso_kg}
                       onChange={(event) =>
                         updateSerie(
@@ -410,19 +474,61 @@ export function SessionEntriesEditor({
             </>
           ) : (
             <div className="grid grid-cols-2 gap-2">
-              {CARDIO_FIELDS.map(({ field, label }) => (
-                <label key={field} className="flex flex-col text-xs">
-                  {label}
-                  <input
-                    type="number"
-                    value={registro[field]}
-                    onChange={(event) =>
-                      updateCardioField(registro.key, field, event.target.value)
-                    }
-                    className="rounded-md border border-black/15 px-2 py-1 dark:border-white/20"
-                  />
-                </label>
-              ))}
+              {CARDIO_FIELDS.map(({ field, label, kind, placeholder }) => {
+                const value = registro[field];
+                // Aviso inline en vez de fallo mudo: un mm:ss mal escrito
+                // (no vacío) se muestra al usuario de inmediato mientras
+                // edita, en vez de convertirse en `undefined` sin que se
+                // entere de que su dato no se guardó — el mismo tipo de
+                // fallo silencioso que motivó este cambio (ver DECISIONS.md).
+                const invalidMmSs =
+                  kind === "mm:ss" &&
+                  value.trim() !== "" &&
+                  !parseMinutesSeconds(value).success;
+
+                return (
+                  <label key={field} className="flex flex-col text-xs">
+                    {label}
+                    <input
+                      type={kind === "integer" ? "number" : "text"}
+                      inputMode={
+                        kind === "mm:ss"
+                          ? "text"
+                          : kind === "decimal"
+                            ? "decimal"
+                            : "numeric"
+                      }
+                      placeholder={placeholder}
+                      pattern={
+                        kind === "mm:ss" ? "\\d{1,3}:[0-5]\\d" : undefined
+                      }
+                      title={
+                        kind === "mm:ss"
+                          ? "Formato minutos:segundos, ej. 8:30"
+                          : undefined
+                      }
+                      aria-invalid={invalidMmSs || undefined}
+                      value={value}
+                      onChange={(event) =>
+                        updateCardioField(
+                          registro.key,
+                          field,
+                          event.target.value,
+                        )
+                      }
+                      className="rounded-md border border-black/15 px-2 py-1 dark:border-white/20"
+                    />
+                    {invalidMmSs ? (
+                      <span
+                        role="alert"
+                        className="text-[11px] text-red-600 dark:text-red-400"
+                      >
+                        Formato inválido: usa min:seg, ej. 8:30.
+                      </span>
+                    ) : null}
+                  </label>
+                );
+              })}
             </div>
           )}
 

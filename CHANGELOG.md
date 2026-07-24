@@ -414,3 +414,16 @@ Proyecto sin versión publicada todavía.
   calcular el máximo/volumen de un ejercicio; y el listado de solo lectura de
   `/historial` (`session-history-section.tsx`) muestra "N reps (peso corporal)" en vez de
   inventar un "0kg" o mostrar "null" literal. Ver DECISIONS.md 2026-07-22.
+- **Formulario de cardio confuso para un corredor real**: "Duración (s)" y "Ritmo medio (s/km)"
+  pedían segundos totales, pero un corredor los piensa en minutos/mm:ss ("8:30", no "510").
+  Ahora ambos campos aceptan texto libre en formato mm:ss (`Duración (mm:ss)`, `Ritmo medio
+  (min:seg/km)`), convertido a segundos por `parseMinutesSeconds`/mostrado con
+  `formatSecondsAsMinutesSeconds` (`src/lib/duration-format.ts`) — el contrato interno en
+  segundos (Prisma/Zod) no cambia. Un formato inválido (no vacío) muestra un aviso inline
+  ("Formato inválido: usa min:seg, ej. 8:30") en vez de descartarse en silencio. Además,
+  `toNumber()` en `session-entries-editor.tsx` ahora normaliza coma decimal a punto antes de
+  `Number()` (afectaba a peso, distancia, velocidad y cadencia: un valor como "0,1" daba `NaN`
+  sin avisar), y los campos decimales relevantes pasan de `type="number"` a `type="text"` con
+  placeholders de ejemplo ("ej: 82,5", "ej: 5,2") — un `<input type="number">` nunca deja llegar
+  una coma a su `.value`, así que la tolerancia de `toNumber()` no tendría ningún efecto real si
+  se hubieran dejado como number. Ver DECISIONS.md.

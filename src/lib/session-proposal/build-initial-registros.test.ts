@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildInitialRegistros } from "./build-initial-registros";
+import {
+  buildInitialRegistros,
+  type SessionEntryInitialData,
+} from "./build-initial-registros";
 
 describe("buildInitialRegistros", () => {
   it("convierte un ejercicio de fuerza a estado local (todo strings)", () => {
@@ -25,6 +28,33 @@ describe("buildInitialRegistros", () => {
       ],
     });
     expect(registro.key).toBeTruthy();
+  });
+
+  // El peso corporal pasa a ser opcional en Prisma/validate-session.ts en una
+  // PR paralela (Developer 1), que ensancha peso_kg a `number | null` en este
+  // mismo DTO. Este cast documenta que buildInitialRegistros ya es robusto a
+  // ese caso *antes* de que el tipo llegue ensanchado tras el merge: sin
+  // toInputString, String(null)/String(undefined) mostrarían literalmente
+  // "null"/"undefined" en el campo de edición en vez de dejarlo vacío — el
+  // mismo tipo de fallo silencioso (aquí, visible pero sin sentido) que
+  // motivó el bug de mm:ss/coma decimal de esta misma ronda.
+  it("no muestra 'null'/'undefined' en el campo de peso cuando no viene informado (peso opcional)", () => {
+    const entries = [
+      {
+        tipo: "fuerza",
+        ejercicio: "Sentadilla",
+        series: [
+          { reps: 5, peso_kg: null },
+          { reps: 5, peso_kg: undefined },
+        ],
+      },
+    ] as unknown as SessionEntryInitialData[];
+
+    const [registro] = buildInitialRegistros(entries);
+
+    expect(registro).toMatchObject({
+      series: [{ peso_kg: "" }, { peso_kg: "" }],
+    });
   });
 
   it("usa cadena vacía como notas cuando no vienen informadas (null o undefined)", () => {
@@ -57,14 +87,29 @@ describe("buildInitialRegistros", () => {
       },
     ]);
 
+    // duracion se guarda en segundos (1800) pero se precarga en mm:ss
+    // ("30:00"): un corredor piensa la duración en minutos, no en segundos
+    // totales — ver DECISIONS.md.
     expect(registro).toMatchObject({
       tipo: "cardio",
       ejercicio: "Carrera",
-      duracion: "1800",
+      duracion: "30:00",
       distancia_km: "5",
       velocidad_media: "",
       RPE: "6",
     });
+  });
+
+  it("precarga ritmo_medio (segundos/km guardados) también en mm:ss", () => {
+    const [registro] = buildInitialRegistros([
+      {
+        tipo: "cardio",
+        ejercicio: "Carrera",
+        ritmo_medio: 330,
+      },
+    ]);
+
+    expect(registro).toMatchObject({ tipo: "cardio", ritmo_medio: "5:30" });
   });
 
   it("asigna una clave distinta y no vacía a cada registro convertido, en el mismo orden de entrada", () => {

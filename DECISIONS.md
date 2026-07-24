@@ -2005,25 +2005,99 @@ confirmado con Playwright contra la URL real, no una hipótesis.
   (no como "positivo relajado a incluir cero") mantiene la regla de negocio real intacta: un
   peso de 0 kg o negativo sigue sin tener sentido físico cuando sí se informa.
 - **Lecciones aprendidas:**
-  - Coordinación de scope con el Developer paralelo (`fix/peso-opcional-ui`, mismo bug, mitad
-    UI): el encargo de esta ronda marcó explícitamente `session-entries-editor.tsx` y
-    `build-initial-registros.ts` como fuera de alcance para evitar pisarse. Sin embargo, el tipo
-    compartido `SessionEntryInitialData` (declarado en `build-initial-registros.ts`) tiene
-    `series[].peso_kg: number` no-nullable, y tres puntos de la app (`to-session-history-entry.
-    ts`, `session-history-section.tsx`, `src/app/sesion/actions.ts` en el flujo de IA) empiezan
-    a producir legítimamente `number | null`/`undefined` en cuanto `StrengthSet.weightKg` pasa a
-    nullable — `npm run typecheck` lo confirmó con errores reales en los tres sitios, no una
-    suposición. No tocar ese tipo habría dejado el build roto de forma irresoluble desde este
-    lado. Se hizo el ensanchamiento mínimo posible (`peso_kg?: number | null`, un solo campo,
-    sin tocar ninguna lógica de parseo/conversión a string de ese mismo fichero) y se documenta
-    aquí explícitamente para que el Tech Lead lo tenga en cuenta al revisar/mergear ambas PRs en
-    paralelo: la conversión a string de edición de ese campo (`String(serie.peso_kg)`, que
-    produciría el string literal `"null"` si no se ajusta) sigue pendiente del lado UI. Confirma
-    la lección ya registrada en la ronda del servidor MCP (fase 1): un contrato de dominio
-    compartido entre dos agentes en paralelo puede acabar necesitando un toque mínimo en el
-    "territorio" del otro cuando el tipo en sí, no solo la lógica que lo rodea, es el punto de
-    acoplamiento — la alternativa (bloquear la PR sin resolver el build) es peor que un cambio de
-    tipo de una línea, claramente señalado.
+  - Coordinación de scope con el Developer paralelo (`feature/formato-duracion-ritmo-cardio`,
+    mismo bug, mitad UI): el encargo de esta ronda marcó explícitamente
+    `session-entries-editor.tsx` y `build-initial-registros.ts` como fuera de alcance para evitar
+    pisarse. Sin embargo, el tipo compartido `SessionEntryInitialData` (declarado en
+    `build-initial-registros.ts`) tiene `series[].peso_kg: number` no-nullable, y tres puntos de
+    la app (`to-session-history-entry.ts`, `session-history-section.tsx`,
+    `src/app/sesion/actions.ts` en el flujo de IA) empiezan a producir legítimamente
+    `number | null`/`undefined` en cuanto `StrengthSet.weightKg` pasa a nullable — `npm run
+    typecheck` lo confirmó con errores reales en los tres sitios, no una suposición. No tocar ese
+    tipo habría dejado el build roto de forma irresoluble desde este lado. Se hizo el
+    ensanchamiento mínimo posible (`peso_kg?: number | null`, un solo campo, sin tocar ninguna
+    lógica de parseo/conversión a string de ese mismo fichero) y se documenta aquí explícitamente
+    para que el Tech Lead lo tenga en cuenta al revisar/mergear ambas PRs en paralelo: la
+    conversión a string de edición de ese campo (`String(serie.peso_kg)`, que produciría el
+    string literal `"null"` si no se ajusta) sigue pendiente del lado UI. Confirma la lección ya
+    registrada en la ronda del servidor MCP (fase 1): un contrato de dominio compartido entre dos
+    agentes en paralelo puede acabar necesitando un toque mínimo en el "territorio" del otro
+    cuando el tipo en sí, no solo la lógica que lo rodea, es el punto de acoplamiento — la
+    alternativa (bloquear la PR sin resolver el build) es peor que un cambio de tipo de una
+    línea, claramente señalado.
+
+---
+
+- **Fecha:** 2026-07-22
+- **Decisión:** Corrección de dos fallos de formato en el formulario de cardio
+  (`session-entries-editor.tsx`), reportados por un corredor real: (1) `duracion` y
+  `ritmo_medio` pasan de segundos totales (`type="number"`) a texto libre en formato mm:ss
+  (`Duración (mm:ss)`, `Ritmo medio (min:seg/km)`, ej. "8:30"), convertidos con dos funciones
+  puras nuevas — `parseMinutesSeconds`/`formatSecondsAsMinutesSeconds` en
+  `src/lib/duration-format.ts` (no dentro de `session-entries-editor.tsx`, que es `"use
+  client"`: build-initial-registros.ts también las necesita para precargar una sesión ya
+  guardada, y el resumen de solo lectura de `/historial` para mostrarla — mismo criterio de
+  separación ya documentado el 2026-07-19 para `buildInitialRegistros`). El contrato interno en
+  segundos (`durationSeconds`/`avgPaceSecPerKm: Int?` de Prisma, `validate-session.ts`) no
+  cambia: la conversión ocurre solo en la capa de UI, en ambos sentidos (parseo al construir el
+  payload de guardado, formateo al precargar/mostrar un valor ya guardado). (2) `toNumber()`
+  normaliza coma decimal a punto (`"0,1".replace(",", ".")`) antes de `Number()`: sin
+  normalizar, `Number("0,1")` da `NaN` y el valor se descartaba en silencio sin avisar al
+  usuario — el fallo real que motivó el reporte, ya que un valor prellenado por la IA como
+  "0.1" podía acabar leyéndose con coma en algún dispositivo. Los campos con decimales
+  afectados por (2) (peso de fuerza, distancia, velocidad media, cadencia) pasan de
+  `type="number"` a `type="text"` con `inputMode="decimal"` y un placeholder de ejemplo ("ej:
+  82,5", "ej: 5,2"), con placeholders análogos en mm:ss ("ej: 8:30", "ej: 5:30").
+- **Alternativas consideradas:**
+  - Mantener los campos decimales como `type="number"` y solo tocar `toNumber()` — descartada
+    tras comprobar que un `<input type="number">` normaliza su `.value` a un número JS válido
+    (siempre con `.`, nunca con `,`) o lo deja vacío/inválido: el navegador nunca deja llegar
+    una coma literal a `.value` en ese tipo de input, así que la tolerancia de `toNumber()` no
+    tendría ningún efecto real sin este cambio de tipo — la corrección de (2) exige el cambio
+    de `type="number"` a `type="text"` para tener algún efecto observable.
+  - Normalizar en silencio los segundos fuera de rango dentro de un mm:ss (p. ej. "8:75" →
+    "9:15", arrastrando el minuto) en vez de rechazarlos — descartada por repetir el mismo tipo
+    de fallo mudo que motivó este cambio: un mm:ss real no permite segundos ≥ 60, así que
+    "corregirlo" en silencio sería una interpretación no solicitada del dato que el usuario
+    tecleó, sin decírselo.
+  - Bloquear el envío del formulario completo (deshabilitar el botón "Guardar" del padre)
+    cuando hay un mm:ss inválido, vía un prop `onValidationChange` adicional — descartada por
+    desproporcionada frente al problema real: el aviso inline (`role="alert"`) ya dice
+    claramente qué está mal y dónde, sin necesidad de propagar un estado de validez cruzando el
+    límite `SessionEntriesEditor` → `SessionForm`/`SessionEntryEditForm` (dos componentes que no
+    tenían ninguna razón previa para conocer nada más que el conteo de `registros`). Un mm:ss
+    inválido se resuelve a `undefined` al construir el payload — el mismo comportamiento que ya
+    tenía cualquier otro campo numérico vacío u opcional — pero ahora con un aviso visible
+    mientras se edita, en vez de sin ninguno.
+- **Justificación:** el contrato Zod/Prisma en segundos es el que ya consumen la skill
+  "sesion-entrenamiento" y el servidor MCP (`log_session`/`edit_session`), así que cambiarlo
+  habría exigido tocar `validate-session.ts`/`create-session.ts`/`update-session.ts` (fuera del
+  alcance de este cambio, asignado en paralelo a otro Developer) y desincronizar la app de la
+  skill. Resolverlo solo en la capa de UI (parseo/formato en la frontera del formulario) es la
+  superficie mínima de cambio que arregla la confusión real reportada sin tocar ese contrato.
+- **Lecciones aprendidas:**
+  - Confirmado en la práctica lo que ya predecía el razonamiento de la primera alternativa
+    descartada: la tolerancia a coma decimal de `toNumber()` es necesaria pero no suficiente
+    por sí sola — sin cambiar también el `type` del `<input>` de "number" a "text", el
+    navegador ya habría descartado la coma antes de que `toNumber()` llegara a verla. Cualquier
+    fix futuro de "aceptar un carácter que el usuario tecleó tal cual" debe revisar primero si
+    el tipo de input nativo ya lo está filtrando en el propio DOM, antes de asumir que basta con
+    tocar la función de parseo.
+  - El Tech Lead avisó a mitad de esta ronda de que la PR paralela de Developer 1 (peso
+    corporal opcional) ensancha `peso_kg` a `number | null` en este mismo DTO compartido
+    (`SessionEntryInitialData`, `build-initial-registros.ts`). En este fichero,
+    `buildInitialRegistros` convertía `peso_kg` con `String(serie.peso_kg)` en vez de con
+    `toInputString` (la misma función ya usada para `RPE`, que sí es nullable) — con el tipo
+    ensanchado tras el merge, un peso ausente habría mostrado literalmente el texto `"null"` en
+    el campo de edición de una serie de fuerza, en vez de dejarlo vacío. Corregido de forma
+    preventiva (usando `toInputString` también para `peso_kg`) antes de que el tipo llegue
+    ensanchado, con un test que fuerza el caso vía cast (`as unknown as
+    SessionEntryInitialData[]`, ya que el tipo declarado en esta rama todavía no admite
+    `null`). Confirma que compartir un mismo fichero de dominio entre dos PRs paralelas exige
+    que cada Developer revise activamente el impacto del cambio del otro en su propio código,
+    no solo confiar en que el conflicto de merge lo resolverá el Tech Lead — el conflicto de
+    líneas es trivial, pero el fallo de comportamiento (mostrar "null") no lo habría detectado
+    ningún test existente sin este aviso explícito.
 
 ---
 

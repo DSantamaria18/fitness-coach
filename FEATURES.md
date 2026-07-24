@@ -62,6 +62,15 @@ cambio relevante.
   "sesion-entrenamiento": series/reps/tempo/peso/RPE para fuerza; duración, distancia,
   velocidad/ritmo medio, frecuencia cardiaca media/máxima, pasos, frecuencia de paso y kcal
   (todos opcionales) para cardio.
+- Duración y ritmo medio de cardio se teclean/muestran en formato mm:ss (`Duración (mm:ss)`,
+  `Ritmo medio (min:seg/km)`, ej. "8:30"), no en segundos totales: un corredor piensa la
+  duración en minutos, no en segundos — el contrato interno (Prisma `durationSeconds`/
+  `avgPaceSecPerKm: Int?`, `validate-session.ts`) sigue siendo segundos, la conversión ocurre
+  solo en la capa de UI (`src/lib/duration-format.ts`). Un mm:ss con formato inválido (no
+  vacío) muestra un aviso inline en vez de guardarse en silencio como si no se hubiera
+  informado. Los campos numéricos con decimales (peso, distancia, velocidad media, cadencia)
+  aceptan indistintamente coma o punto como separador decimal, con un placeholder de ejemplo
+  ("ej: 82,5") para que el formato quede claro. Ver DECISIONS.md.
 - Validación de forma con Zod (`validate-session.ts`) y de existencia del ejercicio en el
   catálogo, incluyendo que su tipo (fuerza/cardio) coincida (`create-session.ts`) — la
   existencia se valida contra la base de datos, no en el esquema Zod puro.
@@ -133,6 +142,11 @@ cambio relevante.
   `"use client"`) porque también lo invoca la Server Action `generateSessionProposalAction`
   (ver "Propuesta de sesión con IA" más abajo) — RSC prohíbe llamar desde el servidor a una
   función exportada por un módulo cliente, ver DECISIONS.md 2026-07-19.
+- `src/lib/duration-format.ts` — conversores puros `parseMinutesSeconds`/
+  `formatSecondsAsMinutesSeconds` entre el mm:ss que teclea/lee un corredor ("8:30") y los
+  segundos totales del contrato existente. Usados por `session-entries-editor.tsx` (parseo al
+  construir el payload de guardado) y por `build-initial-registros.ts`/el resumen de solo
+  lectura de `/historial` (formateo al precargar/mostrar una sesión ya guardada).
 
 ## Backup manual
 

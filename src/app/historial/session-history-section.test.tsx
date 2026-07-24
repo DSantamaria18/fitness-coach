@@ -120,8 +120,10 @@ describe("SessionHistorySection", () => {
     );
 
     expect(screen.getByText("15/06/2026")).toBeInTheDocument();
+    // duracion se guarda en segundos (1800) pero se muestra en mm:ss
+    // ("30:00"), igual que el propio label "Duración (mm:ss)" ya anuncia.
     expect(
-      screen.getByText(/Duración \(s\): 1800 · Distancia \(km\): 5/),
+      screen.getByText(/Duración \(mm:ss\): 30:00 · Distancia \(km\): 5/),
     ).toBeInTheDocument();
   });
 
@@ -167,7 +169,10 @@ describe("SessionHistorySection", () => {
     const duracionInput = screen.getByLabelText(
       /duración/i,
     ) as HTMLInputElement;
-    expect(duracionInput.value).toBe("1800");
+    // duracion se guarda en segundos (1800) pero se precarga en el
+    // formulario de edición en mm:ss ("30:00") — un corredor piensa la
+    // duración en minutos, no en segundos totales (ver DECISIONS.md).
+    expect(duracionInput.value).toBe("30:00");
   });
 
   it("muestra el error de la Server Action en el formulario de edición", async () => {
