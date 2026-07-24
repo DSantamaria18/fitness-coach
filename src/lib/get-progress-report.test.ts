@@ -285,6 +285,59 @@ describe("getProgressReport", () => {
       });
       expect(cardioEntryFindManyMock).not.toHaveBeenCalled();
     });
+
+    // Ejercicios a peso corporal (Burpees, Dominadas...) guardan weightKg
+    // null (ver DECISIONS.md): no deben romper el cálculo de peso
+    // máximo/volumen, y contribuyen como 0 kg (no hay carga externa que
+    // sumar) en vez de ensuciar el máximo o el volumen con NaN.
+    it("trata las series sin peso (null) como 0 kg al calcular el máximo y el volumen", async () => {
+      exerciseFindFirstMock.mockResolvedValue({
+        id: "ex-3",
+        name: "Burpees",
+        type: "STRENGTH",
+        createdAt: new Date(),
+      } as never);
+      strengthEntryFindManyMock.mockResolvedValue([
+        {
+          id: "se-2",
+          sessionId: "s-4",
+          exerciseId: "ex-3",
+          notes: null,
+          order: 0,
+          session: { id: "s-4", date: new Date("2026-06-04T00:00:00.000Z") },
+          sets: [
+            {
+              id: "set-3",
+              order: 0,
+              reps: 12,
+              weightKg: null,
+              tempo: null,
+              rpe: null,
+            },
+          ],
+        },
+      ] as never);
+
+      const result = await getProgressReport("user-1", {
+        ejercicio: "Burpees",
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.exercise).toEqual({
+          exercise: "Burpees",
+          type: "STRENGTH",
+          points: [
+            {
+              sessionId: "s-4",
+              date: new Date("2026-06-04T00:00:00.000Z"),
+              maxWeightKg: 0,
+              totalVolumeKg: 0,
+            },
+          ],
+        });
+      }
+    });
   });
 
   describe("progreso de un ejercicio de cardio", () => {

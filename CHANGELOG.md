@@ -395,6 +395,25 @@ Proyecto sin versión publicada todavía.
   en el proyecto `mobile-chromium`, en 6 pushes seguidos desde el commit directo a `master` que
   amplió el catálogo). Corregido añadiendo `min-w-0` al `<select>` en
   `src/components/session-entries-editor.tsx`. Ver DECISIONS.md 2026-07-21.
+- **[Crítico]** No se podía guardar una sesión con un ejercicio de fuerza a peso corporal
+  (p. ej. Burpees, sugerido por la IA con un peso inventado "0,1" al no tener otra opción): el
+  guardado fallaba siempre con el mensaje genérico "Revisa los ejercicios y la fecha
+  introducidos.", sin ningún rastro en logs (ni consola ni Vercel). Causa raíz:
+  `serieSchema.peso_kg` (`validate-session.ts`) exigía un número positivo obligatorio para toda
+  serie de fuerza, sin excepción para ejercicios sin carga externa, y ese mismo esquema es
+  literalmente el `inputSchema` que usa la tool de propuesta de sesión con IA
+  (`src/lib/session-proposal/tools.ts`) — el problema afectaba igual al formulario manual y a
+  la IA. Además, `create-session.ts`/`update-session.ts` descartaban `validation.error.issues`
+  sin loguear nada al fallar, repitiendo el mismo patrón de "error swallowing" ya corregido en
+  `generate-session-proposal.ts` (ver entrada de más arriba). Corregido: `peso_kg` pasa a
+  opcional en `serieSchema` (sigue rechazando 0/negativo cuando SÍ se informa — solo cambia la
+  ausencia del campo); `StrengthSet.weightKg` pasa a `Float?` en el esquema Prisma (migración no
+  destructiva, `make_weight_kg_optional`); `console.error` con los `issues` de Zod en
+  `create-session.ts`/`update-session.ts` al fallar la validación, mismo estilo que
+  `generate-session-proposal.ts`; `get-progress-report.ts` trata una serie sin peso como 0 kg al
+  calcular el máximo/volumen de un ejercicio; y el listado de solo lectura de
+  `/historial` (`session-history-section.tsx`) muestra "N reps (peso corporal)" en vez de
+  inventar un "0kg" o mostrar "null" literal. Ver DECISIONS.md 2026-07-22.
 - **Formulario de cardio confuso para un corredor real**: "Duración (s)" y "Ritmo medio (s/km)"
   pedían segundos totales, pero un corredor los piensa en minutos/mm:ss ("8:30", no "510").
   Ahora ambos campos aceptan texto libre en formato mm:ss (`Duración (mm:ss)`, `Ritmo medio

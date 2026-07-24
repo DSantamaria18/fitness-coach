@@ -40,11 +40,18 @@ function toDateInputValue(iso: string) {
 
 function formatSerie(serie: {
   reps: number;
-  peso_kg: number;
+  peso_kg?: number | null;
   tempo?: string | null;
   RPE?: number | null;
 }) {
-  const parts = [`${serie.reps}×${serie.peso_kg}kg`];
+  // Ejercicios a peso corporal (Burpees, Dominadas...) no tienen carga
+  // externa que mostrar (ver DECISIONS.md): "12 reps" en vez de inventar un
+  // "0kg" o mostrar el "null" literal.
+  const parts = [
+    serie.peso_kg != null
+      ? `${serie.reps}×${serie.peso_kg}kg`
+      : `${serie.reps} reps (peso corporal)`,
+  ];
   if (serie.tempo) parts.push(`tempo ${serie.tempo}`);
   if (serie.RPE != null) parts.push(`RPE ${serie.RPE}`);
   return parts.join(" · ");

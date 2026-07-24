@@ -174,12 +174,15 @@ async function getExerciseProgress(
       points: entries.map((entry) => ({
         sessionId: entry.sessionId,
         date: entry.session.date,
+        // Series de ejercicios a peso corporal (Burpees, Dominadas...)
+        // guardan weightKg null (ver DECISIONS.md): no aportan carga externa
+        // al máximo ni al volumen, así que cuentan como 0, no como NaN.
         maxWeightKg: entry.sets.reduce(
-          (max, set) => Math.max(max, set.weightKg),
+          (max, set) => Math.max(max, set.weightKg ?? 0),
           0,
         ),
         totalVolumeKg: entry.sets.reduce(
-          (sum, set) => sum + set.reps * set.weightKg,
+          (sum, set) => sum + set.reps * (set.weightKg ?? 0),
           0,
         ),
       })),

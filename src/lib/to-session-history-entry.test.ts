@@ -24,6 +24,7 @@ function buildDomainSession(overrides: {
 function strengthEntry(
   order: number,
   exerciseName: string,
+  weightKg: number | null = 100,
 ): DomainSessionHistoryEntry["strengthEntries"][number] {
   return {
     id: `strength-${order}`,
@@ -43,7 +44,7 @@ function strengthEntry(
         strengthEntryId: `strength-${order}`,
         order: 0,
         reps: 5,
-        weightKg: 100,
+        weightKg,
         tempo: null,
         rpe: null,
       },
@@ -140,6 +141,24 @@ describe("toSessionHistoryEntry", () => {
       frecuencia_paso: null,
       kcal: null,
       RPE: null,
+    });
+  });
+
+  // Ejercicios a peso corporal (Burpees, Dominadas...) no tienen carga
+  // externa: weightKg llega a null desde Prisma y debe conservarse tal cual,
+  // no inventar un número (ver DECISIONS.md).
+  it("conserva weightKg null en una serie de un ejercicio a peso corporal", () => {
+    const session = buildDomainSession({
+      strengthEntries: [strengthEntry(0, "Burpees", null)],
+    });
+
+    const result = toSessionHistoryEntry(session);
+
+    expect(result.ejercicios[0]).toEqual({
+      tipo: "fuerza",
+      ejercicio: "Burpees",
+      notas: null,
+      series: [{ reps: 5, peso_kg: null, tempo: null, RPE: null }],
     });
   });
 });

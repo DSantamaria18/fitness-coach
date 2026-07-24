@@ -79,6 +79,10 @@ cambio relevante.
   escritura de algún ejercicio a mitad.
 - Endpoint `POST /api/sessions` comparte la misma lógica de dominio que la Server Action del
   formulario `/sesion` (mismo patrón que peso: una sola fuente de verdad).
+- El peso de una serie de fuerza es opcional: ejercicios a peso corporal (Burpees, Dominadas,
+  Flexiones...) no necesitan un número inventado. Solo la ausencia del campo cambia — un peso
+  de 0 kg o negativo sigue sin ser válido cuando sí se informa. El historial de solo lectura
+  muestra "N reps (peso corporal)" para esas series (ver DECISIONS.md 2026-07-22).
 - La página `/sesion` fuerza renderizado dinámico (`export const dynamic = "force-dynamic"`)
   por estar protegida por `proxy.ts`: nunca puede servirse como contenido estático generado en
   build time.

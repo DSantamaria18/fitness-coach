@@ -20,6 +20,12 @@ export async function updateSession(
 ): Promise<UpdateSessionResult> {
   const validation = validateSession(input);
   if (!validation.success) {
+    // Mismo motivo que create-session.ts: sin esto, un fallo de validación
+    // no dejaba ningún rastro en logs (ver DECISIONS.md).
+    console.error(
+      "[updateSession] VALIDATION_ERROR: el input no pasó validateSession.",
+      { code: "VALIDATION_ERROR", issues: validation.error.issues },
+    );
     return {
       success: false,
       error: {

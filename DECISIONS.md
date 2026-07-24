@@ -1968,6 +1968,67 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 ---
 
 - **Fecha:** 2026-07-22
+- **Decisión:** `peso_kg` pasa a opcional en `serieSchema` (`validate-session.ts`) y
+  `StrengthSet.weightKg` pasa a `Float?` en el esquema Prisma (migración no destructiva
+  `make_weight_kg_optional`). Cuando el campo SÍ se informa, sigue teniendo que ser positivo
+  (`z.number().positive().optional()`) — un peso de 0 kg o negativo no tiene sentido físico, así
+  que solo cambia la ausencia del campo. `create-session.ts`/`update-session.ts` añaden
+  `console.error` con los `issues` de Zod al fallar la validación (mismo estilo que
+  `generate-session-proposal.ts`); `get-progress-report.ts` trata una serie sin peso como 0 kg
+  al calcular el máximo/volumen de un ejercicio; el listado de solo lectura de `/historial`
+  (`session-history-section.tsx`) muestra "N reps (peso corporal)" en vez de inventar un "0kg"
+  o mostrar "null" literal.
+- **Contexto/bug:** un usuario real reportó que no se podía guardar una sesión con un ejercicio
+  de fuerza a peso corporal (Burpees, sugerido por la IA con un peso inventado "0,1" al no
+  tener otra opción válida): el guardado fallaba siempre con el mensaje genérico "Revisa los
+  ejercicios y la fecha introducidos.", sin ningún rastro en logs (ni consola ni Vercel).
+  `serieSchema.peso_kg` exigía un número positivo obligatorio sin excepción para ejercicios sin
+  carga externa (Burpees, Dominadas, Flexiones...), y ese mismo esquema
+  (`sessionSchema`/`serieSchema`) es literalmente el `inputSchema` que usa la tool de propuesta
+  de sesión con IA (`src/lib/session-proposal/tools.ts`, `createSubmitSessionProposalTool`), así
+  que el mismo fix cubre a la vez el formulario manual y la IA. Además,
+  `create-session.ts`/`update-session.ts` descartaban `validation.error.issues` sin loguear
+  nada al fallar, repitiendo el mismo patrón de "error swallowing" ya corregido en
+  `generate-session-proposal.ts` (ver entrada 2026-07-21 de más arriba) — sin el fix de logging,
+  este bug habría sido tan opaco de diagnosticar como aquel.
+- **Alternativas consideradas:** mantener `peso_kg` obligatorio y que la skill/UI sigan
+  inventando un valor centinela (p. ej. "0,1") para ejercicios a peso corporal — descartada por
+  ser precisamente la causa del bug: un valor inventado no es un dato real y además ensucia
+  cualquier cálculo agregado (peso máximo, volumen) que lo trate como carga externa real. Usar
+  `0` como sentinel explícito en vez de `null`/ausencia — descartada porque `0` es un valor
+  numérico válido en teoría (aunque sin sentido físico como peso) y no se distingue de "el
+  usuario registró 0 kg a propósito" frente a "no aplica", mientras que `null`/ausencia sí lo
+  distingue sin ambigüedad.
+- **Justificación:** una serie de un ejercicio a peso corporal no tiene una carga externa que
+  registrar — exigir un número ahí fuerza a cualquier fuente (formulario manual o IA) a mentir
+  con un valor inventado, que es exactamente el bug reportado. Tratarlo como ausencia opcional
+  (no como "positivo relajado a incluir cero") mantiene la regla de negocio real intacta: un
+  peso de 0 kg o negativo sigue sin tener sentido físico cuando sí se informa.
+- **Lecciones aprendidas:**
+  - Coordinación de scope con el Developer paralelo (`feature/formato-duracion-ritmo-cardio`,
+    mismo bug, mitad UI): el encargo de esta ronda marcó explícitamente
+    `session-entries-editor.tsx` y `build-initial-registros.ts` como fuera de alcance para evitar
+    pisarse. Sin embargo, el tipo compartido `SessionEntryInitialData` (declarado en
+    `build-initial-registros.ts`) tiene `series[].peso_kg: number` no-nullable, y tres puntos de
+    la app (`to-session-history-entry.ts`, `session-history-section.tsx`,
+    `src/app/sesion/actions.ts` en el flujo de IA) empiezan a producir legítimamente
+    `number | null`/`undefined` en cuanto `StrengthSet.weightKg` pasa a nullable — `npm run
+    typecheck` lo confirmó con errores reales en los tres sitios, no una suposición. No tocar ese
+    tipo habría dejado el build roto de forma irresoluble desde este lado. Se hizo el
+    ensanchamiento mínimo posible (`peso_kg?: number | null`, un solo campo, sin tocar ninguna
+    lógica de parseo/conversión a string de ese mismo fichero) y se documenta aquí explícitamente
+    para que el Tech Lead lo tenga en cuenta al revisar/mergear ambas PRs en paralelo: la
+    conversión a string de edición de ese campo (`String(serie.peso_kg)`, que produciría el
+    string literal `"null"` si no se ajusta) sigue pendiente del lado UI. Confirma la lección ya
+    registrada en la ronda del servidor MCP (fase 1): un contrato de dominio compartido entre dos
+    agentes en paralelo puede acabar necesitando un toque mínimo en el "territorio" del otro
+    cuando el tipo en sí, no solo la lógica que lo rodea, es el punto de acoplamiento — la
+    alternativa (bloquear la PR sin resolver el build) es peor que un cambio de tipo de una
+    línea, claramente señalado.
+
+---
+
+- **Fecha:** 2026-07-22
 - **Decisión:** Corrección de dos fallos de formato en el formulario de cardio
   (`session-entries-editor.tsx`), reportados por un corredor real: (1) `duracion` y
   `ritmo_medio` pasan de segundos totales (`type="number"`) a texto libre en formato mm:ss
