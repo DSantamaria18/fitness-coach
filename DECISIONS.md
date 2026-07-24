@@ -2206,4 +2206,213 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-07-24
+- **Decisión:** Consolidar aquí, textualmente, las lecciones de proceso del equipo de agentes
+  que hasta ahora vivían como prosa larga dentro de CLAUDE.md (`equipo_de_agentes` →
+  "Reglas adicionales de funcionamiento del equipo"). CLAUDE.md se carga entero en cada sesión;
+  DECISIONS.md solo se consulta bajo demanda (regla 10) — mover aquí el detalle narrativo de
+  cada incidente y dejar en CLAUDE.md solo la regla imperativa de una línea ahorra tokens de
+  carga automática sin perder contexto, porque la regla 1 ya designa este fichero como el sitio
+  de "decisiones... incluyendo lecciones aprendidas de errores pasados para no repetirlos".
+- **Justificación:** ahorro de tokens de contexto siempre-cargado, a petición de David.
+- **Lecciones aprendidas — histórico completo (antes en CLAUDE.md):**
+  - **Rama actualizada antes de asignar trabajo**: antes de crear la rama de una nueva
+    feature/bug para un Developer, el Tech Lead debe comprobar que su copia local de `master`
+    está al día con `origin/master` (no basta con haber hecho `fetch`, hay que actualizar la
+    rama local). Partir de un `master` desactualizado puede hacer que el Developer trabaje sin
+    funcionalidad ya mergeada (pasó en la ronda del servidor MCP: `master` local estaba 11
+    commits por detrás).
+  - **QA verifica los fixes de forma independiente**: cuando un Developer devuelve una PR tras
+    corregir un problema que QA encontró, QA no debe darlo por bueno solo con el resumen del
+    Developer — debe repetir por su cuenta la verificación que detectó el problema original
+    (especialmente en bugs de seguridad/autenticación), antes de dar su sign-off definitivo.
+  - **Worktrees temporales excluidos de lint/test**: los worktrees de agentes
+    (`.claude/worktrees/`) deben estar excluidos explícitamente de cualquier configuración de
+    lint/test (ESLint, Vitest, etc.) desde el momento en que se empiezan a usar en el proyecto.
+    Al vivir dentro del árbol del repo (aunque gitignored), estas herramientas no respetan
+    `.gitignore` por sí solas: un run en la raíz con dos o más worktrees activos puede
+    relintar/reejecutar también el código de cada worktree como si fuera parte del árbol
+    principal, dando falsos positivos masivos (pasó en la ronda del informe de progreso: 656
+    errores de lint y 639 tests fantasma con dos worktrees vivos en el momento del merge).
+  - **Conflictos triviales de documentación entre PRs paralelas los resuelve el Tech Lead**: si
+    dos Developers trabajando en paralelo documentan en el mismo punto de un `.md` (típicamente
+    el final de una sección o lista), es normal que sus PRs entren en conflicto ahí al mergear
+    una tras otra. El Tech Lead resuelve ese conflicto directamente al hacer el merge
+    (conservando el contenido de ambas aportaciones), sin devolver la PR al Developer — no es un
+    bug de código, es una consecuencia esperable de documentar en paralelo.
+  - **El Tech Lead fija el modelo de Claude en cualquier encargo con llamadas de pago a la API
+    de Anthropic**: cuando una tarea implica que el código llame a la API de Claude (no el
+    propio equipo de agentes), el encargo al Developer debe especificar explícitamente qué
+    modelo usar, nunca dejarlo a su discreción. Pasó en la ronda de generación asistida por IA:
+    dos Developers en paralelo, sin esa indicación, eligieron por defecto el modelo más potente
+    disponible (Opus), inconsistente con la estimación de coste ya comunicada a David y
+    detectado solo en el code review del Tech Lead — una vuelta completa evitable si el encargo
+    original hubiera sido explícito.
+  - **Verificar contra documentación oficial qué es realmente un SDK/librería antes de
+    comprometerlo en SPEC.md**: antes de fijar en el documento de especificaciones el nombre de
+    un paquete concreto para una integración nueva, confirmar qué hace exactamente (con la
+    documentación oficial o un agente de investigación), no solo si el nombre encaja
+    conceptualmente con lo que se necesita. Pasó con "Claude Agent SDK" en la ronda de
+    generación asistida por IA: sonaba como el SDK ligero adecuado, pero resultó ser el motor de
+    Claude Code (subproceso + binario nativo, pensado para agentes de código autónomos) — se
+    corrigió a tiempo, antes de asignar trabajo a ningún Developer, pero solo porque se verificó
+    durante la planificación en vez de asumirlo.
+  - **Pedir las credenciales externas necesarias antes de la fase de QA, no descubrir su
+    ausencia al final**: si una feature necesita una credencial real de un servicio externo de
+    pago (p. ej. una API key) para verificarse de punta a punta, el Tech Lead la solicita a
+    David antes de despachar a QA (idealmente antes incluso de despachar a los Developers), para
+    que la verificación manual en navegador real (exigida por CLAUDE.md para cambios de
+    UI/flujo) pueda completarse dentro de la misma ronda. Pasó en la ronda de generación asistida
+    por IA: la falta de `ANTHROPIC_API_KEY` se descubrió ya en la QA de la primera PR, dejando
+    el camino de éxito sin verificar y la ronda con un cierre pendiente en vez de completo.
+  - **Cualquier código que cruce la frontera Server Action ↔ Client Component (o, en general,
+    cualquier límite de React Server Components) exige verificación en navegador real antes de
+    darse por probado — tests en verde y code review no son suficientes.** Vitest/jsdom no
+    interpreta la directiva `"use client"` en absoluto (solo lo hace el bundler de RSC de
+    Next.js), así que una Server Action puede importar y llamar sin error aparente en tests a
+    una función "de cliente" que crashea siempre en `next dev`/`next start` reales. Pasó en la
+    ronda de generación asistida por IA: `buildInitialRegistros` (exportada por un módulo
+    `"use client"`) se llamaba desde una Server Action, y esto pasó 253 tests unitarios y un
+    code review limpio sin que nadie lo detectara — solo lo encontró la verificación manual en
+    navegador real, que ya crasheaba con un Runtime Error 500 determinista en el 100% de los
+    casos de éxito. La regla general de "verificación en navegador real para cambios de
+    UI/flujo" ya cubría esto, pero aquí no era "deseable", era la única forma posible de
+    detectarlo — no asumir que "tests + review" basta cuando hay código a ambos lados de esa
+    frontera.
+  - **El review/aprobación de PR del Tech Lead se registra como `gh pr comment`, nunca con
+    `gh pr review --approve`.** `gh pr review --approve` falla siempre con "Can not approve your
+    own pull request" en este proyecto, porque todos los agentes (Developers, QA, Tech Lead)
+    comparten la misma identidad autenticada de `gh` (la cuenta de GitHub de David), sin
+    importar qué sub-agente concreto ejecutó `gh pr create`. El Tech Lead deja constancia de su
+    review con `gh pr comment` y mergea directamente después (`gh pr merge`) — es el flujo
+    esperado en este setup, no un error a corregir cada vez.
+  - **El Tech Lead comprueba el estado real de CI en GitHub (`gh pr checks` / `gh run list`)
+    antes de dar por buena una PR, no solo replica en local `npm run lint`/`typecheck`/`test`.**
+    Local y CI pueden divergir: `npm run format:check` (Prettier) forma parte del job `test` de
+    CI, pero un `git status` limpio en local no revela que ficheros ya mergeados en `master`
+    nunca pasaron ese check. Pasó en la ronda de BL-001: CI llevaba roto en `master` desde el
+    commit `48b7f1c` (2026-07-18), durante 3 merges completos, sin que nadie lo notara porque la
+    verificación se quedaba en local. Añadir "comprobar CI en verde" al Definition of Done, como
+    paso explícito antes de mergear.
+  - **Todo worktree nuevo necesita `npx prisma generate` antes de que `npm run typecheck` (y a
+    veces `npm run dev`) funcione.** El cliente de Prisma generado (`src/generated/prisma`) está
+    en `.gitignore`, así que un `git worktree add` no lo trae — sin este paso, `typecheck` falla
+    en cascada con `Cannot find module '@/generated/prisma/client'` en decenas de ficheros, un
+    falso positivo que parece un fallo real de la PR. Pasó de forma independiente en los 3
+    agentes QA de la ronda BL-004/005/006/008 (cada uno lo descubrió por su cuenta). Ejecutar
+    `npx prisma generate` justo después de crear el worktree y enlazar `node_modules`, como paso
+    estándar de setup, no como algo a investigar cada vez.
+  - **Un `node_modules` enlazado por symlink no trae dependencias nuevas que la propia rama
+    añadió.** El symlink apunta al `node_modules` del repo principal tal y como esté en ese
+    momento — si la rama del worktree añadió un paquete a `package.json`/`package-lock.json`
+    (p. ej. un adapter nuevo), ese paquete no está instalado ahí hasta que alguien corra `npm
+    install`, ni en el repo principal ni en ningún otro worktree enlazado al mismo
+    `node_modules`. Pasó en la ronda del pivote a Turso: el worktree de QA para la PR #30 no
+    tenía `@prisma/adapter-libsql` instalado pese al symlink, porque el repo principal tampoco lo
+    tenía todavía. Tras mergear una PR que añade dependencias nuevas, el Tech Lead corre `npm
+    install` en el repo principal (actualiza el `node_modules` compartido por todos los
+    worktrees enlazados) como paso estándar, no solo `git pull`.
+  - **QA reporta explícitamente si la rama de la PR está por detrás de `master` (commits
+    behind), no solo el resultado funcional.** Cuando varias PRs se desarrollan en paralelo
+    sobre una base común (p. ej. varias ramas que dependen del mismo adapter de datos), una rama
+    puede quedarse desactualizada sin que GitHub la marque como "unmergeable" hasta el intento
+    real de merge. Pasó en la ronda del pivote a Turso: la PR #28 (backup) llevaba 8 commits por
+    detrás de `master` cuando otras tres PRs paralelas (#27, #29, #30) ya habían mergeado — QA
+    lo detectó y lo señaló como hallazgo de proceso al validar, lo que permitió al Tech Lead
+    rebasar y re-verificar antes de mergear en vez de descubrirlo solo al fallar `gh pr merge`.
+    Añadir "cuántos commits por detrás de `master` está la rama" como comprobación estándar de
+    QA en rondas con varias PRs paralelas sobre una base compartida.
+  - **Al probar formularios manualmente en navegador real, usar valores de prueba que respeten
+    las restricciones nativas del HTML (`step`, `min`, `max`, `pattern`).** Un valor que las
+    incumple bloquea el envío del formulario de forma silenciosa — sin error de red ni de
+    consola — y puede parecer un bug de guardado cuando es solo un dato de prueba mal elegido.
+    Pasó en la ronda del pivote a Turso: QA probó `/peso` con `82.35` (el campo tiene
+    `step="0.1"`), el navegador bloqueó el envío sin ningún rastro en consola/red, y hubo que
+    investigarlo como posible regresión antes de confirmar que era un falso positivo. Revisar
+    las restricciones del campo (o reutilizar los valores que ya usan los tests E2E existentes)
+    antes de dar por bueno un valor de prueba.
+  - **El Tech Lead evalúa primero si una feature es realmente separable antes de repartirla
+    entre los 2 Developers en paralelo.** La regla de paralelizar asume tareas independientes
+    que no tocan los mismos ficheros; si backend y frontend de una feature pequeña comparten los
+    mismos ficheros clave (p. ej. la Server Action y la página que la consume), dividirla entre
+    dos Developers solo introduce el riesgo de "pisarse" que la propia coordinación del Tech
+    Lead existe para evitar. Pasó en la ronda de gestión del catálogo de ejercicios: al ser una
+    feature pequeña y acoplada (mismo `actions.ts`, mismo `page.tsx`), se asignó a un único
+    Developer en vez de partirla, sin ningún coste de velocidad ni conflictos de merge. Repartir
+    entre 2 Developers es la opción por defecto solo cuando el trabajo se separa en módulos o
+    ficheros genuinamente distintos.
+  - **QA puede levantar su propio worktree en HEAD desacoplado sobre el commit exacto de la PR
+    cuando la rama de esa PR ya está en uso en el worktree del Developer.** Git no permite tener
+    la misma rama activa (no desacoplada) en dos worktrees a la vez (`git worktree add` falla
+    con "ya está registrado"), así que QA no puede simplemente añadir un worktree sobre la misma
+    rama para validar en paralelo. La solución es
+    `git worktree add --detach <path> <sha-del-commit-de-la-PR>` (tras
+    `git fetch origin <rama>`): un worktree en HEAD desacoplado sobre ese commit exacto, sin
+    tocar la rama del Developer ni bloquearla. Usado en la ronda de gestión del catálogo de
+    ejercicios sin conflicto alguno; recordar también enlazar `node_modules` y correr
+    `npx prisma generate` en ese worktree, igual que en cualquier worktree nuevo.
+  - **Un workflow de escritura en producción, aunque ya esté aprobado en su diseño, requiere
+    confirmación explícita de David antes de cada disparo real — no basta con inferirla de una
+    pregunta suya sobre si es posible delegarlo.** Que David haya aprobado la construcción de un
+    mecanismo (p. ej. un GitHub Action `workflow_dispatch` que escribe en la Turso de
+    producción) no equivale a aprobar su ejecución en un momento dado; son dos decisiones
+    distintas y la regla 11 exige aprobación explícita previa a la acción sobre producción, no
+    solo a su diseño. Pasó en la ronda del workflow de seed en producción (2026-07-21): tras
+    mergear la PR y que David configurara los secrets, preguntó "¿no lo puede hacer el
+    TechOps?" — una pregunta sobre capacidad, no una orden — y el Tech Lead lo interpretó como
+    luz verde y disparó el workflow real de inmediato sin preguntar primero "¿lo disparo
+    ahora?". La ejecución en sí fue segura (operación idempotente, `upsert`, ya validada), pero
+    el proceso de aprobación se saltó un paso. Antes de disparar cualquier acción real sobre
+    producción (aunque sea no destructiva y ya esté validado su diseño), el Tech Lead confirma
+    explícitamente ese disparo en concreto, incluso si la pregunta de David suena como una
+    obviedad.
+  - **Ningún commit directo a `master` que pueda tener efectos colaterales de comportamiento
+    (código de aplicación, datos que la UI consume y renderiza, migraciones, configuración de
+    build/runtime) se hace sin pasar por PR + CI, aunque el cambio "parezca" de bajo riesgo.**
+    El precedente de commitear directamente a `master` cambios puramente descriptivos de
+    documentación (`.md`) no se extiende a cambios que, aunque parezcan solo datos, alimentan la
+    UI o el comportamiento real de la app — ahí la propia PR+CI (en concreto la suite E2E) es la
+    red de seguridad que detecta efectos colaterales antes de que lleguen a producción. Pasó en
+    la ronda de ampliación del catálogo de ejercicios (2026-07-21): el Tech Lead commiteó
+    directamente a `master` una ampliación de `prisma/seed.ts` (12→27 ejercicios, con nombres
+    más largos) por parecer "solo contenido", saltándose PR/CI — y ese cambio tuvo un efecto
+    colateral real: un nombre de ejercicio largo hacía que un `<select>` sin `min-w-0`
+    desbordara su contenedor en viewports móviles estrechos, empujando el botón "Añadir" fuera
+    del área clicable (bug real en el móvil de David, no solo de test). CI quedó en rojo durante
+    6 pushes seguidos sin que nadie se diera cuenta hasta una comprobación posterior, porque
+    saltarse la PR también saltó la propia suite E2E que lo habría detectado antes de tocar
+    `master`. Solo los cambios puramente descriptivos de `.md` (BACKLOG, CHANGELOG, DECISIONS,
+    FEATURES, README sin comandos ejecutables nuevos) siguen siendo razonablemente seguros como
+    commit directo.
+  - **Cuando un Developer descubre a mitad de tarea que tiene que tocar un fichero fuera de su
+    alcance declarado (territorio de otro Developer en paralelo), avisa por mensaje directo al
+    otro agente antes de que ese cierre su propia PR, no solo lo documenta para que el Tech Lead
+    lo detecte en review.** Pasó en la ronda de "peso corporal opcional + formato mm:ss" (PRs
+    #40/#41, 2026-07-22): Developer 1 tuvo que ensanchar un tipo en
+    `build-initial-registros.ts` (fuera de su alcance) para que el build compilara; el Tech Lead
+    retransmitió el aviso a Developer 2 mientras seguía trabajando, y este corrigió
+    preventivamente un "null" literal que ese mismo cambio de tipo iba a producir en su propia
+    UI — antes de dar su PR por lista, no después. Esperar al review para que el Tech Lead
+    conecte los dos hallazgos habría costado una vuelta completa.
+  - **Un check de CI "pending" indefinidamente no bloquea el merge si existe un run duplicado
+    para el mismo commit que ya completó todos los tipos de check en verde.** GitHub a veces
+    dispara más de un run de un mismo workflow para el mismo push; si uno de ellos se queda
+    colgado en un paso de infraestructura (p. ej. `npx playwright install --with-deps`
+    descargando/instalando dependencias del sistema) mientras el otro ya pasó limpio, el Tech
+    Lead puede cancelar el run colgado (`gh run cancel`) y mergear apoyándose en el run gemelo,
+    sin esperar indefinidamente. Pasó en la ronda de "peso corporal opcional + formato mm:ss"
+    (PR #41, 2026-07-24): un run se quedó ~17 minutos en ese paso mientras el run gemelo completó
+    `e2e`/`test`/`verify-turso-migrations`/`Vercel` en menos de 2 minutos para el mismo commit
+    exacto.
+  - **Antes de `git worktree add`, confirmar que el directorio de trabajo actual es la raíz del
+    repo principal (o usar la ruta absoluta), no asumirlo.** Si el comando se ejecuta con el cwd
+    apuntando a otro worktree ya existente, el nuevo worktree se crea anidado dentro de él (a
+    veces en cadena de varios niveles) en vez de en `.claude/worktrees/<nombre>` al mismo nivel
+    que los demás. Ha pasado ya tres veces en rondas distintas (gestión del catálogo de
+    ejercicios; "peso corporal + mm:ss" con la PR de Developer 2; "tooltips + excepción
+    SKILL.md" con los dos worktrees de QA, uno anidado dentro del otro) — se detecta y se
+    corrige con `git worktree move` sin pérdida de trabajo, pero es un paso evitable de raíz.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
