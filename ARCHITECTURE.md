@@ -134,6 +134,16 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   `cardio`) que valida solo la forma del dato, con el mismo esquema fuerza/reps/tempo/peso/RPE
   y cardio (duración, distancia, velocidad/ritmo medio, frecuencia cardiaca, pasos, kcal —
   todos opcionales) que ya usa la skill "sesion-entrenamiento".
+  - `peso_kg` de cada serie de fuerza es opcional (`StrengthSet.weightKg Float?` en Prisma,
+    migración no destructiva `make_weight_kg_optional`): ejercicios a peso corporal (Burpees,
+    Dominadas, Flexiones...) no tienen carga externa que registrar. Cuando SÍ se informa, sigue
+    teniendo que ser positivo — solo cambia la ausencia del campo, no su validación. Este mismo
+    esquema es el `inputSchema` de la tool de propuesta de sesión con IA
+    (`session-proposal/tools.ts`), así que el fix cubre ambos flujos (formulario manual e IA) a
+    la vez. `get-progress-report.ts` trata una serie sin peso como 0 kg al calcular el máximo y
+    el volumen de un ejercicio; el listado de solo lectura de `/historial`
+    (`session-history-section.tsx`) muestra "N reps (peso corporal)" en vez de inventar un
+    "0kg". Ver DECISIONS.md 2026-07-22.
 - `src/lib/create-session.ts` — valida forma (Zod), valida existencia del ejercicio en el
   catálogo y que su tipo coincida (contra la base de datos, no en Zod), y persiste `Session`
   junto con sus `StrengthEntry`/`StrengthSet` o `CardioEntry` en una única transacción Prisma

@@ -153,6 +153,29 @@ describe("createSession", () => {
     expect(transactionMock).not.toHaveBeenCalled();
   });
 
+  // Antes de este fix, un fallo de validación no dejaba ningún rastro en
+  // logs (ver DECISIONS.md): un usuario real con un ejercicio a peso
+  // corporal se encontraba el mensaje genérico sin forma de diagnosticar la
+  // causa real sin reproducir la llamada. `issues` de Zod es lo único que
+  // identifica qué campo falló y por qué.
+  it("logs the Zod validation issues when the input is invalid", async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    await createSession("user-1", {
+      fecha: "2026-07-17T08:00:00.000Z",
+      ejercicios: [],
+    });
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[createSession]"),
+      expect.objectContaining({ issues: expect.any(Array) }),
+    );
+
+    consoleErrorSpy.mockRestore();
+  });
+
   it("returns a failure result when a referenced exercise does not exist in the catalog", async () => {
     findManyMock.mockResolvedValue([]);
 

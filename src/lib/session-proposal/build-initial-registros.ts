@@ -54,7 +54,15 @@ export type SessionEntryInitialData =
       notas?: string | null;
       series: {
         reps: number;
-        peso_kg: number;
+        // Opcional (igual que tempo/RPE): ejercicios a peso corporal
+        // (Burpees, Dominadas...) no tienen carga externa que registrar (ver
+        // DECISIONS.md, fix "peso corporal opcional"). `null` llega desde
+        // Prisma (get-session-history.ts), `undefined` desde
+        // ValidatedSession (Zod, ausencia del campo) — ambas fuentes
+        // alimentan este mismo DTO. Solo el tipo se ensancha aquí — la
+        // conversión a string de edición (más abajo) es responsabilidad de
+        // quien mantiene ese flujo.
+        peso_kg?: number | null;
         tempo?: string | null;
         RPE?: number | null;
       }[];

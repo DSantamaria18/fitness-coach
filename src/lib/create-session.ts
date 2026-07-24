@@ -15,6 +15,14 @@ export async function createSession(
 ): Promise<CreateSessionResult> {
   const result = validateSession(input);
   if (!result.success) {
+    // Sin esto, un fallo de validación no dejaba ningún rastro (ver
+    // DECISIONS.md): `issues` es lo único que identifica qué campo falló y
+    // por qué sin reproducir la llamada real. Mismo estilo que
+    // generate-session-proposal.ts.
+    console.error(
+      "[createSession] VALIDATION_ERROR: el input no pasó validateSession.",
+      { code: "VALIDATION_ERROR", issues: result.error.issues },
+    );
     return {
       success: false,
       error: "Revisa los ejercicios y la fecha introducidos.",

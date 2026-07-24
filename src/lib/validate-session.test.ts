@@ -160,6 +160,27 @@ describe("validateSession", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rejects a set with a negative weight", () => {
+    const result = validateSession({
+      fecha: new Date().toISOString(),
+      ejercicios: [baseFuerza({ series: [{ reps: 5, peso_kg: -10 }] })],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  // Ejercicios a peso corporal (Burpees, Dominadas, Flexiones...) no tienen
+  // una carga externa que registrar: la ausencia del campo es válida, solo
+  // un valor explícito no positivo sigue sin tener sentido físico.
+  it("accepts a set without peso_kg (bodyweight exercise)", () => {
+    const result = validateSession({
+      fecha: new Date().toISOString(),
+      ejercicios: [baseFuerza({ series: [{ reps: 12 }] })],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it("rejects a set with an RPE outside the 1-10 range", () => {
     const result = validateSession({
       fecha: new Date().toISOString(),

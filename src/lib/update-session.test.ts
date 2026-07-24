@@ -152,6 +152,27 @@ describe("updateSession", () => {
     expect(transactionMock).not.toHaveBeenCalled();
   });
 
+  // Mismo criterio que create-session.test.ts: un fallo de validación debe
+  // dejar rastro con los issues concretos de Zod, no solo el mensaje
+  // genérico devuelto al usuario (ver DECISIONS.md).
+  it("loguea los issues de Zod cuando el input es inválido", async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    await updateSession("user-1", "s-1", {
+      fecha: "2026-07-17T08:00:00.000Z",
+      ejercicios: [],
+    });
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[updateSession]"),
+      expect.objectContaining({ issues: expect.any(Array) }),
+    );
+
+    consoleErrorSpy.mockRestore();
+  });
+
   it("devuelve un error NOT_FOUND sin llamar a resolveSessionEntries cuando la sesión no existe", async () => {
     findFirstMock.mockResolvedValue(null);
 
