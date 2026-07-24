@@ -427,3 +427,13 @@ Proyecto sin versión publicada todavía.
   placeholders de ejemplo ("ej: 82,5", "ej: 5,2") — un `<input type="number">` nunca deja llegar
   una coma a su `.value`, así que la tolerancia de `toNumber()` no tendría ningún efecto real si
   se hubieran dejado como number. Ver DECISIONS.md.
+- **Causa raíz del "0,1" inventado por la IA en ejercicios a peso corporal**: la ronda anterior
+  (ver entrada de más arriba, "No se podía guardar una sesión...") arregló el síntoma (`peso_kg`
+  ahora es opcional en el esquema), pero no la causa: `skills/sesion-entrenamiento/SKILL.md`
+  (que además de prompt de la skill standalone es el `system` prompt literal de la generación
+  in-app, vía `read-skill.ts`) seguía instruyendo a la IA a proponer *siempre* un peso numérico
+  cuando un ejercicio no tenía historial, sin distinguir un ejercicio con mancuernas de uno a
+  peso corporal (Burpees, Dominadas, Flexiones...). Añadida una excepción explícita en "Reglas
+  de peso y progresión": para ejercicios a peso corporal, la IA no propone ningún número, lo
+  indica como "a peso corporal" y deja el campo de peso sin informar. Ver DECISIONS.md
+  2026-07-24.
