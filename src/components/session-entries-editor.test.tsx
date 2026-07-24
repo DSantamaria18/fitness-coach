@@ -154,4 +154,30 @@ describe("SessionEntriesEditor", () => {
 
     expect(screen.getByRole("alert")).toHaveTextContent(/formato inválido/i);
   });
+
+  it("aclara en el tooltip del peso de fuerza que es peso añadido y que se deja vacío a peso corporal", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await addExercise(user, "Sentadilla");
+
+    const pesoInput = screen.getByLabelText(/^peso/i);
+    // El bug de la ronda anterior fue sugerir "0" como sentinel de "a peso
+    // corporal" cuando el esquema lo rechaza (peso_kg exige > 0) — el
+    // tooltip no debe repetir ese error y sí debe decir "vacío".
+    expect(pesoInput.getAttribute("title")).toMatch(/vacío/i);
+    expect(pesoInput.getAttribute("title")).not.toMatch(/\b0\b/);
+  });
+
+  it("aclara en el tooltip de los campos decimales de cardio que admiten coma o punto", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await addExercise(user, "Carrera");
+
+    for (const label of [/distancia/i, /vel\. media/i, /cadencia/i]) {
+      const input = screen.getByLabelText(label);
+      expect(input.getAttribute("title")).toMatch(/coma.*punto|punto.*coma/i);
+    }
+  });
 });
