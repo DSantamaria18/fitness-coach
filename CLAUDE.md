@@ -61,7 +61,7 @@ A partir de ahora, el desarrollo se hace con un equipo de agentes con roles dife
 
 - **2 agentes Developer**: Modelo Sonnet 5. implementan funcionalidades y corrigen bugs. Trabajan en paralelo entre sí cuando las tareas son independientes (features distintas, o tests vs. implementación), cada uno en su propia rama por feature/bug (regla 12). Recibiran las instrucciones del Tech Lead. Escriben los unit tests y los tests de componentes (se ejecutarán en la fase de build), y los tests de integracion (definidos en el test plan del agente QA engineer y ejecutados en el CI). Podran delegar tareas sencillas al agente developer junior.
 - **1 agente Developer Junior**: Modelo Haiku. Los demas agentes podran delegarle tareas sencillas y repetitivas. 
-- **1 agente QA Engineer**: Modelo Sonnet 5 . Define los requisitos funcionales, no funcionales y los quality gates (coverage, linting, ...), genera los planes de prueba (integration tests, e2e tests, ...) segun TDD regla 5, Valida funcionalmente la app y verifica que se cumplen los requisitos no funcionales. Además implementa y mantiene los tests E2E y los tests de seguridad. Hará un reporte breve al final de cada desarrollo. Podra delegar tareas sencillas al agente developer junior.
+- **1 agente QA Engineer**: Modelo Sonnet 5 . Define los requisitos funcionales, no funcionales y los quality gates (coverage, linting, ...), genera los planes de prueba (integration tests, e2e tests, ...) segun TDD regla 5, Valida funcionalmente la app y verifica que se cumplen los requisitos no funcionales. Además implementa y mantiene los tests E2E y los tests de seguridad. Hará un reporte breve al final de cada desarrollo. ejecutará tests de UI (playwright) solo cuando sea estrictamente necesario. Podra delegar tareas sencillas al agente developer junior.
 - **1 agente TechOps Engineer**: Experto en infraestructura del equipo. Rol de Arquitecto Cloud, SRE y DevOps. Modelo opus 4.8 . Encargado de las tareas de definicion, creacion y mantenimiento de la infraestructura necesaria para el proyecto. Tambien implementará métricas y alertas de infraestructura. Define y ejecuta sus propios checks de validación de infraestructura (no pasa por QA, ver reglas adicionales). Podrá delegar tareas sencillas al agente developer junior.
 - **1 agente Tech Lead**: Modelo Opus 4.8 . Dividirá las features en tareas más sencillas. Da las instrucciones precisas a los developers. Reparte el trabajo , comprueba que se cumplen los criterios de desarrollo y se siguen las prácticas indicadas. Revisa (code review) las PRs de los Developers y propone cambios si hace falta; si están correctas, las mergea a master. Decide el stack tecnológico, mantiene la documentación viva (regla 1) y es quien me traslada las preguntas necesarias (p. ej. las decisiones de producto que me corresponden a mí). Podran delegar tareas sencillas al agente developer junior.
 
@@ -274,6 +274,8 @@ Reglas adicionales de funcionamiento del equipo:
   Pasó en la ronda de "peso corporal opcional + formato mm:ss" (PR #41, 2026-07-24): un run se
   quedó ~17 minutos en ese paso mientras el run gemelo completó `e2e`/`test`/
   `verify-turso-migrations`/`Vercel` en menos de 2 minutos para el mismo commit exacto.
+- ** los agentes compactarán su contexto a intervalos regulares
+
 </equipo_de_agentes>
 
 <primer_paso>
