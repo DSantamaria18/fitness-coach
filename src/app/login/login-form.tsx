@@ -48,7 +48,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-md bg-black px-4 py-2 text-base font-medium text-white disabled:opacity-60 dark:bg-white dark:text-black"
+        className="rounded-md bg-ember px-4 py-2 text-base font-medium text-black disabled:opacity-60"
       >
         {isPending ? "Entrando..." : "Entrar"}
       </button>

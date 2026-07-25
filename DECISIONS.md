@@ -2507,4 +2507,31 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-07-25
+- **Decisión:** Completado BL-019: todos los botones de acción primaria (`type="submit"` de
+  Guardar/Añadir en `sesion`, `peso`, `historial`, `ajustes`, `informe`, `login`) migrados de
+  `bg-black text-white dark:bg-white dark:text-black` a `bg-ember text-black`, sin variante
+  `dark:` — mismo criterio que `text-ember` en NavBar (el token ya se redefine bajo
+  `prefers-color-scheme: dark`).
+- **Alternativas consideradas:** `text-white` sobre `bg-ember` (descartado: contraste
+  insuficiente — ~3.7:1 en claro, ~2.7:1 en oscuro, ambos por debajo de AA 4.5:1 para texto de
+  este tamaño; `text-black` da ~5.7:1 y ~7.9:1 respectivamente); usar `text-ink` en vez de
+  `text-black` fijo (descartado: `--ink` se invierte de oscuro a claro entre temas igual que
+  `--foreground`, así que en modo oscuro quedaría texto casi blanco sobre un fondo ember que
+  sigue siendo un naranja medio-claro — el mismo problema de contraste que descartar
+  `text-white`; el texto sobre un acento de color necesita quedarse fijo en oscuro, no seguir
+  el tema de la app).
+- **Lecciones aprendidas:** el propio alcance acordado de BL-019 (ver entrada de más arriba)
+  incluía "los `page.tsx`/componentes de contenido de las 4 páginas", pero la verificación de
+  la integración conjunta se quedó en revisión de diff + Playwright a nivel de navegación,
+  nunca una pasada visual en navegador real ya logueado contra el mock aprobado (bloqueado en
+  su momento por el clasificador de credenciales, ver entrada de más arriba) — por eso ningún
+  botón de acción primaria en todo el contenido de la app quedó migrado pese a estar dentro
+  del alcance ya acordado, y nadie lo detectó hasta que David lo vio en producción real. Un
+  rediseño visual con alcance "todas las páginas de contenido" necesita al menos una pasada de
+  grep por el patrón visual que se sustituye (aquí, `bg-black.*text-white`) antes de dar la
+  integración por completa, no solo repasar los ficheros que cada Developer tocó.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
