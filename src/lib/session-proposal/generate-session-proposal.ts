@@ -77,6 +77,14 @@ export async function generateSessionProposal(
     const client = new Anthropic();
     const system = `${readSkillSystemPrompt()}\n\n${FORMAT_INSTRUCTIONS}`;
 
+    // Sin esto el modelo no tiene forma de saber qué fecha/hora es "ahora"
+    // de verdad y tiene que adivinarla para rellenar `fecha` en
+    // submit_session_proposal — a veces adivina una posterior al instante
+    // real de validación, y validateSession la rechaza con "La fecha no
+    // puede ser futura" (bug real en producción, ver DECISIONS.md
+    // 2026-07-25). La skill standalone en Claude Code no lo sufre porque el
+    // propio harness inyecta la fecha real en el contexto de cada turno.
+    const nowIso = new Date().toISOString();
     const explorationRunner = client.beta.messages.toolRunner(
       {
         model: MODEL,
@@ -86,7 +94,7 @@ export async function generateSessionProposal(
         messages: [
           {
             role: "user",
-            content: "Genera la propuesta de sesión de entreno de hoy.",
+            content: `Genera la propuesta de sesión de entreno de hoy. Fecha y hora actuales: ${nowIso}.`,
           },
         ],
         max_iterations: MAX_EXPLORATION_ITERATIONS,
