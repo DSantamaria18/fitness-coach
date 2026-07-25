@@ -9,15 +9,29 @@ const fechaSchema = z.iso
 
 const rpeSchema = z.number().int().min(1).max(10);
 
+// La IA (submit_session_proposal, log_session/edit_session vía MCP) trata a
+// veces "no aplica" como `null` explícito en vez de omitir la clave —
+// comportamiento habitual de tool-use con LLMs, no un dato con significado
+// propio en este esquema — así que cualquier campo opcional debe aceptar
+// `null` como equivalente a ausente. `z.number().optional()` por sí solo
+// rechaza `null` (solo admite `undefined`), lo que tumbaba la sesión entera
+// con "expected number, received null" (bug real en producción, ver
+// DECISIONS.md 2026-07-25).
+const nullableOptional = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess(
+    (value) => (value === null ? undefined : value),
+    schema.optional(),
+  );
+
 const serieSchema = z.object({
   reps: z.number().int().positive(),
   // Opcional: ejercicios a peso corporal (Burpees, Dominadas, Flexiones...)
   // no tienen una carga externa que registrar. Cuando SÍ se informa, sigue
   // teniendo que ser positivo — un peso de 0 kg o negativo no tiene sentido
   // físico, así que solo cambia la ausencia del campo, no su validación.
-  peso_kg: z.number().positive().optional(),
-  tempo: z.string().optional(),
-  RPE: rpeSchema.optional(),
+  peso_kg: nullableOptional(z.number().positive()),
+  tempo: nullableOptional(z.string()),
+  RPE: nullableOptional(rpeSchema),
 });
 
 // notas: feedback de David tras la sesión (sensaciones, dolor, contexto) —
@@ -30,15 +44,16 @@ const registroFuerzaSchema = z.object({
   tipo: z.literal("fuerza"),
   ejercicio: z.string().min(1),
   series: z.array(serieSchema).min(1),
-  notas: z.string().optional(),
-  comentario_ia: z
-    .string()
-    .optional()
-    .describe(
-      "Tu propia observación breve sobre este ejercicio (técnica, progresión sugerida), " +
-        "si tienes algo útil que decir. Nunca escribas aquí el feedback de David — eso va " +
-        "en el campo `notas`, que tú solo lees, no rellenas.",
-    ),
+  notas: nullableOptional(z.string()),
+  comentario_ia: nullableOptional(
+    z
+      .string()
+      .describe(
+        "Tu propia observación breve sobre este ejercicio (técnica, progresión sugerida), " +
+          "si tienes algo útil que decir. Nunca escribas aquí el feedback de David — eso va " +
+          "en el campo `notas`, que tú solo lees, no rellenas.",
+      ),
+  ),
 });
 
 // Todos los campos numéricos son opcionales individualmente (SPEC §3): no
@@ -46,25 +61,26 @@ const registroFuerzaSchema = z.object({
 const registroCardioSchema = z.object({
   tipo: z.literal("cardio"),
   ejercicio: z.string().min(1),
-  duracion: z.number().int().positive().optional(),
-  distancia_km: z.number().positive().optional(),
-  velocidad_media: z.number().positive().optional(),
-  ritmo_medio: z.number().int().positive().optional(),
-  frecuencia_cardiaca_media: z.number().int().positive().optional(),
-  frecuencia_cardiaca_maxima: z.number().int().positive().optional(),
-  pasos: z.number().int().positive().optional(),
-  frecuencia_paso: z.number().positive().optional(),
-  kcal: z.number().int().positive().optional(),
-  RPE: rpeSchema.optional(),
-  notas: z.string().optional(),
-  comentario_ia: z
-    .string()
-    .optional()
-    .describe(
-      "Tu propia observación breve sobre este ejercicio (técnica, progresión sugerida), " +
-        "si tienes algo útil que decir. Nunca escribas aquí el feedback de David — eso va " +
-        "en el campo `notas`, que tú solo lees, no rellenas.",
-    ),
+  duracion: nullableOptional(z.number().int().positive()),
+  distancia_km: nullableOptional(z.number().positive()),
+  velocidad_media: nullableOptional(z.number().positive()),
+  ritmo_medio: nullableOptional(z.number().int().positive()),
+  frecuencia_cardiaca_media: nullableOptional(z.number().int().positive()),
+  frecuencia_cardiaca_maxima: nullableOptional(z.number().int().positive()),
+  pasos: nullableOptional(z.number().int().positive()),
+  frecuencia_paso: nullableOptional(z.number().positive()),
+  kcal: nullableOptional(z.number().int().positive()),
+  RPE: nullableOptional(rpeSchema),
+  notas: nullableOptional(z.string()),
+  comentario_ia: nullableOptional(
+    z
+      .string()
+      .describe(
+        "Tu propia observación breve sobre este ejercicio (técnica, progresión sugerida), " +
+          "si tienes algo útil que decir. Nunca escribas aquí el feedback de David — eso va " +
+          "en el campo `notas`, que tú solo lees, no rellenas.",
+      ),
+  ),
 });
 
 const registroEjercicioSchema = z.discriminatedUnion("tipo", [

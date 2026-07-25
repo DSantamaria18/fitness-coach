@@ -2663,4 +2663,34 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-07-25
+- **Incidente:** generación de sesión con IA falló 3 veces seguidas en real: 2 timeouts y 1
+  `INVALID_OUTPUT` con 9 issues `expected number, received null` — exactamente los 9 campos
+  numéricos opcionales de `registroCardioSchema` (duración, distancia, velocidad, ritmo, FC
+  media/máxima, pasos, frecuencia de paso, kcal). La IA mandó `null` explícito en vez de omitir
+  la clave para un ejercicio de cardio — comportamiento habitual de tool-use con LLMs para
+  "campo no aplica", no un dato con significado propio en este esquema. `z.number().optional()`
+  solo admite `undefined`, no `null`, así que el ejercicio entero se rechazaba.
+- **Decisión:** `validate-session.ts` normaliza `null → undefined` en todos los campos
+  opcionales del esquema compartido (`nullableOptional`, vía `z.preprocess`), no solo en
+  cardio. Corregido en el único esquema fuente (`sessionSchema`), no en
+  `generate-session-proposal.ts`: el SDK de MCP (`McpServer.registerTool`) valida los
+  argumentos contra `logSessionSchema`/`editSessionSchema` (= `sessionSchema`) antes de que el
+  handler propio se ejecute, así que un parche solo en la Server Action no habría cubierto la
+  skill MCP. Verificado que `z.preprocess` se serializa correctamente con `z.toJSONSchema`
+  (usado por `betaZodTool` para construir el `input_schema` de la tool de Anthropic): el campo
+  sigue anunciándose como `{"type": "number"}`, sin perder la restricción de tipo de cara al
+  modelo.
+- **Verificación:** dos tests nuevos en `validate-session.test.ts` (`null` en los 4 campos
+  opcionales de un registro de fuerza; `null` en los 12 campos opcionales de uno de cardio),
+  436/436 tests en verde, typecheck y lint limpios.
+- **Sobre los timeouts:** los otros 2 fallos del mismo lote fueron `TIMEOUT` (límite propio de
+  60s en `generate-session-proposal.ts`, no el límite de función de Vercel, que es 300s). Sin
+  desglose de tiempos por turno no hay evidencia suficiente para diagnosticar causa raíz
+  (latencia real de la API vs. algo diagnosticable en el código) — no se ha tocado nada al
+  respecto en esta ronda, pendiente de que David decida si quiere más instrumentación o subir
+  el límite.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
