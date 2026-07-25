@@ -2601,4 +2601,45 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-07-25
+- **Decisión:** BL-027 implementado: `notas` (campo existente) y `comentario_ia` (nuevo) son
+  ahora campos independientes por ejercicio, con autoría exclusiva cada uno. Migración de Prisma
+  puramente aditiva (`ALTER TABLE ... ADD COLUMN "aiComment" TEXT`, nullable, sin backfill ni
+  drop) porque `notes` no se renombra a nivel de BD — sigue siendo la misma columna, solo cambia
+  su significado en adelante (de facto ya era así: la IA nunca estuvo instruida a escribir ahí).
+  `comentario_ia` añadido a `registroFuerzaSchema`/`registroCardioSchema`
+  (`validate-session.ts`), con `.describe()` para guiar al modelo — se propaga automáticamente a
+  `submit_session_proposal` (in-app) y `log_session`/`edit_session` (MCP), los tres reutilizan
+  `sessionSchema` sin duplicar el esquema. UI: bloque de solo lectura para `comentario_ia` en
+  `SessionEntriesEditor`, oculto cuando está vacío; el campo editable existente se renombra en
+  pantalla de "Notas" a "Tu feedback".
+- **Contexto:** hallazgo antes de implementar — `SKILL.md` nunca instruía a la IA a escribir en
+  `notas`, y el campo tampoco se leía en ningún punto del pipeline de informe de progreso
+  (`get-progress-report.ts`/`generate-progress-comment.ts`). Es decir, "separar" no era solo
+  dividir una columna: sin instruir a la IA a rellenar `comentario_ia`, el campo habría quedado
+  siempre vacío incluso en ejercicios generados por IA. Confirmado con David antes de
+  implementar (alcance ampliado a instruir `SKILL.md`, no solo la mecánica de esquema/UI).
+- **Alternativas consideradas:**
+  - Renombrar `notes` → `userNotes` a nivel de columna (descartado: migración más arriesgada
+    —rename + posible downtime en SQLite/Turso— sin beneficio real, ya que el nombre de columna
+    Prisma no se expone directamente en ningún contrato externo; el nombre en español
+    (`notas`/`comentario_ia`) vive solo en la capa Zod/API).
+  - Mover el histórico de `notes` a una columna nueva de "feedback de usuario" separada
+    (descartado: `notes` ya significaba feedback de usuario en la práctica — la IA nunca escribió
+    ahí —, así que no hay dato mixto que migrar).
+- **Verificación:** typecheck, lint y 434/434 tests en verde, incluyendo una regresión específica
+  cubierta a propósito: `update-session.ts` borra y recrea todas las entradas de una sesión en
+  cada guardado (`session-entries.ts`), así que si el formulario no reenviara `comentario_ia` tal
+  cual (aunque sea de solo lectura), se perdería el comentario de la IA en cuanto David editara y
+  guardara cualquier otra cosa del mismo ejercicio — test añadido en
+  `session-entries-editor.test.tsx` que precarga un registro con `comentario_ia`, edita el
+  feedback y comprueba que ambos campos siguen presentes e independientes en el payload.
+- **Lecciones aprendidas:** antes de implementar una feature descrita como "separar X en dos
+  campos", comprobar si X ya tiene contenido real hoy o si la instrucción que lo generaría
+  simplemente nunca existió — la petición del usuario puede presuponer un comportamiento actual
+  que no es el real, y sin ese hallazgo el cambio de esquema habría quedado sin efecto observable
+  para ejercicios generados por IA.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

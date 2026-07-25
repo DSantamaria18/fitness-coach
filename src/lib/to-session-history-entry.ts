@@ -30,6 +30,7 @@ export function toSessionHistoryEntry(
         tipo: "fuerza" as const,
         ejercicio: entry.exercise.name,
         notas: entry.notes,
+        comentario_ia: entry.aiComment,
         series: entry.sets.map((set) => ({
           reps: set.reps,
           peso_kg: set.weightKg,
@@ -44,6 +45,7 @@ export function toSessionHistoryEntry(
         tipo: "cardio" as const,
         ejercicio: entry.exercise.name,
         notas: entry.notes,
+        comentario_ia: entry.aiComment,
         duracion: entry.durationSeconds,
         distancia_km: entry.distanceKm,
         velocidad_media: entry.avgSpeedKmh,

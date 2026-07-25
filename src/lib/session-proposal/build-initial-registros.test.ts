@@ -69,6 +69,35 @@ describe("buildInitialRegistros", () => {
     expect(registro.notas).toBe("");
   });
 
+  it("mantiene notas y comentario_ia como campos independientes", () => {
+    const [registro] = buildInitialRegistros([
+      {
+        tipo: "fuerza",
+        ejercicio: "Sentadilla",
+        notas: "Me dolió la muñeca",
+        comentario_ia: "Progresión sugerida: +2,5 kg",
+        series: [{ reps: 5, peso_kg: 100 }],
+      },
+    ]);
+
+    expect(registro).toMatchObject({
+      notas: "Me dolió la muñeca",
+      comentario_ia: "Progresión sugerida: +2,5 kg",
+    });
+  });
+
+  it("usa cadena vacía como comentario_ia cuando no viene informado (ejercicio manual)", () => {
+    const [registro] = buildInitialRegistros([
+      {
+        tipo: "fuerza",
+        ejercicio: "Sentadilla",
+        series: [{ reps: 5, peso_kg: 100 }],
+      },
+    ]);
+
+    expect(registro.comentario_ia).toBe("");
+  });
+
   it("convierte un ejercicio de cardio, dejando en blanco las métricas no informadas", () => {
     const [registro] = buildInitialRegistros([
       {

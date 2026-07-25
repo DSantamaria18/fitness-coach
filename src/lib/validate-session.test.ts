@@ -86,6 +86,33 @@ describe("validateSession", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts a strength entry with both notas and comentario_ia set independently", () => {
+    const result = validateSession({
+      fecha: new Date().toISOString(),
+      ejercicios: [
+        baseFuerza({
+          notas: "Me dolió la muñeca en la última serie",
+          comentario_ia: "Progresión sugerida: +2,5 kg la próxima sesión",
+        }),
+      ],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a cardio entry with comentario_ia and without notas", () => {
+    const result = validateSession({
+      fecha: new Date().toISOString(),
+      ejercicios: [
+        baseCardio({
+          comentario_ia: "Ritmo constante, buena base aeróbica",
+        }),
+      ],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it("accepts a past date", () => {
     const result = validateSession({
       fecha: "2026-01-01T00:00:00.000Z",

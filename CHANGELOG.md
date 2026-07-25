@@ -325,6 +325,15 @@ Proyecto sin versión publicada todavía.
   redirigía `manifest.webmanifest`/`icon`/`apple-icon` a `/login` con 307 (mismo patrón que el
   bug ya corregido de `/api/mcp`) — el favicon del propio login habría quedado roto y la
   instalabilidad habría fallado sin sesión.
+- **[BL-027]** Comentario de la IA y feedback de David separados en dos campos por ejercicio,
+  antes mezclados en un único campo `notas` sin distinguir autoría. Columna nueva `aiComment`
+  (`StrengthEntry`/`CardioEntry`, migración aditiva sin pérdida de datos) y campo `comentario_ia`
+  en el esquema Zod compartido (`validate-session.ts`, usado por el formulario manual,
+  `submit_session_proposal` in-app y `log_session`/`edit_session` MCP). De solo lectura en el
+  formulario, oculto cuando está vacío (siempre el caso en ejercicios añadidos a mano). `SKILL.md`
+  actualizado para que la IA rellene `comentario_ia` con su propia observación (técnica,
+  progresión) y trate `notas` como feedback de David de solo lectura, a considerar junto al RPE
+  para decidir la progresión. Ver DECISIONS.md.
 
 ### Changed
 

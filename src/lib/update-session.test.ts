@@ -67,6 +67,7 @@ describe("updateSession", () => {
           {
             exerciseId: "ex-1",
             notes: undefined,
+            aiComment: undefined,
             order: 0,
             sets: {
               create: [

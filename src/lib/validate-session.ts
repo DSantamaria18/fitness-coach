@@ -20,11 +20,25 @@ const serieSchema = z.object({
   RPE: rpeSchema.optional(),
 });
 
+// notas: feedback de David tras la sesión (sensaciones, dolor, contexto) —
+// la IA lo lee vía get_session_history, nunca lo escribe. comentario_ia: la
+// propia observación de la IA (técnica, progresión sugerida), de solo
+// lectura para David en el formulario — campos separados a propósito para
+// no mezclar autorías en un único texto (BL-027, ver DECISIONS.md
+// 2026-07-25).
 const registroFuerzaSchema = z.object({
   tipo: z.literal("fuerza"),
   ejercicio: z.string().min(1),
   series: z.array(serieSchema).min(1),
   notas: z.string().optional(),
+  comentario_ia: z
+    .string()
+    .optional()
+    .describe(
+      "Tu propia observación breve sobre este ejercicio (técnica, progresión sugerida), " +
+        "si tienes algo útil que decir. Nunca escribas aquí el feedback de David — eso va " +
+        "en el campo `notas`, que tú solo lees, no rellenas.",
+    ),
 });
 
 // Todos los campos numéricos son opcionales individualmente (SPEC §3): no
@@ -43,6 +57,14 @@ const registroCardioSchema = z.object({
   kcal: z.number().int().positive().optional(),
   RPE: rpeSchema.optional(),
   notas: z.string().optional(),
+  comentario_ia: z
+    .string()
+    .optional()
+    .describe(
+      "Tu propia observación breve sobre este ejercicio (técnica, progresión sugerida), " +
+        "si tienes algo útil que decir. Nunca escribas aquí el feedback de David — eso va " +
+        "en el campo `notas`, que tú solo lees, no rellenas.",
+    ),
 });
 
 const registroEjercicioSchema = z.discriminatedUnion("tipo", [

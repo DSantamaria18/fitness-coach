@@ -107,6 +107,7 @@ describe("createBackup", () => {
         // Comilla simple deliberada: prueba de escapado, no un caso raro —
         // David escribe notas libres con apóstrofos habitualmente.
         notes: "No dormí bien, RPE alto",
+        aiComment: null,
         order: 0,
       },
     ]);
@@ -153,7 +154,8 @@ describe("createBackup", () => {
       );
       CREATE TABLE "StrengthEntry" (
         "id" TEXT NOT NULL PRIMARY KEY, "sessionId" TEXT NOT NULL,
-        "exerciseId" TEXT NOT NULL, "notes" TEXT, "order" INTEGER NOT NULL,
+        "exerciseId" TEXT NOT NULL, "notes" TEXT, "aiComment" TEXT,
+        "order" INTEGER NOT NULL,
         FOREIGN KEY ("sessionId") REFERENCES "Session"("id"),
         FOREIGN KEY ("exerciseId") REFERENCES "Exercise"("id")
       );
@@ -169,7 +171,7 @@ describe("createBackup", () => {
         "durationSeconds" INTEGER, "distanceKm" REAL, "avgSpeedKmh" REAL,
         "avgPaceSecPerKm" INTEGER, "avgHeartRate" INTEGER, "maxHeartRate" INTEGER,
         "steps" INTEGER, "stepFrequency" REAL, "kcal" INTEGER, "rpe" INTEGER,
-        "notes" TEXT
+        "notes" TEXT, "aiComment" TEXT
       );
       CREATE TABLE "ComentarioProgreso" (
         "id" TEXT NOT NULL PRIMARY KEY, "userId" TEXT NOT NULL UNIQUE,

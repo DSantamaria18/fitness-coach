@@ -24,6 +24,7 @@ export const MOCK_SESSION_PROPOSAL = {
   reps: 5,
   pesoKg: 60,
   rpe: 7,
+  comentarioIa: "Progresión sugerida: +2,5 kg la próxima sesión.",
 } as const;
 
 export const MOCK_PROGRESS_COMMENT_TEXT =
@@ -78,7 +79,10 @@ function buildSubmitProposalMessage(model: string) {
                   RPE: MOCK_SESSION_PROPOSAL.rpe,
                 },
               ],
-              notas: "Propuesta generada por el mock de Anthropic (E2E).",
+              // `notas` es el feedback de David: la IA no lo escribe (BL-027,
+              // ver validate-session.ts), así que el mock no lo simula. Solo
+              // rellena comentario_ia, que es lo que sí le corresponde.
+              comentario_ia: MOCK_SESSION_PROPOSAL.comentarioIa,
             },
           ],
         },

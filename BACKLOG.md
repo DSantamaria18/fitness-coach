@@ -43,16 +43,6 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   `SKILL.md`/README, o subir a un campo explícito en `Exercise` si se quiere forzar en el
   esquema).
 
-- **[BL-027]** **Separar comentarios de ejercicio en dos campos**: uno para las observaciones que
-  genera la IA sobre el ejercicio (técnica, progresión sugerida, etc.) y otro para el feedback que
-  escribe David tras la sesión (sensaciones, dolor, contexto) — hoy es un único campo de
-  comentario sin distinguir autoría. Justificación: propuesto por David; la IA necesita poder leer
-  el feedback de David como input para los informes de progreso, y mezclarlo con sus propias
-  observaciones en el mismo campo le impide diferenciar "lo que yo dije" de "lo que la IA generó
-  antes". Dificultad: media (cambio de esquema en el modelo de sesión/ejercicio, migración de los
-  comentarios existentes a uno de los dos campos, ajuste de formulario y del prompt de
-  generación/informe de la skill).
-
 - **[BL-028]** **Chat con IA sobre temas diversos**: conversar libremente con la IA sobre dudas de
   un ejercicio concreto, feedback específico de una sesión ya registrada, evolución a lo largo
   del tiempo, etc. — más allá del flujo estructurado actual de generar/registrar sesión.

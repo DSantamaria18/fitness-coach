@@ -19,8 +19,12 @@ const exercises = [
 // Host de prueba: SessionEntriesEditor recibe `registros` como prop
 // controlado por el padre (ver DECISIONS.md 2026-07-18), así que necesita un
 // componente que le dé estado real para poder interactuar con él.
-function Harness() {
-  const [registros, setRegistros] = useState<RegistroState[]>([]);
+function Harness({
+  initialRegistros = [],
+}: {
+  initialRegistros?: RegistroState[];
+} = {}) {
+  const [registros, setRegistros] = useState<RegistroState[]>(initialRegistros);
   return (
     <form>
       <SessionEntriesEditor
@@ -179,5 +183,46 @@ describe("SessionEntriesEditor", () => {
       const input = screen.getByLabelText(label);
       expect(input.getAttribute("title")).toMatch(/coma.*punto|punto.*coma/i);
     }
+  });
+
+  it("no muestra el bloque de comentario de la IA en un ejercicio añadido a mano", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await addExercise(user, "Sentadilla");
+
+    expect(screen.queryByText(/comentario de la ia/i)).not.toBeInTheDocument();
+  });
+
+  // Regresión BL-027: update-session.ts borra y recrea todas las entradas en
+  // cada guardado, así que si el payload no reenviara comentario_ia tal cual,
+  // se perdería el comentario de la IA en cuanto David editara/guardara
+  // cualquier otra cosa del mismo ejercicio (p. ej. su propio feedback).
+  it("muestra el comentario de la IA de solo lectura y lo mantiene en el payload al editar el feedback", async () => {
+    const user = userEvent.setup();
+    const registroIa: RegistroState = {
+      key: "registro-ia-1",
+      tipo: "fuerza",
+      ejercicio: "Sentadilla",
+      series: [{ reps: "5", peso_kg: "100", tempo: "", RPE: "8" }],
+      notas: "",
+      comentario_ia: "Progresión sugerida: +2,5 kg la próxima sesión",
+    };
+    const { container } = render(<Harness initialRegistros={[registroIa]} />);
+
+    expect(
+      screen.getByText("Progresión sugerida: +2,5 kg la próxima sesión"),
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByLabelText(/tu feedback/i),
+      "Me dolió el hombro",
+    );
+
+    const [entrada] = getPayload(container);
+    expect(entrada.comentario_ia).toBe(
+      "Progresión sugerida: +2,5 kg la próxima sesión",
+    );
+    expect(entrada.notas).toBe("Me dolió el hombro");
   });
 });

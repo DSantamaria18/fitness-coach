@@ -90,6 +90,13 @@ cambio relevante.
 - La página `/sesion` fuerza renderizado dinámico (`export const dynamic = "force-dynamic"`)
   por estar protegida por `proxy.ts`: nunca puede servirse como contenido estático generado en
   build time.
+- Comentario de la IA y feedback de David separados en dos campos por ejercicio (BL-027):
+  `comentario_ia` (columna `aiComment` en `StrengthEntry`/`CardioEntry`) es la observación de la
+  IA sobre técnica/progresión al generar o editar una sesión, de solo lectura en el formulario y
+  oculta cuando está vacía (siempre el caso en ejercicios añadidos a mano); `notas` sigue siendo
+  el feedback editable de David (sensaciones, dolor, contexto). La IA lee `notas` vía
+  `get_session_history` como contexto adicional para la progresión, pero nunca lo escribe — ver
+  SKILL.md y DECISIONS.md.
 
 ## Historial y edición de sesión de entreno
 
