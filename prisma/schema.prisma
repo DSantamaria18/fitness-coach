@@ -77,7 +77,14 @@ model StrengthEntry {
   id         String  @id @default(cuid())
   sessionId  String
   exerciseId String
+  // Feedback de David tras la sesión (sensaciones, dolor, contexto) — la IA
+  // lo lee (get_session_history) pero nunca lo escribe. Ver BL-027.
   notes      String?
+  // Observación de la IA sobre el ejercicio (técnica, progresión sugerida) al
+  // generar/editar la sesión — de solo lectura para David en el formulario.
+  // Columna nueva, separada de `notes`, para no mezclar ambas autorías en el
+  // mismo campo (BL-027, ver DECISIONS.md 2026-07-25).
+  aiComment  String?
   order      Int
 
   session  Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -126,7 +133,12 @@ model CardioEntry {
   stepFrequency   Float?
   kcal            Int?
   rpe             Int?
+  // Feedback de David tras la sesión — ver comentario equivalente en
+  // StrengthEntry.notes.
   notes           String?
+  // Observación de la IA sobre el ejercicio — ver comentario equivalente en
+  // StrengthEntry.aiComment.
+  aiComment       String?
 
   session  Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   exercise Exercise @relation(fields: [exerciseId], references: [id])

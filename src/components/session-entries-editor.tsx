@@ -133,7 +133,11 @@ function toOptionalText(value: string): string | undefined {
 
 // Convierte el estado local (todo strings, cómodo para <input>) al mismo
 // contrato JSON que consume validate-session.ts, tanto al crear como al
-// editar una sesión.
+// editar una sesión. `comentario_ia` se reenvía tal cual aunque el campo sea
+// de solo lectura en el formulario: update-session.ts borra y recrea todas
+// las entradas de la sesión en cada guardado (ver session-entries.ts), así
+// que si no viajara en el payload se perdería el comentario de la IA en
+// cuanto se editara cualquier otra cosa del ejercicio (BL-027).
 function buildSessionEntriesPayload(registros: RegistroState[]) {
   return registros.map((registro) => {
     if (registro.tipo === "fuerza") {
@@ -141,6 +145,7 @@ function buildSessionEntriesPayload(registros: RegistroState[]) {
         tipo: "fuerza" as const,
         ejercicio: registro.ejercicio,
         notas: toOptionalText(registro.notas),
+        comentario_ia: toOptionalText(registro.comentario_ia),
         series: registro.series.map((serie) => ({
           reps: toNumber(serie.reps),
           peso_kg: toNumber(serie.peso_kg),
@@ -154,6 +159,7 @@ function buildSessionEntriesPayload(registros: RegistroState[]) {
       tipo: "cardio" as const,
       ejercicio: registro.ejercicio,
       notas: toOptionalText(registro.notas),
+      comentario_ia: toOptionalText(registro.comentario_ia),
       duracion: toSecondsFromMinutesSeconds(registro.duracion),
       distancia_km: toNumber(registro.distancia_km),
       velocidad_media: toNumber(registro.velocidad_media),
@@ -239,6 +245,10 @@ export function SessionEntriesEditor({
           ejercicio: exercise.name,
           series: [emptySerie()],
           notas: "",
+          // Vacío a propósito: un ejercicio añadido a mano no tiene
+          // observación de la IA, y el bloque de solo lectura del formulario
+          // se oculta cuando este campo está vacío (BL-027).
+          comentario_ia: "",
         },
       ]);
     } else {
@@ -249,6 +259,7 @@ export function SessionEntriesEditor({
           tipo: "cardio",
           ejercicio: exercise.name,
           notas: "",
+          comentario_ia: "",
           ...emptyCardioMetrics(),
         },
       ]);
@@ -616,8 +627,20 @@ export function SessionEntriesEditor({
             </table>
           )}
 
+          {registro.comentario_ia ? (
+            // Solo lectura: la IA es la única autora de este campo (ver
+            // validate-session.ts). Oculto por completo cuando está vacío —
+            // siempre el caso en ejercicios añadidos a mano (BL-027).
+            <div className="flex flex-col text-xs">
+              <span className="font-medium text-iron">Comentario de la IA</span>
+              <p className="rounded-md border border-iron/10 bg-stone px-2 py-1 text-iron">
+                {registro.comentario_ia}
+              </p>
+            </div>
+          ) : null}
+
           <label className="flex flex-col text-xs">
-            Notas
+            Tu feedback
             <input
               type="text"
               value={registro.notas}

@@ -28,6 +28,12 @@ test("Generar propuesta con IA precarga el formulario y sigue siendo editable", 
   await expect(pesoKg).toHaveValue(String(MOCK_SESSION_PROPOSAL.pesoKg));
   await expect(rpe).toHaveValue(String(MOCK_SESSION_PROPOSAL.rpe));
 
+  // BL-027: el comentario de la IA se muestra de solo lectura, separado del
+  // campo de feedback de David.
+  await expect(
+    page.getByText(MOCK_SESSION_PROPOSAL.comentarioIa),
+  ).toBeVisible();
+
   // El formulario prellenado por la IA debe seguir siendo editable a mano,
   // no de solo lectura.
   await reps.fill("6");

@@ -91,6 +91,7 @@ function buildStrengthEntries(
   const entries: {
     exerciseId: string;
     notes: string | undefined;
+    aiComment: string | undefined;
     order: number;
     sets: { create: ReturnType<typeof buildSets> };
   }[] = [];
@@ -100,6 +101,7 @@ function buildStrengthEntries(
     entries.push({
       exerciseId: exerciseByName.get(entry.ejercicio)!.id,
       notes: entry.notas,
+      aiComment: entry.comentario_ia,
       order,
       sets: { create: buildSets(entry.series) },
     });
@@ -138,6 +140,7 @@ function buildCardioEntries(
     kcal: number | undefined;
     rpe: number | undefined;
     notes: string | undefined;
+    aiComment: string | undefined;
   }[] = [];
 
   ejercicios.forEach((entry, order) => {
@@ -156,6 +159,7 @@ function buildCardioEntries(
       kcal: entry.kcal,
       rpe: entry.RPE,
       notes: entry.notas,
+      aiComment: entry.comentario_ia,
     });
   });
 

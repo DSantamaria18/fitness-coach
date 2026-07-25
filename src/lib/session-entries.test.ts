@@ -138,6 +138,58 @@ describe("resolveSessionEntries", () => {
     ]);
   });
 
+  // BL-027: notas (feedback de David) y comentario_ia (observación de la IA)
+  // se guardan en columnas separadas (notes/aiComment) — no deben pisarse.
+  it("guarda notas y comentario_ia en columnas separadas para fuerza", async () => {
+    findManyMock.mockResolvedValue([
+      {
+        id: "ex-1",
+        name: "Sentadilla",
+        type: "STRENGTH",
+        createdAt: new Date(),
+      },
+    ] as never);
+
+    const result = await resolveSessionEntries([
+      {
+        tipo: "fuerza",
+        ejercicio: "Sentadilla",
+        series: [{ reps: 5, peso_kg: 100 }],
+        notas: "Me dolió la muñeca",
+        comentario_ia: "Progresión sugerida: +2,5 kg",
+      },
+    ]);
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.strengthEntries[0]).toMatchObject({
+      notes: "Me dolió la muñeca",
+      aiComment: "Progresión sugerida: +2,5 kg",
+    });
+  });
+
+  it("guarda notas y comentario_ia en columnas separadas para cardio", async () => {
+    findManyMock.mockResolvedValue([
+      { id: "ex-2", name: "Carrera", type: "CARDIO", createdAt: new Date() },
+    ] as never);
+
+    const result = await resolveSessionEntries([
+      {
+        tipo: "cardio",
+        ejercicio: "Carrera",
+        notas: "Sensaciones buenas",
+        comentario_ia: "Ritmo constante, buena base aeróbica",
+      },
+    ]);
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.cardioEntries[0]).toMatchObject({
+      notes: "Sensaciones buenas",
+      aiComment: "Ritmo constante, buena base aeróbica",
+    });
+  });
+
   it("returns a failure result when a referenced exercise does not exist in the catalog", async () => {
     findManyMock.mockResolvedValue([]);
 

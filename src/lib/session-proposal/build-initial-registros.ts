@@ -30,6 +30,7 @@ type FuerzaRegistroState = {
   ejercicio: string;
   series: SerieState[];
   notas: string;
+  comentario_ia: string;
 };
 
 type CardioRegistroState = {
@@ -37,6 +38,7 @@ type CardioRegistroState = {
   tipo: "cardio";
   ejercicio: string;
   notas: string;
+  comentario_ia: string;
 } & Record<CardioMetricKey, string>;
 
 export type RegistroState = FuerzaRegistroState | CardioRegistroState;
@@ -54,6 +56,7 @@ export type SessionEntryInitialData =
       tipo: "fuerza";
       ejercicio: string;
       notas?: string | null;
+      comentario_ia?: string | null;
       series: {
         reps: number;
         // Opcional (igual que tempo/RPE): ejercicios a peso corporal
@@ -73,6 +76,7 @@ export type SessionEntryInitialData =
       tipo: "cardio";
       ejercicio: string;
       notas?: string | null;
+      comentario_ia?: string | null;
       duracion?: number | null;
       distancia_km?: number | null;
       velocidad_media?: number | null;
@@ -124,6 +128,7 @@ export function buildInitialRegistros(
         tipo: "fuerza",
         ejercicio: entry.ejercicio,
         notas: entry.notas ?? "",
+        comentario_ia: entry.comentario_ia ?? "",
         series: entry.series.map((serie) => ({
           reps: String(serie.reps),
           // toInputString (no String()): peso_kg puede llegar null/undefined
@@ -144,6 +149,7 @@ export function buildInitialRegistros(
       tipo: "cardio",
       ejercicio: entry.ejercicio,
       notas: entry.notas ?? "",
+      comentario_ia: entry.comentario_ia ?? "",
       duracion: toMinutesSecondsInputString(entry.duracion),
       distancia_km: toInputString(entry.distancia_km),
       velocidad_media: toInputString(entry.velocidad_media),

@@ -147,6 +147,7 @@ describe("SessionForm", () => {
           tipo: "fuerza",
           ejercicio: "Sentadilla",
           notas: "",
+          comentario_ia: "",
           series: [{ reps: "10", peso_kg: "10", tempo: "", RPE: "7" }],
         },
       ],

@@ -25,12 +25,14 @@ function strengthEntry(
   order: number,
   exerciseName: string,
   weightKg: number | null = 100,
+  aiComment: string | null = null,
 ): DomainSessionHistoryEntry["strengthEntries"][number] {
   return {
     id: `strength-${order}`,
     sessionId: "session-1",
     exerciseId: `ex-${exerciseName}`,
     notes: null,
+    aiComment,
     order,
     exercise: {
       id: `ex-${exerciseName}`,
@@ -55,6 +57,7 @@ function strengthEntry(
 function cardioEntry(
   order: number,
   exerciseName: string,
+  aiComment: string | null = null,
 ): DomainSessionHistoryEntry["cardioEntries"][number] {
   return {
     id: `cardio-${order}`,
@@ -72,6 +75,7 @@ function cardioEntry(
     kcal: null,
     rpe: null,
     notes: null,
+    aiComment,
     exercise: {
       id: `ex-${exerciseName}`,
       name: exerciseName,
@@ -125,12 +129,14 @@ describe("toSessionHistoryEntry", () => {
       tipo: "fuerza",
       ejercicio: "Sentadilla",
       notas: null,
+      comentario_ia: null,
       series: [{ reps: 5, peso_kg: 100, tempo: null, RPE: null }],
     });
     expect(result.ejercicios[1]).toEqual({
       tipo: "cardio",
       ejercicio: "Carrera",
       notas: null,
+      comentario_ia: null,
       duracion: 1200,
       distancia_km: null,
       velocidad_media: null,
@@ -141,6 +147,30 @@ describe("toSessionHistoryEntry", () => {
       frecuencia_paso: null,
       kcal: null,
       RPE: null,
+    });
+  });
+
+  // BL-027: notas y comentario_ia son campos independientes (autoría
+  // distinta), no deben pisarse ni fusionarse al mapear.
+  it("mapea notas y comentario_ia como campos independientes cuando ambos están informados", () => {
+    const session = buildDomainSession({
+      strengthEntries: [
+        strengthEntry(0, "Sentadilla", 100, "Progresión sugerida: +2,5 kg"),
+      ],
+      cardioEntries: [
+        cardioEntry(1, "Carrera", "Ritmo constante, buena base aeróbica"),
+      ],
+    });
+
+    const result = toSessionHistoryEntry(session);
+
+    expect(result.ejercicios[0]).toMatchObject({
+      notas: null,
+      comentario_ia: "Progresión sugerida: +2,5 kg",
+    });
+    expect(result.ejercicios[1]).toMatchObject({
+      notas: null,
+      comentario_ia: "Ritmo constante, buena base aeróbica",
     });
   });
 
@@ -158,6 +188,7 @@ describe("toSessionHistoryEntry", () => {
       tipo: "fuerza",
       ejercicio: "Burpees",
       notas: null,
+      comentario_ia: null,
       series: [{ reps: 5, peso_kg: null, tempo: null, RPE: null }],
     });
   });
