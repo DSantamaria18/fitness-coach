@@ -42,12 +42,11 @@ export function NavBar() {
               href={href}
               aria-current={isActive ? "page" : undefined}
               className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-xs font-medium transition-colors ${
-                // Color de acento temporal en valor arbitrario: el Tech Lead
-                // lo sustituirá por un token compartido `--color-ember`
-                // cuando se integre la rama de tokens visuales.
-                isActive
-                  ? "text-[#d9622b] dark:text-[#f0813e]"
-                  : "text-zinc-500 dark:text-zinc-400"
+                // `text-ember` resuelve a --color-ember (globals.css), que ya
+                // se redefine bajo prefers-color-scheme: dark — no hace
+                // falta una variante `dark:` aparte, a diferencia del resto
+                // de esta barra (que sigue en zinc plano).
+                isActive ? "text-ember" : "text-zinc-500 dark:text-zinc-400"
               }`}
             >
               <Icon />

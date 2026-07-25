@@ -2415,4 +2415,54 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-07-25
+- **Decisión:** BL-019 (rediseño de UX) se implementó en dos PRs paralelas e independientes —
+  navegación (`feature/bl019-navegacion-inferior`, PR #45) y tokens visuales + `Card`
+  (`feature/bl019-tokens-visuales`, PR #46) — repartidas entre los 2 Developers antes de escribir
+  ninguna línea de código de producción, y solo después de que David aprobara un mock estático
+  (HTML/CSS aislado, nunca parte del repo) mostrándole la dirección visual concreta.
+- **Contexto/proceso:**
+  - **Mock antes de implementar**: David pidió explícitamente ver un mock visual antes de tocar
+    código, más allá del plan de texto ya presentado. Se construyó como página aislada (fuera
+    del repo), con teléfono simulado, cambiador de pantalla (Sesión/Historial/Informe) y
+    alternador claro/oscuro, usando contenido real del dominio (nombres de ejercicios, series,
+    RPE) en vez de lorem ipsum. Aprobado sin cambios ("está perfecto, adelante con ello").
+  - **Separación por propiedad de fichero, no por tamaño de tarea**: antes de repartir, se
+    verificó que navegación (`nav-bar.tsx`, `nav-links.ts`, `layout.tsx`,
+    `section-indicator.tsx`) y visual (`globals.css`, `card.tsx` nuevo, los `page.tsx`/
+    componentes de contenido de las 4 páginas) no comparten ningún fichero — condición ya
+    establecida en una ronda anterior para decidir si una feature es realmente separable entre
+    los 2 Developers. Al no compartir ficheros, ambas ramas partieron del mismo `master` y se
+    mergearon sin conflictos, en cualquier orden.
+  - **Contrato de color entre ramas independientes**: como solo la rama de tokens visuales
+    debía tocar `globals.css`, la rama de navegación usó un valor de color arbitrario de
+    Tailwind (`text-[#d9622b] dark:text-[#f0813e]`, mismo hex que el mock) en vez de esperar a
+    que el token existiera, con un comentario explícito marcándolo como temporal. Tras mergear
+    ambas PRs, el Tech Lead sustituyó ese valor arbitrario por la utilidad `text-ember` (ya
+    generada por Tailwind a partir de `--color-ember` en `@theme inline`) en una PR de
+    integración aparte (`chore/bl019-integracion`) — cambio mecánico de una clase, sin efecto de
+    comportamiento, pero con su propia PR+CI de todos modos (regla ya existente: ningún commit
+    directo a `master` con efecto colateral de comportamiento, solo `.md` puro es seguro
+    directo).
+  - **Verificación en navegador real, tres veces**: cada Developer verificó su propia rama en
+    Playwright MCP (375px/1024px) antes de abrir su PR. El Tech Lead, al revisar la integración
+    conjunta tras mergear ambas, encontró que `NavBarGate` muestra la barra en `/login` si ya
+    existe una sesión válida (comprueba `auth()`, no la ruta) — comportamiento preexistente a
+    BL-019, no introducido por esta ronda, documentado como BL-030 en vez de arreglarlo sobre la
+    marcha (fuera del alcance acordado de esta tarea).
+  - **Credencial de admin bloqueada por el clasificador de permisos**: al intentar iniciar
+    sesión en el navegador real para esa verificación conjunta, el modo automático bloqueó
+    escribir usuario/contraseña en el formulario de login (patrón de entrada de credenciales),
+    incluso tratándose de una contraseña temporal generada localmente por el propio Tech Lead
+    para su `dev.db` local. Se respetó el bloqueo sin buscar un rodeo: se revirtió el cambio de
+    contraseña en `.env` y se dio la verificación conjunta por completada con lo ya disponible
+    (revisión de ambos diffs, CI en verde en ambas PRs, y la verificación en navegador real ya
+    hecha por cada Developer en su propio worktree).
+- **Justificación:** repartir por propiedad de fichero (no por "mitad del trabajo") es lo que
+  permitió que ambas ramas avanzaran sin coordinarse en tiempo real y sin conflictos de merge;
+  el mock previo evitó construir una dirección visual que David pudiera rechazar después de
+  escrito el código.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
