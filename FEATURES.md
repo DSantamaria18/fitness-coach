@@ -139,6 +139,9 @@ cambio relevante.
   controlado por el componente padre (no como estado interno), para que tanto `SessionForm`
   como el formulario de edición de `/historial` puedan conocer el número de ejercicios añadidos
   y habilitar/deshabilitar su propio botón de guardar sin duplicar esa lógica tampoco.
+- Layout de tabla (BL-019, 2026-07-25): fuerza en columnas Serie/Peso/Reps/Tempo/RPE; cardio
+  en una fila por métrica (etiqueta + input). En ambos, RPE se muestra como badge circular
+  (`RpeInput`, componente compartido) en vez de un `<input>` rectangular igual al resto.
 - `src/lib/session-proposal/build-initial-registros.ts` — conversor puro (`buildInitialRegistros`,
   sin JSX ni hooks) de ejercicios ya guardados (formato de `get-session-history.ts`) o
   propuestos por la IA (`ValidatedSession.ejercicios`, estructuralmente compatible) al estado

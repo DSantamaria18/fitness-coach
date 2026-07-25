@@ -168,6 +168,33 @@ function buildSessionEntriesPayload(registros: RegistroState[]) {
   });
 }
 
+// RPE compartido entre fuerza y cardio: círculo fijo (no escala con el resto
+// de inputs de la fila) para que la métrica subjetiva de esfuerzo destaque
+// visualmente frente a las numéricas objetivas (peso, reps, duración) — así
+// era en el mock aprobado de BL-019.
+function RpeInput({
+  value,
+  onChange,
+  ariaLabel,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  ariaLabel: string;
+}) {
+  return (
+    <input
+      type="number"
+      inputMode="numeric"
+      min={1}
+      max={10}
+      aria-label={ariaLabel}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className="h-9 w-9 rounded-full border border-iron/20 bg-surface text-center font-mono text-sm tabular-nums"
+    />
+  );
+}
+
 // `registros` es un prop controlado por el padre (no estado interno): tanto
 // SessionForm (/sesion) como el formulario de edición de /historial
 // necesitan conocer el número de ejercicios añadidos para habilitar/
@@ -374,97 +401,123 @@ export function SessionEntriesEditor({
 
           {registro.tipo === "fuerza" ? (
             <>
-              {registro.series.map((serie, index) => (
-                // Etiquetas implícitas (envolviendo el input) en vez de
-                // htmlFor/id: las series se añaden/quitan dinámicamente y un
-                // id fijo colisionaría entre filas repetidas.
-                <div key={index} className="flex flex-wrap items-end gap-2">
-                  <label className="flex flex-col text-xs">
-                    Reps
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      value={serie.reps}
-                      onChange={(event) =>
-                        updateSerie(
-                          registro.key,
-                          index,
-                          "reps",
-                          event.target.value,
-                        )
-                      }
-                      className="w-16 rounded-md border border-iron/15 px-2 py-1 font-mono tabular-nums"
-                    />
-                  </label>
-                  <label className="flex flex-col text-xs">
-                    Peso (kg)
-                    {/* type="text" (no "number"): un <input type="number">
-                        nunca deja llegar una coma a su .value, así que la
-                        tolerancia a coma decimal de toNumber() no tendría
-                        ningún efecto real si este campo siguiera siendo
-                        number — ver comentario de CardioFieldKind. */}
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="ej: 82,5"
-                      title="Peso añadido a la serie, además de tu peso corporal. Déjalo vacío si el ejercicio es a peso corporal, sin lastre."
-                      value={serie.peso_kg}
-                      onChange={(event) =>
-                        updateSerie(
-                          registro.key,
-                          index,
-                          "peso_kg",
-                          event.target.value,
-                        )
-                      }
-                      className="w-20 rounded-md border border-iron/15 px-2 py-1 font-mono tabular-nums"
-                    />
-                  </label>
-                  <label className="flex flex-col text-xs">
-                    Tempo
-                    <input
-                      type="text"
-                      value={serie.tempo}
-                      onChange={(event) =>
-                        updateSerie(
-                          registro.key,
-                          index,
-                          "tempo",
-                          event.target.value,
-                        )
-                      }
-                      className="w-16 rounded-md border border-iron/15 px-2 py-1"
-                    />
-                  </label>
-                  <label className="flex flex-col text-xs">
-                    RPE
-                    <input
-                      type="number"
-                      min={1}
-                      max={10}
-                      value={serie.RPE}
-                      onChange={(event) =>
-                        updateSerie(
-                          registro.key,
-                          index,
-                          "RPE",
-                          event.target.value,
-                        )
-                      }
-                      className="w-14 rounded-md border border-iron/15 px-2 py-1 font-mono tabular-nums"
-                    />
-                  </label>
-                  {registro.series.length > 1 ? (
-                    <button
-                      type="button"
-                      onClick={() => removeSerie(registro.key, index)}
-                      className="text-xs text-red-600 dark:text-red-400"
-                    >
-                      Quitar serie
-                    </button>
-                  ) : null}
-                </div>
-              ))}
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-max text-left text-xs">
+                  <thead>
+                    <tr className="text-iron">
+                      <th scope="col" className="w-8 pb-1 font-medium">
+                        Serie
+                      </th>
+                      <th scope="col" className="pb-1 font-medium">
+                        Peso (kg)
+                      </th>
+                      <th scope="col" className="pb-1 font-medium">
+                        Reps
+                      </th>
+                      <th scope="col" className="pb-1 font-medium">
+                        Tempo
+                      </th>
+                      <th scope="col" className="pb-1 text-center font-medium">
+                        RPE
+                      </th>
+                      <th scope="col" className="w-6 pb-1">
+                        <span className="sr-only">Quitar serie</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {registro.series.map((serie, index) => (
+                      <tr key={index} className="border-t border-iron/10">
+                        <th
+                          scope="row"
+                          className="py-1.5 pr-2 font-mono font-normal tabular-nums text-iron"
+                        >
+                          {index + 1}
+                        </th>
+                        <td className="py-1.5 pr-2">
+                          {/* type="text" (no "number"): un <input
+                              type="number"> nunca deja llegar una coma a su
+                              .value, así que la tolerancia a coma decimal de
+                              toNumber() no tendría ningún efecto real si este
+                              campo siguiera siendo number — ver comentario de
+                              CardioFieldKind. */}
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="ej: 82,5"
+                            title="Peso añadido a la serie, además de tu peso corporal. Déjalo vacío si el ejercicio es a peso corporal, sin lastre."
+                            aria-label="Peso (kg)"
+                            value={serie.peso_kg}
+                            onChange={(event) =>
+                              updateSerie(
+                                registro.key,
+                                index,
+                                "peso_kg",
+                                event.target.value,
+                              )
+                            }
+                            className="w-20 rounded-md border border-iron/15 px-2 py-1 font-mono tabular-nums"
+                          />
+                        </td>
+                        <td className="py-1.5 pr-2">
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            aria-label="Reps"
+                            value={serie.reps}
+                            onChange={(event) =>
+                              updateSerie(
+                                registro.key,
+                                index,
+                                "reps",
+                                event.target.value,
+                              )
+                            }
+                            className="w-16 rounded-md border border-iron/15 px-2 py-1 font-mono tabular-nums"
+                          />
+                        </td>
+                        <td className="py-1.5 pr-2">
+                          <input
+                            type="text"
+                            aria-label="Tempo"
+                            value={serie.tempo}
+                            onChange={(event) =>
+                              updateSerie(
+                                registro.key,
+                                index,
+                                "tempo",
+                                event.target.value,
+                              )
+                            }
+                            className="w-16 rounded-md border border-iron/15 px-2 py-1"
+                          />
+                        </td>
+                        <td className="py-1.5 pr-2 text-center">
+                          <RpeInput
+                            ariaLabel="RPE"
+                            value={serie.RPE}
+                            onChange={(value) =>
+                              updateSerie(registro.key, index, "RPE", value)
+                            }
+                          />
+                        </td>
+                        <td className="py-1.5 text-center">
+                          {registro.series.length > 1 ? (
+                            <button
+                              type="button"
+                              onClick={() => removeSerie(registro.key, index)}
+                              aria-label={`Quitar serie ${index + 1}`}
+                              className="text-red-600 dark:text-red-400"
+                            >
+                              ✕
+                            </button>
+                          ) : null}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               <button
                 type="button"
                 onClick={() => addSerie(registro.key)}
@@ -474,65 +527,93 @@ export function SessionEntriesEditor({
               </button>
             </>
           ) : (
-            <div className="grid grid-cols-2 gap-2">
-              {CARDIO_FIELDS.map(({ field, label, kind, placeholder }) => {
-                const value = registro[field];
-                // Aviso inline en vez de fallo mudo: un mm:ss mal escrito
-                // (no vacío) se muestra al usuario de inmediato mientras
-                // edita, en vez de convertirse en `undefined` sin que se
-                // entere de que su dato no se guardó — el mismo tipo de
-                // fallo silencioso que motivó este cambio (ver DECISIONS.md).
-                const invalidMmSs =
-                  kind === "mm:ss" &&
-                  value.trim() !== "" &&
-                  !parseMinutesSeconds(value).success;
+            <table className="w-full text-left text-xs">
+              <tbody>
+                {CARDIO_FIELDS.map(({ field, label, kind, placeholder }) => {
+                  const value = registro[field];
+                  // Aviso inline en vez de fallo mudo: un mm:ss mal escrito
+                  // (no vacío) se muestra al usuario de inmediato mientras
+                  // edita, en vez de convertirse en `undefined` sin que se
+                  // entere de que su dato no se guardó — el mismo tipo de
+                  // fallo silencioso que motivó este cambio (ver
+                  // DECISIONS.md).
+                  const invalidMmSs =
+                    kind === "mm:ss" &&
+                    value.trim() !== "" &&
+                    !parseMinutesSeconds(value).success;
 
-                return (
-                  <label key={field} className="flex flex-col text-xs">
-                    {label}
-                    <input
-                      type={kind === "integer" ? "number" : "text"}
-                      inputMode={
-                        kind === "mm:ss"
-                          ? "text"
-                          : kind === "decimal"
-                            ? "decimal"
-                            : "numeric"
-                      }
-                      placeholder={placeholder}
-                      pattern={
-                        kind === "mm:ss" ? "\\d{1,3}:[0-5]\\d" : undefined
-                      }
-                      title={
-                        kind === "mm:ss"
-                          ? "Formato minutos:segundos, ej. 8:30"
-                          : kind === "decimal"
-                            ? "Admite coma o punto como separador decimal, ej. 5,2 o 5.2"
-                            : undefined
-                      }
-                      aria-invalid={invalidMmSs || undefined}
-                      value={value}
-                      onChange={(event) =>
-                        updateCardioField(
-                          registro.key,
-                          field,
-                          event.target.value,
-                        )
-                      }
-                      className="rounded-md border border-iron/15 px-2 py-1 font-mono tabular-nums"
-                    />
-                    {invalidMmSs ? (
-                      <span
-                        role="alert"
-                        className="text-[11px] text-red-600 dark:text-red-400"
+                  return (
+                    <tr
+                      key={field}
+                      className="border-t border-iron/10 first:border-t-0"
+                    >
+                      <th
+                        scope="row"
+                        className="w-1/2 py-1.5 pr-2 font-normal text-iron"
                       >
-                        Formato inválido: usa min:seg, ej. 8:30.
-                      </span>
-                    ) : null}
-                  </label>
-                );
-              })}
-            </div>
+                        {label}
+                      </th>
+                      <td className="py-1.5">
+                        {field === "RPE" ? (
+                          <RpeInput
+                            ariaLabel={label}
+                            value={value}
+                            onChange={(v) =>
+                              updateCardioField(registro.key, field, v)
+                            }
+                          />
+                        ) : (
+                          <>
+                            <input
+                              type={kind === "integer" ? "number" : "text"}
+                              inputMode={
+                                kind === "mm:ss"
+                                  ? "text"
+                                  : kind === "decimal"
+                                    ? "decimal"
+                                    : "numeric"
+                              }
+                              placeholder={placeholder}
+                              pattern={
+                                kind === "mm:ss"
+                                  ? "\\d{1,3}:[0-5]\\d"
+                                  : undefined
+                              }
+                              title={
+                                kind === "mm:ss"
+                                  ? "Formato minutos:segundos, ej. 8:30"
+                                  : kind === "decimal"
+                                    ? "Admite coma o punto como separador decimal, ej. 5,2 o 5.2"
+                                    : undefined
+                              }
+                              aria-invalid={invalidMmSs || undefined}
+                              aria-label={label}
+                              value={value}
+                              onChange={(event) =>
+                                updateCardioField(
+                                  registro.key,
+                                  field,
+                                  event.target.value,
+                                )
+                              }
+                              className="w-full rounded-md border border-iron/15 px-2 py-1 font-mono tabular-nums"
+                            />
+                            {invalidMmSs ? (
+                              <span
+                                role="alert"
+                                className="block text-[11px] text-red-600 dark:text-red-400"
+                              >
+                                Formato inválido: usa min:seg, ej. 8:30.
+                              </span>
+                            ) : null}
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           )}
 
           <label className="flex flex-col text-xs">

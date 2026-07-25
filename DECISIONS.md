@@ -2561,4 +2561,33 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-07-25
+- **Decisión:** Reconstruido el layout de `SessionEntriesEditor` (fuerza y cardio) a `<table>`,
+  para que coincida estructuralmente con el mock de BL-019 aprobado por David — no solo en
+  color, que ya se había migrado en rondas anteriores. Fuerza: columnas Serie/Peso/Reps/
+  Tempo/RPE, con RPE como badge circular (`RpeInput`, `h-9 w-9 rounded-full`). Cardio: una fila
+  por métrica (`<th scope="row">` con la etiqueta, `<td>` con el input), mismo badge circular
+  para su campo RPE — reutilizando `RpeInput` en vez de duplicar el estilo.
+- **Contexto:** David confirmó con una captura real de `/sesion` en el móvil (2026-07-25) que
+  el tema oscuro ya funcionaba (bug anterior resuelto), pero el layout seguía siendo filas
+  `flex-wrap` de campo suelto — nunca se había reconstruido, solo reskinnado. Confirmado
+  explícitamente por David antes de implementar ("reconstruye los dos") qué alcance cubrir
+  (fuerza y cardio, no solo fuerza).
+- **Alternativas consideradas:** mantener cardio como grid de 2 columnas sin tabla (descartado:
+  David pidió expresamente reconstruir "los dos", y el badge circular de RPE necesita el mismo
+  tratamiento en ambos tipos de registro para no verse inconsistente entre tarjetas de una
+  misma sesión).
+- **Verificación:** typecheck, lint y 425/425 tests en verde (TDD regla 5: ningún test afirma
+  clases CSS ni estructura DOM interna, así que el cambio de layout no rompió nada). Sin
+  verificación en navegador real logueado — bloqueada por el clasificador de credenciales
+  (mismo bloqueo documentado en la entrada de BL-019 de más arriba); pendiente que David
+  verifique visualmente contra el preview de Vercel de la PR.
+- **Lecciones aprendidas:** un "rediseño visual" y una "reconstrucción de layout" son alcances
+  distintos — migrar clases de color no implica que la estructura DOM coincida con el mock. La
+  entrada de BL-019 de más arriba ya lo señalaba para el resto de la app; este componente
+  concreto se había quedado fuera de esa migración de tokens porque sí tenía clases migradas
+  (parecía "hecho" a simple vista), ocultando que la estructura seguía sin tocar.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
