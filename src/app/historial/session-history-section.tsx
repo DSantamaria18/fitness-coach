@@ -96,7 +96,7 @@ export function SessionHistorySection({
       <h2 className="text-lg font-semibold text-ink">Sesiones de entreno</h2>
 
       {entries.length === 0 ? (
-        <p className="text-sm text-black/60 dark:text-white/60">
+        <p className="text-sm text-iron">
           Todavía no hay sesiones registradas.
         </p>
       ) : (
@@ -113,7 +113,7 @@ export function SessionHistorySection({
                 ) : (
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex flex-col gap-1">
-                      <span className="text-sm text-black/60 dark:text-white/60">
+                      <span className="text-sm text-iron">
                         {formatDate(entry.date)}
                       </span>
                       <ul className="flex flex-col gap-0.5 text-sm">

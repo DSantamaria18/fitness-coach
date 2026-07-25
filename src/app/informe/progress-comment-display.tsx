@@ -20,11 +20,9 @@ export function ProgressCommentDisplay({
   const formattedDate = dateFormatter.format(new Date(generadoEn));
 
   return (
-    <div className="rounded-md border border-black/10 px-4 py-3 dark:border-white/15">
+    <div className="rounded-md border border-iron/10 px-4 py-3">
       <p className="text-sm">{texto}</p>
-      <p className="mt-2 text-xs text-black/60 dark:text-white/60">
-        Generado el {formattedDate}
-      </p>
+      <p className="mt-2 text-xs text-iron">Generado el {formattedDate}</p>
     </div>
   );
 }

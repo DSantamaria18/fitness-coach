@@ -43,9 +43,7 @@ export function WeightHistorySection({
       <h2 className="text-lg font-semibold text-ink">Peso corporal</h2>
 
       {entries.length === 0 ? (
-        <p className="text-sm text-black/60 dark:text-white/60">
-          Todavía no hay registros de peso.
-        </p>
+        <p className="text-sm text-iron">Todavía no hay registros de peso.</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {entries.map((entry) => (
@@ -62,7 +60,7 @@ export function WeightHistorySection({
                       <span className="font-mono font-medium tabular-nums text-ink">
                         {entry.weightKg} kg
                       </span>
-                      <span className="text-sm text-black/60 dark:text-white/60">
+                      <span className="text-sm text-iron">
                         {formatDate(entry.date)}
                       </span>
                     </div>
@@ -112,7 +110,7 @@ function WeightEntryEditForm({
             inputMode="decimal"
             defaultValue={entry.weightKg}
             required
-            className="rounded-md border border-black/15 px-2 py-1 text-base dark:border-white/20"
+            className="rounded-md border border-iron/15 px-2 py-1 text-base"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
@@ -123,7 +121,7 @@ function WeightEntryEditForm({
             defaultValue={toDateInputValue(entry.date)}
             max={today}
             required
-            className="rounded-md border border-black/15 px-2 py-1 text-base dark:border-white/20"
+            className="rounded-md border border-iron/15 px-2 py-1 text-base"
           />
         </label>
       </div>

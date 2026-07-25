@@ -483,3 +483,18 @@ Proyecto sin versión publicada todavía.
   NavBar: el token ya se redefine bajo `prefers-color-scheme: dark`; texto negro fijo porque
   blanco sobre ember no cumple contraste AA, sobre todo en oscuro). Los botones destructivos
   ("Borrar", ya en rojo subrayado) no se tocan. Ver DECISIONS.md.
+- **BL-019 seguía a medias tras el fix de botones: bordes, fondo de NavBar y texto secundario
+  seguían en negro/blanco plano** (detectado por David tras instalar la PWA, 2026-07-25 —
+  "sigo sin ver los cambios en los componentes... la paleta y los componentes de ejercicios
+  siguen siendo los anteriores"). La migración de tokens (BL-019, PR anterior) solo había
+  tocado `Card` y los botones; los bordes de todos los `<input>`/`<select>` (12 ficheros,
+  incluido el editor de ejercicios de sesión), el fondo/borde propio de `NavBar` y el texto
+  secundario (`text-black/60 dark:text-white/60` y variantes) seguían con la paleta plana
+  anterior en vez de los tokens `iron`/`surface`. Migrados todos a `border-iron/N`,
+  `bg-surface` y `text-iron` (colapsando la variante `dark:` explícita, igual que el resto de
+  tokens: ya cambian solos por tema). Además, el tema oscuro no se aplicaba en el móvil (PWA
+  instalada) aunque sí en navegador de escritorio, incluso tras desinstalar/reinstalar: faltaba
+  la declaración `color-scheme` (`<meta name="color-scheme">`), que informa al navegador de que
+  la página soporta ambos temas explícitamente — algunos motores móviles en modo standalone no
+  activan `prefers-color-scheme` de forma fiable sin ella. Añadido `colorScheme: "light dark"`
+  al `viewport` de `layout.tsx`. Ver DECISIONS.md.

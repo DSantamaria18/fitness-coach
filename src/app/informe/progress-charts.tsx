@@ -104,7 +104,7 @@ function formatAxisDate(iso: string) {
 }
 
 function EmptyMessage({ children }: { children: React.ReactNode }) {
-  return <p className="text-sm text-black/60 dark:text-white/60">{children}</p>;
+  return <p className="text-sm text-iron">{children}</p>;
 }
 
 type MetricPoint = { date: string; value: number | null };

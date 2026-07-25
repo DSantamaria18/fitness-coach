@@ -21,7 +21,7 @@ export function LoginForm() {
           type="text"
           autoComplete="username"
           required
-          className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/20"
+          className="rounded-md border border-iron/15 px-3 py-2 text-base"
         />
       </div>
 
@@ -35,7 +35,7 @@ export function LoginForm() {
           type="password"
           autoComplete="current-password"
           required
-          className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/20"
+          className="rounded-md border border-iron/15 px-3 py-2 text-base"
         />
       </div>
 

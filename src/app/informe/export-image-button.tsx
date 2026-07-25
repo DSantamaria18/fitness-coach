@@ -65,11 +65,11 @@ export function ExportImageButton() {
         // domToPng solo captura el subárbol de #informe-content, no
         // <body> — sin esto, el fondo del PNG queda transparente (blanco
         // en la mayoría de visores) mientras el texto sigue usando los
-        // colores resueltos del tema activo (p. ej. las variantes
-        // `dark:text-white/60`), dejando etiquetas casi ilegibles en modo
-        // oscuro. Se toma el fondo real ya calculado por el navegador en
-        // vez de asumir claro/oscuro, para que el PNG combine con lo que
-        // el usuario está viendo en pantalla en ese momento.
+        // colores resueltos del tema activo (p. ej. `text-iron`), dejando
+        // etiquetas casi ilegibles en modo oscuro. Se toma el fondo real ya
+        // calculado por el navegador en vez de asumir claro/oscuro, para que
+        // el PNG combine con lo que el usuario está viendo en pantalla en
+        // ese momento.
         backgroundColor: getComputedStyle(document.body).backgroundColor,
         onCloneEachNode: fixSelectedOption,
       });
@@ -89,12 +89,12 @@ export function ExportImageButton() {
         type="button"
         onClick={handleClick}
         disabled={status === "generating"}
-        className="self-start rounded-md border border-black/15 px-4 py-2 text-sm font-medium disabled:opacity-60 dark:border-white/20"
+        className="self-start rounded-md border border-iron/15 px-4 py-2 text-sm font-medium disabled:opacity-60"
       >
         {status === "generating" ? "Generando..." : "Descargar imagen"}
       </button>
       {status === "error" ? (
-        <p role="alert" className="text-sm text-black/60 dark:text-white/60">
+        <p role="alert" className="text-sm text-iron">
           No se ha podido generar la imagen. Inténtalo de nuevo.
         </p>
       ) : null}

@@ -43,7 +43,7 @@ export function ExercisesSection({
       <ExerciseCreateForm />
 
       {exercises.length === 0 ? (
-        <p className="text-sm text-black/60 dark:text-white/60">
+        <p className="text-sm text-iron">
           Todavía no hay ejercicios en el catálogo.
         </p>
       ) : (
@@ -81,14 +81,12 @@ function ExerciseGroup({
 
   return (
     <div className="flex flex-col gap-2">
-      <h3 className="text-sm font-semibold text-black/60 dark:text-white/60">
-        {TYPE_LABELS[type]}
-      </h3>
+      <h3 className="text-sm font-semibold text-iron">{TYPE_LABELS[type]}</h3>
       <ul className="flex flex-col gap-2">
         {entries.map((exercise) => (
           <li
             key={exercise.id}
-            className="rounded-md border border-black/10 px-4 py-3 dark:border-white/15"
+            className="rounded-md border border-iron/10 px-4 py-3"
           >
             {editingId === exercise.id ? (
               <ExerciseEditForm
@@ -137,7 +135,7 @@ function ExerciseCreateForm() {
     <form
       ref={formRef}
       action={formAction}
-      className="flex flex-col gap-3 rounded-md border border-black/10 p-3 dark:border-white/15"
+      className="flex flex-col gap-3 rounded-md border border-iron/10 p-3"
     >
       <div className="flex flex-wrap gap-3">
         <label className="flex flex-col gap-1 text-sm">
@@ -146,7 +144,7 @@ function ExerciseCreateForm() {
             name="name"
             type="text"
             required
-            className="rounded-md border border-black/15 px-2 py-1 text-base dark:border-white/20"
+            className="rounded-md border border-iron/15 px-2 py-1 text-base"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
@@ -154,7 +152,7 @@ function ExerciseCreateForm() {
           <select
             name="type"
             defaultValue="STRENGTH"
-            className="rounded-md border border-black/15 px-2 py-1 text-base dark:border-white/20"
+            className="rounded-md border border-iron/15 px-2 py-1 text-base"
           >
             <option value="STRENGTH">Fuerza</option>
             <option value="CARDIO">Cardio</option>
@@ -207,7 +205,7 @@ function ExerciseEditForm({
             type="text"
             defaultValue={exercise.name}
             required
-            className="rounded-md border border-black/15 px-2 py-1 text-base dark:border-white/20"
+            className="rounded-md border border-iron/15 px-2 py-1 text-base"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
@@ -215,7 +213,7 @@ function ExerciseEditForm({
           <select
             name="type"
             defaultValue={exercise.type}
-            className="rounded-md border border-black/15 px-2 py-1 text-base dark:border-white/20"
+            className="rounded-md border border-iron/15 px-2 py-1 text-base"
           >
             <option value="STRENGTH">Fuerza</option>
             <option value="CARDIO">Cardio</option>

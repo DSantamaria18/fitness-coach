@@ -66,15 +66,11 @@ function StatCard({
 }) {
   return (
     <Card className="flex flex-col gap-1">
-      <span className="text-xs text-black/60 dark:text-white/60">{label}</span>
+      <span className="text-xs text-iron">{label}</span>
       <span className="font-mono text-xl font-semibold tabular-nums text-ink">
         {value}
       </span>
-      {caption ? (
-        <span className="text-xs text-black/50 dark:text-white/50">
-          {caption}
-        </span>
-      ) : null}
+      {caption ? <span className="text-xs text-iron/80">{caption}</span> : null}
     </Card>
   );
 }
@@ -152,7 +148,7 @@ export default async function InformePage({
     return (
       <main className="flex flex-1 flex-col gap-8 p-6">
         <h1 className="text-xl font-semibold text-ink">Informe de progreso</h1>
-        <p className="text-sm text-black/60 dark:text-white/60">
+        <p className="text-sm text-iron">
           No se ha podido generar el informe. Inténtalo de nuevo más tarde.
         </p>
       </main>
