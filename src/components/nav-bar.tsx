@@ -1,156 +1,66 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/app/actions";
 import { NAV_LINKS } from "@/lib/nav-links";
 
-// Barra de navegación mobile-first: fila de enlaces con altura mínima de
-// 44px (tamaño de toque recomendado en iOS/Android), ya que el uso
-// principal de la app es desde el navegador del móvil (ver SPEC.md §2/§6).
-//
-// BL-009: por debajo del breakpoint `sm` (640px, ya en uso en el resto del
-// proyecto — ver informe/date-range-filter.tsx), los enlaces y el botón de
-// logout colapsan detrás de un botón hamburguesa en vez de repartirse en
-// fila; en `sm:` y superior se comportan exactamente igual que antes. El
-// contenedor de enlaces alterna las clases `hidden`/`flex` según
-// `isMenuOpen`, con `sm:flex` fijo para que en pantallas grandes se
-// muestre siempre pese a la clase `hidden` (idioma estándar de Tailwind,
-// mismo criterio de breakpoint que el resto del proyecto). Se probó primero
-// con el atributo NATIVO `hidden` del elemento (mejor semántica de
-// accesibilidad en teoría), pero Tailwind v4 fuerza
-// `[hidden] { display: none !important }` en su Preflight — verificado en
-// navegador real, dejaba la barra vacía también en pantallas grandes — así
-// que no es viable combinarlo con una utilidad de display responsive en
-// este proyecto (ver DECISIONS.md).
+// BL-019: barra de pestañas inferior fija con las 4 secciones de uso
+// frecuente, siempre visible (sin colapso ni menú hamburguesa — ver
+// DECISIONS.md, entrada BL-009 sobre `hidden`/`sm:flex`, ya no aplica: no
+// hay ningún estado que alternar). Franja superior separada, pequeña, con
+// Ajustes y cerrar sesión, también siempre visible.
 export function NavBar() {
   const pathname = usePathname();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const navRef = useRef<HTMLElement>(null);
-
-  // Cierra el menú en cuanto cambia la ruta, para que no quede abierto tras
-  // navegar (además del cierre explícito en el onClick de cada enlace, que
-  // cubre el instante del clic antes de que la navegación complete). Ajuste
-  // de estado durante el render (no en un efecto): es el patrón que React
-  // recomienda para "resetear estado cuando cambia una prop/valor externo"
-  // (https://react.dev/learn/you-might-not-need-an-effect), y evita el
-  // aviso de lint react-hooks/set-state-in-effect por llamar a setState
-  // síncronamente dentro de un efecto sin suscribirse a nada externo.
-  const [previousPathname, setPreviousPathname] = useState(pathname);
-  if (pathname !== previousPathname) {
-    setPreviousPathname(pathname);
-    setIsMenuOpen(false);
-  }
-
-  // Los listeners de Escape/clic-fuera solo se registran mientras el menú
-  // está abierto, para no añadir trabajo innecesario en el caso común
-  // (menú cerrado, o pantallas grandes donde nunca se abre).
-  useEffect(() => {
-    if (!isMenuOpen) {
-      return;
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsMenuOpen(false);
-      }
-    }
-
-    function handleClickOutside(event: MouseEvent) {
-      if (navRef.current && !navRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isMenuOpen]);
-
-  function closeMenu() {
-    setIsMenuOpen(false);
-  }
 
   return (
-    <nav
-      ref={navRef}
-      aria-label="Navegación principal"
-      className="sticky top-0 z-10 border-b border-black/10 bg-white dark:border-white/10 dark:bg-black"
-    >
-      <div className="flex items-center justify-end sm:hidden">
-        <button
-          type="button"
-          onClick={() => setIsMenuOpen((open) => !open)}
-          aria-expanded={isMenuOpen}
-          aria-controls="nav-links"
-          aria-label={isMenuOpen ? "Cerrar menú" : "Abrir menú"}
-          className="flex h-11 w-11 items-center justify-center text-zinc-500 dark:text-zinc-400"
+    <>
+      <div className="sticky top-0 z-10 flex h-11 items-center justify-end gap-1 border-b border-black/10 bg-white px-2 dark:border-white/10 dark:bg-black">
+        <Link
+          href="/ajustes"
+          aria-label="Ajustes"
+          aria-current={pathname === "/ajustes" ? "page" : undefined}
+          className="flex h-9 w-9 items-center justify-center rounded text-zinc-500 transition-colors dark:text-zinc-400"
         >
-          <MenuIcon open={isMenuOpen} />
-        </button>
+          <SettingsIcon />
+        </Link>
+        <LogoutButton />
       </div>
-      <div
-        id="nav-links"
-        className={`${isMenuOpen ? "flex flex-col" : "hidden"} sm:flex sm:flex-1 sm:flex-row`}
+
+      <nav
+        aria-label="Navegación principal"
+        className="fixed right-0 bottom-0 left-0 z-10 flex border-t border-black/10 bg-white dark:border-white/10 dark:bg-black"
       >
         {NAV_LINKS.map(({ href, label }) => {
           const isActive = pathname === href;
+          const Icon = NAV_ICONS[href];
 
           return (
             <Link
               key={href}
               href={href}
               aria-current={isActive ? "page" : undefined}
-              onClick={closeMenu}
-              className={`flex h-11 items-center justify-center text-sm font-medium transition-colors sm:flex-1 ${
+              className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-xs font-medium transition-colors ${
+                // Color de acento temporal en valor arbitrario: el Tech Lead
+                // lo sustituirá por un token compartido `--color-ember`
+                // cuando se integre la rama de tokens visuales.
                 isActive
-                  ? "bg-black/5 text-black dark:bg-white/10 dark:text-white"
+                  ? "text-[#d9622b] dark:text-[#f0813e]"
                   : "text-zinc-500 dark:text-zinc-400"
               }`}
             >
+              <Icon />
               {label}
             </Link>
           );
         })}
-        <LogoutButton onLogoutStart={closeMenu} />
-      </div>
-    </nav>
+      </nav>
+    </>
   );
 }
 
-/** Icono hamburguesa/cerrar (X) según `open` — puramente decorativo, el nombre accesible viene del `aria-label` del botón que lo contiene. */
-function MenuIcon({ open }: { open: boolean }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
-      {open ? (
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M6 6l12 12M18 6L6 18"
-        />
-      ) : (
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M4 6h16M4 12h16M4 18h16"
-        />
-      )}
-    </svg>
-  );
-}
-
-function LogoutButton({ onLogoutStart }: { onLogoutStart: () => void }) {
+function LogoutButton() {
   const [isPending, setIsPending] = useState(false);
 
   async function handleLogout() {
@@ -161,7 +71,6 @@ function LogoutButton({ onLogoutStart }: { onLogoutStart: () => void }) {
       return;
     }
 
-    onLogoutStart();
     setIsPending(true);
     // logout() redirige a /login en el propio Server Action (signOut con
     // redirectTo), así que no hace falta manejar un resultado de éxito ni
@@ -174,9 +83,93 @@ function LogoutButton({ onLogoutStart }: { onLogoutStart: () => void }) {
       type="button"
       onClick={handleLogout}
       disabled={isPending}
-      className="flex h-11 items-center justify-center px-4 text-sm font-medium text-zinc-500 transition-colors disabled:opacity-60 dark:text-zinc-400"
+      className="flex h-9 items-center justify-center px-2 text-sm font-medium text-zinc-500 transition-colors disabled:opacity-60 dark:text-zinc-400"
     >
       {isPending ? "Cerrando sesión..." : "Cerrar sesión"}
     </button>
   );
 }
+
+/** Iconos inline, geometría simple (stroke, sin relleno) — puramente decorativos, el nombre accesible viene del Link/label que los contiene. */
+
+function iconProps() {
+  return {
+    "aria-hidden": true as const,
+    viewBox: "0 0 24 24",
+    className: "h-5 w-5",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+}
+
+/** Báscula: Peso. */
+function ScaleIcon() {
+  return (
+    <svg {...iconProps()}>
+      <rect x="4" y="4" width="16" height="16" rx="2" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+/** Mancuerna: Sesión. */
+function DumbbellIcon() {
+  return (
+    <svg {...iconProps()}>
+      <line x1="2.5" y1="9.5" x2="2.5" y2="14.5" />
+      <line x1="21.5" y1="9.5" x2="21.5" y2="14.5" />
+      <line x1="5" y1="8" x2="5" y2="16" />
+      <line x1="19" y1="8" x2="19" y2="16" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  );
+}
+
+/** Lista: Historial. */
+function ListIcon() {
+  return (
+    <svg {...iconProps()}>
+      <line x1="9" y1="6" x2="20" y2="6" />
+      <line x1="9" y1="12" x2="20" y2="12" />
+      <line x1="9" y1="18" x2="20" y2="18" />
+      <circle cx="4.5" cy="6" r="1" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="12" r="1" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="18" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+/** Barras: Informe. */
+function ChartIcon() {
+  return (
+    <svg {...iconProps()}>
+      <line x1="4" y1="20" x2="20" y2="20" />
+      <line x1="7" y1="20" x2="7" y2="12" />
+      <line x1="12" y1="20" x2="12" y2="8" />
+      <line x1="17" y1="20" x2="17" y2="4" />
+    </svg>
+  );
+}
+
+/** Engranaje: Ajustes. */
+function SettingsIcon() {
+  return (
+    <svg {...iconProps()}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" />
+    </svg>
+  );
+}
+
+const NAV_ICONS: Record<
+  (typeof NAV_LINKS)[number]["href"],
+  () => React.JSX.Element
+> = {
+  "/peso": ScaleIcon,
+  "/sesion": DumbbellIcon,
+  "/historial": ListIcon,
+  "/informe": ChartIcon,
+};
