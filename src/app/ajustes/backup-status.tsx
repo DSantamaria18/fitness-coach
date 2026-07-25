@@ -42,7 +42,7 @@ export function BackupStatus({ lastBackup }: BackupStatusProps) {
 
       <a
         href="/api/backup"
-        className="rounded-md bg-black px-4 py-2 text-center text-base font-medium text-white dark:bg-white dark:text-black"
+        className="rounded-md bg-ember px-4 py-2 text-center text-base font-medium text-black"
       >
         Descargar backup
       </a>

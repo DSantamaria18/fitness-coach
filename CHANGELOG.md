@@ -475,3 +475,11 @@ Proyecto sin versión publicada todavía.
   `fecha` en `submit_session_proposal` — a veces adivinaba una posterior al instante real de
   validación. Corregido inyectando la fecha/hora real (`new Date().toISOString()`) en el
   mensaje inicial. Ver DECISIONS.md.
+- **BL-019 quedó a medias: ningún botón de acción primaria usaba el acento ember** (detectado
+  por David probando la PWA en real, 2026-07-25 — solo NavBar y los envoltorios `Card` habían
+  migrado, nunca se verificó en navegador real logueado). Todos los botones "Guardar"/"Añadir"
+  de `sesion`, `peso`, `historial`, `ajustes`, `informe` y `login` seguían en negro/blanco
+  plano. Migrados a `bg-ember text-black` (sin variante `dark:`, igual que `text-ember` en
+  NavBar: el token ya se redefine bajo `prefers-color-scheme: dark`; texto negro fijo porque
+  blanco sobre ember no cumple contraste AA, sobre todo en oscuro). Los botones destructivos
+  ("Borrar", ya en rojo subrayado) no se tocan. Ver DECISIONS.md.

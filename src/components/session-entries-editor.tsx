@@ -350,7 +350,7 @@ export function SessionEntriesEditor({
           <button
             type="button"
             onClick={addRegistro}
-            className="rounded-md bg-black px-3 py-2 text-sm font-medium text-white dark:bg-white dark:text-black"
+            className="rounded-md bg-ember px-3 py-2 text-sm font-medium text-black"
           >
             Añadir
           </button>

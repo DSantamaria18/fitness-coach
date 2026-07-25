@@ -232,6 +232,10 @@ cambio relevante.
   `session-history-section.tsx`) e `/informe` (`StatCard`, `progress-charts.tsx`).
 - `font-mono tabular-nums` en las columnas de datos (peso, reps, tempo, RPE, volumen,
   estadísticas del informe) para que se lean alineadas como una tabla real.
+- Todos los botones de acción primaria (`type="submit"` de Guardar/Añadir en `sesion`, `peso`,
+  `historial`, `ajustes`, `informe`, `login`) usan `bg-ember text-black` — completado
+  2026-07-25 tras detectarse en producción real que se habían quedado en negro/blanco plano
+  (ver DECISIONS.md). Los botones destructivos ("Borrar") siguen en rojo subrayado, sin tocar.
 - Validado antes de implementar con un mock estático (HTML/CSS aislado, no parte del código de
   producción) aprobado por David, y desarrollado en paralelo a la navegación (BL-019 arriba) en
   una PR independiente, sin solape de ficheros entre ambas.

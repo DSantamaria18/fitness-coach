@@ -193,7 +193,7 @@ function SessionEntryEditForm({
         <button
           type="submit"
           disabled={isPending || registros.length === 0}
-          className="rounded-md bg-black px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-black"
+          className="rounded-md bg-ember px-3 py-1.5 text-sm font-medium text-black disabled:opacity-60"
         >
           {isPending ? "Guardando..." : "Guardar"}
         </button>
