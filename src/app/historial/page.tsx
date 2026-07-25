@@ -42,7 +42,7 @@ export default async function HistorialPage() {
 
   return (
     <main className="flex flex-1 flex-col gap-8 p-6">
-      <h1 className="text-xl font-semibold">Historial</h1>
+      <h1 className="text-xl font-semibold text-ink">Historial</h1>
 
       <WeightHistorySection entries={weightEntries} />
 

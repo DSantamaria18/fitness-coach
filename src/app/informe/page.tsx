@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { auth } from "@/auth";
+import { Card } from "@/components/card";
 import { getProgressReport } from "@/lib/get-progress-report";
 import { listExercises } from "@/lib/list-exercises";
 import { getProgressComment } from "@/lib/progress-comment/get-progress-comment";
@@ -64,15 +65,17 @@ function StatCard({
   caption?: string;
 }) {
   return (
-    <div className="flex flex-col gap-1 rounded-md border border-black/10 px-4 py-3 dark:border-white/15">
+    <Card className="flex flex-col gap-1">
       <span className="text-xs text-black/60 dark:text-white/60">{label}</span>
-      <span className="text-xl font-semibold">{value}</span>
+      <span className="font-mono text-xl font-semibold tabular-nums text-ink">
+        {value}
+      </span>
       {caption ? (
         <span className="text-xs text-black/50 dark:text-white/50">
           {caption}
         </span>
       ) : null}
-    </div>
+    </Card>
   );
 }
 
@@ -148,7 +151,7 @@ export default async function InformePage({
   if (!report.success) {
     return (
       <main className="flex flex-1 flex-col gap-8 p-6">
-        <h1 className="text-xl font-semibold">Informe de progreso</h1>
+        <h1 className="text-xl font-semibold text-ink">Informe de progreso</h1>
         <p className="text-sm text-black/60 dark:text-white/60">
           No se ha podido generar el informe. Inténtalo de nuevo más tarde.
         </p>
@@ -293,7 +296,7 @@ export default async function InformePage({
   return (
     <main className="flex flex-1 flex-col gap-8 p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Informe de progreso</h1>
+        <h1 className="text-xl font-semibold text-ink">Informe de progreso</h1>
         <ExportImageButton />
       </div>
 

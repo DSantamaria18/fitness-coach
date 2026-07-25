@@ -7,6 +7,7 @@ import {
   type RegistroState,
 } from "@/lib/session-proposal/build-initial-registros";
 import { parseMinutesSeconds } from "@/lib/duration-format";
+import { Card } from "@/components/card";
 
 // Componente compartido entre /sesion (crear) y /historial (editar): antes
 // vivía duplicado dentro de session-form.tsx. Se extrajo aquí (en vez de a
@@ -357,12 +358,11 @@ export function SessionEntriesEditor({
       </div>
 
       {registros.map((registro) => (
-        <div
-          key={registro.key}
-          className="flex flex-col gap-2 rounded-md border border-black/10 p-3 dark:border-white/15"
-        >
+        <Card key={registro.key} className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">{registro.ejercicio}</h2>
+            <h2 className="text-sm font-semibold text-ink">
+              {registro.ejercicio}
+            </h2>
             <button
               type="button"
               onClick={() => removeRegistro(registro.key)}
@@ -393,7 +393,7 @@ export function SessionEntriesEditor({
                           event.target.value,
                         )
                       }
-                      className="w-16 rounded-md border border-black/15 px-2 py-1 dark:border-white/20"
+                      className="w-16 rounded-md border border-black/15 px-2 py-1 font-mono tabular-nums dark:border-white/20"
                     />
                   </label>
                   <label className="flex flex-col text-xs">
@@ -417,7 +417,7 @@ export function SessionEntriesEditor({
                           event.target.value,
                         )
                       }
-                      className="w-20 rounded-md border border-black/15 px-2 py-1 dark:border-white/20"
+                      className="w-20 rounded-md border border-black/15 px-2 py-1 font-mono tabular-nums dark:border-white/20"
                     />
                   </label>
                   <label className="flex flex-col text-xs">
@@ -451,7 +451,7 @@ export function SessionEntriesEditor({
                           event.target.value,
                         )
                       }
-                      className="w-14 rounded-md border border-black/15 px-2 py-1 dark:border-white/20"
+                      className="w-14 rounded-md border border-black/15 px-2 py-1 font-mono tabular-nums dark:border-white/20"
                     />
                   </label>
                   {registro.series.length > 1 ? (
@@ -519,7 +519,7 @@ export function SessionEntriesEditor({
                           event.target.value,
                         )
                       }
-                      className="rounded-md border border-black/15 px-2 py-1 dark:border-white/20"
+                      className="rounded-md border border-black/15 px-2 py-1 font-mono tabular-nums dark:border-white/20"
                     />
                     {invalidMmSs ? (
                       <span
@@ -546,7 +546,7 @@ export function SessionEntriesEditor({
               className="rounded-md border border-black/15 px-2 py-1 dark:border-white/20"
             />
           </label>
-        </div>
+        </Card>
       ))}
 
       {/* Los ejercicios no son representables como pares clave/valor planos
