@@ -69,6 +69,23 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   sesión: sin esa exclusión recibirían un 307 a `/login` en vez del 200. Consistente con
   SPEC.md §9.
 
+## PWA instalable (BL-026)
+
+- `src/app/manifest.ts`, `src/app/icon.tsx`, `src/app/apple-icon.tsx` — convención de
+  ficheros de Next.js. Los dos últimos usan `next/og` (`ImageResponse`, incluido en el
+  framework) para generar el PNG en build/request, sin depender de un asset externo ni de una
+  dependencia nueva (`sharp`/`canvas`). Next los sirve en `/icon` (512x512, referenciado por el
+  manifest) y `/apple-icon` (180x180, solo para `<link rel="apple-touch-icon">`, que es lo
+  único que iOS respeta) y los enlaza en el `<head>` sin configuración manual.
+- `layout.tsx` añade `viewport.themeColor` (claro/oscuro) y `metadata.appleWebApp` — iOS
+  ignora `manifest.display`, necesita esta meta aparte para el modo standalone.
+- **`manifest.webmanifest`/`icon`/`apple-icon` excluidos del middleware de sesión**
+  (`src/proxy.ts`), mismo motivo y mismo patrón que `api/mcp`/`api/health` más abajo: Next
+  enlaza estas rutas en el `<head>` de TODAS las páginas, incluida `/login`, así que sin la
+  exclusión el favicon del propio login (y cualquier comprobación de instalabilidad sin
+  sesión) recibiría un 307 en vez del recurso real.
+- Sin service worker ni soporte offline: fuera de alcance a propósito (ver BACKLOG.md).
+
 ## Autenticación y protección de rutas
 
 - `src/auth.config.ts` — config "edge-safe" (sin providers ni módulos nativos de Node):

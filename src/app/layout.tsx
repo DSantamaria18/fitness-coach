@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { NavBarGate } from "@/components/nav-bar-gate";
 import "./globals.css";
@@ -16,6 +16,21 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Fitness Coach",
   description: "Seguimiento personal de entrenamiento y peso corporal.",
+  // BL-026: iOS ignora manifest.display, necesita esta meta aparte para
+  // abrir en modo standalone al añadir a pantalla de inicio.
+  appleWebApp: {
+    capable: true,
+    title: "Fitness Coach",
+  },
+};
+
+// BL-026: theme_color del manifest no seguiría prefers-color-scheme, este
+// viewport sí — mismos valores de --ember claro/oscuro en globals.css.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#d9622b" },
+    { media: "(prefers-color-scheme: dark)", color: "#f0813e" },
+  ],
 };
 
 export default function RootLayout({

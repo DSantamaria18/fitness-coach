@@ -43,14 +43,6 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   `SKILL.md`/README, o subir a un campo explícito en `Exercise` si se quiere forzar en el
   esquema).
 
-- **[BL-026]** **Convertir la webapp en PWA instalable** (manifest, iconos, splash screen) para
-  poder añadirla a la pantalla de inicio del móvil como si fuera una app nativa. Justificación:
-  el uso real es 100% desde el móvil (ver `<contexto>` de CLAUDE.md); una PWA instalable mejora
-  la experiencia (icono propio, sin barra de navegador, arranque más rápido) sin salirse de "es
-  una webapp, no una app nativa" ya decidido. Propuesto por David. Dificultad: baja-media (manifest
-  + iconos + metadata; sin soporte offline ni publicación en Play Store, eso sería alcance
-  aparte y no está pedido).
-
 - **[BL-027]** **Separar comentarios de ejercicio en dos campos**: uno para las observaciones que
   genera la IA sobre el ejercicio (técnica, progresión sugerida, etc.) y otro para el feedback que
   escribe David tras la sesión (sensaciones, dolor, contexto) — hoy es un único campo de

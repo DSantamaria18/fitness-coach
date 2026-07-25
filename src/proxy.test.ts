@@ -54,6 +54,16 @@ describe("proxy matcher", () => {
     expect(matcher.test("/favicon.ico")).toBe(false);
   });
 
+  it("excluye el manifest e iconos PWA del middleware de sesión (BL-026)", () => {
+    // Next los enlaza en el <head> de TODAS las páginas, incluida /login:
+    // sin esta excepción, el propio favicon del login (y el manifest/icono
+    // que la instalabilidad PWA necesita fetchear) quedarían detrás de un
+    // 307 a /login, igual que le pasó a /api/mcp.
+    expect(matcher.test("/manifest.webmanifest")).toBe(false);
+    expect(matcher.test("/icon")).toBe(false);
+    expect(matcher.test("/apple-icon")).toBe(false);
+  });
+
   it("sigue protegiendo el resto de rutas de la app", () => {
     expect(matcher.test("/")).toBe(true);
     expect(matcher.test("/historial")).toBe(true);

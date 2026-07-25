@@ -416,3 +416,25 @@ cambio relevante.
 - Ver DECISIONS.md 2026-07-20 ("BL-018: SQLite efímero en `/tmp` para preview deployments sin
   Turso") para la justificación completa, incluida la excepción documentada a la regla de que
   `resolveDatasourceConfig` es agnóstico de entorno.
+
+## PWA instalable (BL-026)
+
+- `src/app/manifest.ts` declara la app como instalable (`display: "standalone"`, icono
+  512x512, `theme_color`/`background_color` con los mismos valores que `--ember`/
+  `--background` de `globals.css` en su variante clara — el manifest no puede seguir
+  `prefers-color-scheme`).
+- Icono e icono de iOS (`src/app/icon.tsx`, `src/app/apple-icon.tsx`) generados con
+  `next/og` (`ImageResponse`, ya incluido en Next.js) en vez de un PNG externo o una
+  dependencia nueva (`sharp`/`canvas`) — Next los sirve en `/icon` y `/apple-icon` y los
+  enlaza solo con la convención de nombre de fichero, sin configuración manual de
+  `<link>` en `layout.tsx`.
+- `layout.tsx` añade `viewport.themeColor` (claro/oscuro, vía `prefers-color-scheme`) y
+  `metadata.appleWebApp` — iOS ignora `manifest.display` y necesita esta meta aparte para
+  abrir en modo standalone al añadir a pantalla de inicio.
+- Sin service worker ni soporte offline: fuera de alcance a propósito (ver BACKLOG.md,
+  entrada original de BL-026).
+- Bug corregido de paso: el middleware de sesión (`src/proxy.ts`) no excluía
+  `manifest.webmanifest`/`icon`/`apple-icon`, así que cualquier petición sin sesión (incluida
+  la que hace el propio `<head>` de `/login` para su favicon) recibía un 307 a `/login` en vez
+  del manifest/icono real — mismo patrón que el bug ya corregido de `/api/mcp` (ver
+  DECISIONS.md).

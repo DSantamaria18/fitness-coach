@@ -315,6 +315,16 @@ Proyecto sin versión publicada todavía.
   registradas todas las sesiones relevantes. README.md documenta el comando real de conexión
   (`claude mcp add --scope user --transport http ...`) y cómo verificarla (`claude mcp list` /
   `/mcp`). Ver DECISIONS.md 2026-07-21.
+- **[BL-026]** PWA instalable: `src/app/manifest.ts` (nombre, `display: "standalone"`,
+  `theme_color`/`background_color` a partir de los tokens de `globals.css`), icono e icono
+  de iOS generados con `next/og` (`src/app/icon.tsx`, `src/app/apple-icon.tsx` — sin
+  dependencia nueva, la convención de ficheros de Next.js ya cubre favicon, `<link
+  rel="apple-touch-icon">` e icono del manifest) y `viewport.themeColor`/`appleWebApp` en
+  `layout.tsx`. Sin service worker ni soporte offline, fuera de alcance a propósito. De paso,
+  corregido un bug real detectado al verificar: el middleware de sesión (`src/proxy.ts`)
+  redirigía `manifest.webmanifest`/`icon`/`apple-icon` a `/login` con 307 (mismo patrón que el
+  bug ya corregido de `/api/mcp`) — el favicon del propio login habría quedado roto y la
+  instalabilidad habría fallado sin sesión.
 
 ### Changed
 

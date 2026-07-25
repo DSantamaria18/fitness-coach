@@ -2465,4 +2465,28 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-07-25
+- **Decisión:** BL-026 (PWA instalable) implementado con la convención de ficheros de
+  Next.js: `manifest.ts`, `icon.tsx`/`apple-icon.tsx` generados con `next/og`
+  (`ImageResponse`, ya incluido en el framework) en vez de un asset PNG externo o una
+  dependencia nueva (`sharp`/`canvas`).
+- **Alternativas consideradas:** icono como PNG estático generado a mano/con `sharp`
+  (descartado, dependencia nueva para dibujar un cuadrado con texto); un icono maskable
+  aparte para Android (descartado por ahora, no es requisito de instalabilidad, solo
+  recomendación — se puede añadir después si Android lo pide).
+- **Lecciones aprendidas:** el middleware de sesión (`src/proxy.ts`) no excluía
+  `manifest.webmanifest`/`icon`/`apple-icon` de su matcher, así que Next.js —que enlaza esas
+  rutas en el `<head>` de TODAS las páginas, incluida `/login`— las servía detrás de un 307 a
+  `/login` para cualquier petición sin sesión: el propio favicon del login habría quedado
+  roto, y la instalabilidad real habría dependido de que el navegador ya tuviera cookie de
+  sesión al comprobar el manifest. Mismo patrón exacto que el bug ya documentado de
+  `/api/mcp` (no excluido del matcher, verifyBearerToken inalcanzable en la práctica) y de
+  `/api/health` (307 en vez de 200 para monitores externos) — un asset o ruta pública nueva
+  bajo `layout.tsx` necesita revisarse contra el matcher del middleware de sesión antes de
+  darla por terminada, no solo probarse con sesión iniciada en el navegador. Se detectó
+  verificando las rutas reales servidas por el dev server con `curl` en vez de asumir el path
+  (`/icon`, no un nombre con hash) que documenta la convención de Next.js.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
