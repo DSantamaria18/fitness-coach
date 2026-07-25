@@ -26,11 +26,17 @@ export const metadata: Metadata = {
 
 // BL-026: theme_color del manifest no seguiría prefers-color-scheme, este
 // viewport sí — mismos valores de --ember claro/oscuro en globals.css.
+// colorScheme declara explícitamente que la página soporta ambos temas
+// (<meta name="color-scheme">): sin esto, el modo standalone (icono de
+// pantalla de inicio) de algunos navegadores móviles no aplica el tema
+// oscuro aunque el propio SO esté en oscuro y la pestaña normal sí lo
+// muestre bien — visto en producción (BL-019).
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#d9622b" },
     { media: "(prefers-color-scheme: dark)", color: "#f0813e" },
   ],
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({

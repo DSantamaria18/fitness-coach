@@ -56,7 +56,7 @@ export function DateRangeFilter({
           // del navegador; getProgressReport igualmente lo rechazaría).
           max={hasta || undefined}
           onChange={handleDesdeChange}
-          className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/20"
+          className="rounded-md border border-iron/15 px-3 py-2 text-base"
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -69,7 +69,7 @@ export function DateRangeFilter({
           value={hasta}
           min={desde || undefined}
           onChange={handleHastaChange}
-          className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/20"
+          className="rounded-md border border-iron/15 px-3 py-2 text-base"
         />
       </div>
     </div>

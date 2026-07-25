@@ -54,7 +54,7 @@ export function ProgressComment({
       ) : null}
 
       {state && "error" in state ? (
-        <p role="alert" className="text-sm text-black/60 dark:text-white/60">
+        <p role="alert" className="text-sm text-iron">
           {state.error}
         </p>
       ) : null}

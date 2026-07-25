@@ -310,11 +310,11 @@ export function SessionEntriesEditor({
           defaultValue={initialDate ?? today}
           max={today}
           required
-          className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/20"
+          className="rounded-md border border-iron/15 px-3 py-2 text-base"
         />
       </div>
 
-      <div className="flex flex-col gap-2 rounded-md border border-black/10 p-3 dark:border-white/15">
+      <div className="flex flex-col gap-2 rounded-md border border-iron/10 p-3">
         <label htmlFor="exercise-picker" className="text-sm font-medium">
           Añadir ejercicio
         </label>
@@ -330,7 +330,7 @@ export function SessionEntriesEditor({
             // contenido, desborda la fila junto al botón "Añadir" y lo
             // empuja fuera del viewport en pantallas móviles estrechas
             // (~412px) — ver DECISIONS.md.
-            className="min-w-0 flex-1 rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/20"
+            className="min-w-0 flex-1 rounded-md border border-iron/15 px-3 py-2 text-base"
           >
             <optgroup label="Fuerza">
               {fuerzaExercises.map((exercise) => (
@@ -393,7 +393,7 @@ export function SessionEntriesEditor({
                           event.target.value,
                         )
                       }
-                      className="w-16 rounded-md border border-black/15 px-2 py-1 font-mono tabular-nums dark:border-white/20"
+                      className="w-16 rounded-md border border-iron/15 px-2 py-1 font-mono tabular-nums"
                     />
                   </label>
                   <label className="flex flex-col text-xs">
@@ -417,7 +417,7 @@ export function SessionEntriesEditor({
                           event.target.value,
                         )
                       }
-                      className="w-20 rounded-md border border-black/15 px-2 py-1 font-mono tabular-nums dark:border-white/20"
+                      className="w-20 rounded-md border border-iron/15 px-2 py-1 font-mono tabular-nums"
                     />
                   </label>
                   <label className="flex flex-col text-xs">
@@ -433,7 +433,7 @@ export function SessionEntriesEditor({
                           event.target.value,
                         )
                       }
-                      className="w-16 rounded-md border border-black/15 px-2 py-1 dark:border-white/20"
+                      className="w-16 rounded-md border border-iron/15 px-2 py-1"
                     />
                   </label>
                   <label className="flex flex-col text-xs">
@@ -451,7 +451,7 @@ export function SessionEntriesEditor({
                           event.target.value,
                         )
                       }
-                      className="w-14 rounded-md border border-black/15 px-2 py-1 font-mono tabular-nums dark:border-white/20"
+                      className="w-14 rounded-md border border-iron/15 px-2 py-1 font-mono tabular-nums"
                     />
                   </label>
                   {registro.series.length > 1 ? (
@@ -519,7 +519,7 @@ export function SessionEntriesEditor({
                           event.target.value,
                         )
                       }
-                      className="rounded-md border border-black/15 px-2 py-1 font-mono tabular-nums dark:border-white/20"
+                      className="rounded-md border border-iron/15 px-2 py-1 font-mono tabular-nums"
                     />
                     {invalidMmSs ? (
                       <span
@@ -543,7 +543,7 @@ export function SessionEntriesEditor({
               onChange={(event) =>
                 updateNotas(registro.key, event.target.value)
               }
-              className="rounded-md border border-black/15 px-2 py-1 dark:border-white/20"
+              className="rounded-md border border-iron/15 px-2 py-1"
             />
           </label>
         </Card>

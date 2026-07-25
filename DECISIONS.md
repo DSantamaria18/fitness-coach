@@ -2534,4 +2534,31 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-07-25
+- **Decisión:** Completada la migración de tokens de BL-019 en todo lo que quedaba: bordes de
+  `<input>`/`<select>` (`border-black/N dark:border-white/M` → `border-iron/N`, 12 ficheros),
+  fondo y borde propios de `NavBar` (`bg-white dark:bg-black` → `bg-surface`) y texto
+  secundario/inactivo (`text-black/60 dark:text-white/60`, `text-zinc-500 dark:text-zinc-400`
+  → `text-iron`, colapsando también la variante `dark:` explícita — el token ya cambia solo
+  por tema). Además, añadido `colorScheme: "light dark"` al `viewport` de `layout.tsx`
+  (renderiza `<meta name="color-scheme">`): el tema oscuro se veía en navegador de escritorio
+  pero no en la PWA instalada en el móvil, ni siquiera tras desinstalar/reinstalar por
+  completo — descartando así un problema de caché — lo que apunta a que el modo standalone de
+  al menos un navegador móvil necesita esta declaración explícita para aplicar
+  `prefers-color-scheme` de forma fiable.
+- **Alternativas consideradas:** mantener alguna variante `dark:` explícita en vez de
+  colapsarla (descartado: los tokens `--iron`/`--surface` ya se redefinen bajo
+  `prefers-color-scheme: dark` en `globals.css`, así que una variante `dark:` aparte sería
+  redundante y un punto más donde volver a olvidarse de migrar algo, como ya pasó dos veces
+  seguidas con BL-019).
+- **Lecciones aprendidas:** un rediseño de tokens de color no se puede dar por completo con un
+  grep de un solo patrón (la ronda anterior solo buscó `bg-black.*text-white`, específico de
+  botones) — hacía falta uno más amplio (`border-black|bg-black|bg-white|text-black/|
+  text-white/|zinc-`) para encontrar el resto de la superficie sin migrar. David lo pidió
+  explícitamente tras la ronda anterior ("asegúrate de que no dejas nada sin aplicar"): un
+  cambio de paleta declarado como aplicado a "toda la app" necesita ese grep amplio como parte
+  del propio criterio de terminado, no solo revisar los ficheros ya tocados.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

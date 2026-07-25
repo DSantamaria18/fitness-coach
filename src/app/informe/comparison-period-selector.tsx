@@ -37,7 +37,7 @@ export function ComparisonPeriodSelector({ selected }: { selected: string }) {
         id="comparison-period-selector"
         value={selected}
         onChange={handleChange}
-        className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/20"
+        className="rounded-md border border-iron/15 px-3 py-2 text-base"
       >
         <option value="">Sin comparar</option>
         <option value="mes">Este mes vs. anterior</option>

@@ -50,7 +50,7 @@ export function ExerciseSelector({
         id="exercise-filter"
         value={selected}
         onChange={handleChange}
-        className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/20"
+        className="rounded-md border border-iron/15 px-3 py-2 text-base"
       >
         <option value="">Todos</option>
         <optgroup label="Fuerza">

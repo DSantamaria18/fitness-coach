@@ -16,12 +16,12 @@ export function NavBar() {
 
   return (
     <>
-      <div className="sticky top-0 z-10 flex h-11 items-center justify-end gap-1 border-b border-black/10 bg-white px-2 dark:border-white/10 dark:bg-black">
+      <div className="sticky top-0 z-10 flex h-11 items-center justify-end gap-1 border-b border-iron/10 bg-surface px-2">
         <Link
           href="/ajustes"
           aria-label="Ajustes"
           aria-current={pathname === "/ajustes" ? "page" : undefined}
-          className="flex h-9 w-9 items-center justify-center rounded text-zinc-500 transition-colors dark:text-zinc-400"
+          className="flex h-9 w-9 items-center justify-center rounded text-iron transition-colors"
         >
           <SettingsIcon />
         </Link>
@@ -30,7 +30,7 @@ export function NavBar() {
 
       <nav
         aria-label="Navegación principal"
-        className="fixed right-0 bottom-0 left-0 z-10 flex border-t border-black/10 bg-white dark:border-white/10 dark:bg-black"
+        className="fixed right-0 bottom-0 left-0 z-10 flex border-t border-iron/10 bg-surface"
       >
         {NAV_LINKS.map(({ href, label }) => {
           const isActive = pathname === href;
@@ -42,11 +42,10 @@ export function NavBar() {
               href={href}
               aria-current={isActive ? "page" : undefined}
               className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-xs font-medium transition-colors ${
-                // `text-ember` resuelve a --color-ember (globals.css), que ya
-                // se redefine bajo prefers-color-scheme: dark — no hace
-                // falta una variante `dark:` aparte, a diferencia del resto
-                // de esta barra (que sigue en zinc plano).
-                isActive ? "text-ember" : "text-zinc-500 dark:text-zinc-400"
+                // text-ember/text-iron resuelven a variables CSS que ya se
+                // redefinen bajo prefers-color-scheme: dark (globals.css) —
+                // ninguna de las dos necesita variante `dark:` aparte.
+                isActive ? "text-ember" : "text-iron"
               }`}
             >
               <Icon />
@@ -82,7 +81,7 @@ function LogoutButton() {
       type="button"
       onClick={handleLogout}
       disabled={isPending}
-      className="flex h-9 items-center justify-center px-2 text-sm font-medium text-zinc-500 transition-colors disabled:opacity-60 dark:text-zinc-400"
+      className="flex h-9 items-center justify-center px-2 text-sm font-medium text-iron transition-colors disabled:opacity-60"
     >
       {isPending ? "Cerrando sesión..." : "Cerrar sesión"}
     </button>

@@ -43,7 +43,7 @@ export function SessionForm({ exercises }: { exercises: ExerciseOption[] }) {
         type="button"
         onClick={handleGenerateProposal}
         disabled={isGeneratingProposal}
-        className="rounded-md border border-black/20 px-4 py-2 text-sm font-medium disabled:opacity-60 dark:border-white/25"
+        className="rounded-md border border-iron/20 px-4 py-2 text-sm font-medium disabled:opacity-60"
       >
         {isGeneratingProposal ? "Generando…" : "Generar propuesta con IA"}
       </button>
