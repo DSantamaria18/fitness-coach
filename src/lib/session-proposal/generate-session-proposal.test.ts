@@ -249,7 +249,39 @@ describe("generateSessionProposal", () => {
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ code: "TIMEOUT" }),
+      expect.objectContaining({
+        code: "TIMEOUT",
+        phase: "exploration",
+        phaseMs: expect.any(Number),
+        totalMs: expect.any(Number),
+      }),
+    );
+    consoleErrorSpy.mockRestore();
+  });
+
+  // Sin esto un TIMEOUT solo dice "tardó más de Xms": no distingue si se
+  // abortó durante la exploración o el turno final, el dato que hacía falta
+  // para diagnosticar el incidente real de 2 timeouts seguidos en producción
+  // (ver DECISIONS.md 2026-07-25).
+  it("registra la fase turno_final cuando el abort ocurre en la llamada final, no en la exploración", async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    toolRunnerMock.mockReturnValue(fakeExplorationRunner());
+    createMock.mockImplementation(
+      (_params, options?: { signal?: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener("abort", () => {
+            reject(new DOMException("Aborted", "AbortError"));
+          });
+        }),
+    );
+
+    await generateSessionProposal("user-1", { timeoutMs: 5 });
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ code: "TIMEOUT", phase: "final_turn" }),
     );
     consoleErrorSpy.mockRestore();
   });

@@ -348,6 +348,10 @@ Proyecto sin versión publicada todavía.
   `undefined`, no `null`. `validate-session.ts` ahora normaliza `null` a ausente en todos los
   campos opcionales del esquema compartido (formulario manual, propuesta IA in-app y
   `log_session`/`edit_session` MCP). Ver DECISIONS.md.
+- Subido el timeout de la generación de sesión con IA de 60s a 90s (`generate-session-proposal.ts`,
+  bajo el límite de función de Vercel de 300s) y añadido logging de duración por fase
+  (exploración/turno final) para diagnosticar futuros timeouts sin tener que reproducirlos.
+  Ver DECISIONS.md.
 
 ### Changed
 

@@ -2693,4 +2693,21 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-07-25
+- **Decisión:** subido `DEFAULT_TIMEOUT_MS` de 60s a **90s** en `generate-session-proposal.ts`
+  (bajo el límite de función de Vercel, 300s) y añadido logging de duración por fase
+  (`exploración` vs `turno_final`, con `phaseMs`/`totalMs`) tanto en el log de éxito como en
+  los de `TIMEOUT`/`API_ERROR`. Pedido explícitamente por David tras el incidente de 2
+  timeouts seguidos documentado en la entrada anterior.
+- **Contexto:** sin este logging, un futuro TIMEOUT solo indicaría "tardó más de Xms" sin decir
+  si el cuello de botella fue la fase de exploración (lectura de historial/catálogo, hasta
+  `MAX_EXPLORATION_ITERATIONS=6` turnos) o el turno final forzado — dato imprescindible para
+  decidir si hace falta seguir subiendo el límite, reducir iteraciones de exploración, o si es
+  simple latencia puntual de la API.
+- **Verificación:** 2 tests nuevos/ampliados en `generate-session-proposal.test.ts` (el log de
+  TIMEOUT incluye `phase`/`phaseMs`/`totalMs`; un abort durante el turno final se registra con
+  `phase: "final_turn"`, no `"exploration"`), 437/437 tests en verde, typecheck y lint limpios.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
