@@ -2652,7 +2652,8 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 - **Decisión:** creado `migrate-prod.yml` (workflow_dispatch, mismo patrón que
   `seed-prod.yml`: disparo manual, secrets `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` ya
   existentes) para aplicar `scripts/apply-turso-migrations.ts` contra producción. Disparado
-  una vez para aplicar la migración pendiente y arreglar el historial.
+  una vez para aplicar la migración pendiente y arreglar el historial. **Verificado**: David
+  confirmó `/historial` cargando correctamente en producción tras el disparo.
 - **Lección aprendida:** cualquier PR que añada una migración de esquema (Prisma) necesita,
   tras el merge, un paso explícito de "¿hay que disparar `migrate-prod.yml`?" — igual que ya
   se comprueba con `seed-prod.yml` para el catálogo. Añadido a las reglas de equipo en
