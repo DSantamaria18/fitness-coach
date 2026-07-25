@@ -109,6 +109,9 @@ cada una → DECISIONS.md, entrada 2026-07-24 "Consolidar lecciones de proceso")
 - Todo worktree nuevo corre `npx prisma generate` justo tras enlazar `node_modules`.
 - Tras mergear una PR con dependencias nuevas, correr `npm install` en el repo principal — el
   symlink de `node_modules` no las trae solo.
+- Tras mergear una PR con migración de esquema Prisma nueva, disparar `migrate-prod.yml`
+  contra producción (Turso) — no es automático. Olvidarlo ya rompió `/historial` en real (ver
+  DECISIONS.md 2026-07-25, columna `aiComment` de BL-027).
 - QA reporta explícitamente si la rama va detrás de `master` (commits behind) en rondas con
   varias PRs paralelas sobre base compartida.
 - Al probar formularios en navegador real, usar valores que respeten restricciones nativas HTML

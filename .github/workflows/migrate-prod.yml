@@ -1,0 +1,62 @@
+# Aplica las migraciones de prisma/migrations/ pendientes contra la base de
+# datos de PRODUCCIÓN (Turso remoto), vía scripts/apply-turso-migrations.ts.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Por qué existe: ni `prisma migrate deploy`, ni `db push`, ni `migrate dev`
+# funcionan contra una URL libSQL remota (Turso habla HTTP, protocolo que
+# Prisma Migrate no soporta — ver DECISIONS.md 2026-07-20 y la cabecera de
+# scripts/apply-turso-migrations.ts). Sin este workflow, cada PR que añade una
+# migración de esquema requeriría un paso manual tras el merge — y de hecho
+# esa laguna causó un bug real en producción (columna `aiComment` de BL-027
+# ausente en Turso, historial roto — ver DECISIONS.md).
+#
+# El script es idempotente (tabla de control propia, solo aplica lo
+# pendiente) y las migraciones existentes hasta ahora son aditivas (ADD
+# COLUMN), pero sigue siendo una escritura real en producción: disparo manual
+# únicamente, nunca en push/PR (ver CLAUDE.md regla 11 y regla de equipo sobre
+# confirmación explícita de David para cada disparo real).
+#
+# Disparo manual:
+#   gh workflow run migrate-prod.yml
+#
+# Secrets del repositorio (ya configurados para seed-prod.yml, se reutilizan):
+#   TURSO_DATABASE_URL
+#   TURSO_AUTH_TOKEN
+name: Migrar producción (esquema Prisma)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: migrate-prod
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Aplicar migraciones pendientes contra Turso de producción
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: npm run apply-turso-migrations
+
+      - name: Resumen
+        if: success()
+        run: |
+          {
+            echo "### Migración de producción completada"
+            echo ""
+            echo "\`apply-turso-migrations\` terminó con éxito (exit 0) contra"
+            echo "la Turso de producción."
+          } >> "$GITHUB_STEP_SUMMARY"

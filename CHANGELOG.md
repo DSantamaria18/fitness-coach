@@ -338,6 +338,10 @@ Proyecto sin versión publicada todavía.
   seed: no borra el ejercicio de bases de datos ya sembradas (dev/prod) ni de sesiones
   históricas que lo usen — para eso existe el borrado real desde `/ajustes`
   (`delete-exercise.ts`), no aplicado aquí a petición explícita de David.
+- Workflow `migrate-prod.yml` (disparo manual, `workflow_dispatch`) para aplicar migraciones
+  de Prisma pendientes contra la Turso de producción vía `scripts/apply-turso-migrations.ts`.
+  Corrige un bug real: la migración de BL-027 (`aiComment`) nunca se aplicó a producción y
+  rompía `/historial`. Ver DECISIONS.md.
 
 ### Changed
 

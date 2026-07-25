@@ -2642,4 +2642,22 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-07-25
+- **Incidente:** `/historial` roto en producción tras mergear BL-027 (PR #53):
+  `SQL_INPUT_ERROR: no such column: main.StrengthEntry.aiComment`. La migración
+  `20260725171640_add_ai_comment_to_entries` quedó en `prisma/migrations/` pero nunca se
+  aplicó a la Turso de producción — no existía ningún paso automático (CI/CD) que corriera
+  `scripts/apply-turso-migrations.ts` contra prod tras el merge, a diferencia del seed de
+  catálogo, que sí tiene su propio workflow (`seed-prod.yml`).
+- **Decisión:** creado `migrate-prod.yml` (workflow_dispatch, mismo patrón que
+  `seed-prod.yml`: disparo manual, secrets `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` ya
+  existentes) para aplicar `scripts/apply-turso-migrations.ts` contra producción. Disparado
+  una vez para aplicar la migración pendiente y arreglar el historial.
+- **Lección aprendida:** cualquier PR que añada una migración de esquema (Prisma) necesita,
+  tras el merge, un paso explícito de "¿hay que disparar `migrate-prod.yml`?" — igual que ya
+  se comprueba con `seed-prod.yml` para el catálogo. Añadido a las reglas de equipo en
+  CLAUDE.md.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
