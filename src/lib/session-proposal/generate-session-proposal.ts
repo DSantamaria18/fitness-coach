@@ -15,10 +15,12 @@ import {
 // exploración del toolRunner (hasta MAX_EXPLORATION_ITERATIONS).
 const MODEL = "claude-sonnet-5";
 const MAX_TOKENS = 4096;
-// 60s, no 30s: en pruebas reales con ANTHROPIC_API_KEY el flujo completo
-// (exploración + turno final) tardó hasta ~31s, por encima del límite
-// anterior en el 60% de los casos (ver DECISIONS.md 2026-07-19).
-const DEFAULT_TIMEOUT_MS = 60_000;
+// 90s, no 60s: el límite de 60s siguió abortando peticiones reales en
+// producción (2 de 3 fallos de un mismo lote fueron TIMEOUT, ver DECISIONS.md
+// 2026-07-25) muy por debajo del límite de función de Vercel (300s, plan
+// Hobby con Fluid Compute). Logging de duración por fase añadido junto a
+// esta subida para tener datos concretos si vuelve a pasar.
+const DEFAULT_TIMEOUT_MS = 90_000;
 // Límite de turnos de exploración (lectura de historial/catálogo) antes de
 // pasar a la fase de salida forzada — evita un bucle sin fin si el modelo no
 // converge, incluso dentro del presupuesto de tiempo.
@@ -73,6 +75,14 @@ export async function generateSessionProposal(
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
+  // Para poder diagnosticar un TIMEOUT/API_ERROR sin tener que reproducirlo:
+  // qué fase estaba en curso y cuánto llevaba, sin desglose por fase un
+  // timeout solo dice "tardó más de Xms", no si fue la exploración o el
+  // turno final (ver DECISIONS.md 2026-07-25).
+  const startedAt = Date.now();
+  let currentPhase: "exploration" | "final_turn" = "exploration";
+  let phaseStartedAt = startedAt;
+
   try {
     const client = new Anthropic();
     const system = `${readSkillSystemPrompt()}\n\n${FORMAT_INSTRUCTIONS}`;
@@ -103,8 +113,11 @@ export async function generateSessionProposal(
     );
 
     await explorationRunner.runUntilDone();
+    const explorationMs = Date.now() - phaseStartedAt;
     const exploredMessages = explorationRunner.params.messages;
 
+    currentPhase = "final_turn";
+    phaseStartedAt = Date.now();
     const finalResponse = await client.beta.messages.create(
       {
         model: MODEL,
@@ -118,6 +131,12 @@ export async function generateSessionProposal(
         ],
       },
       { signal: controller.signal },
+    );
+    const finalTurnMs = Date.now() - phaseStartedAt;
+    console.log(
+      "[generateSessionProposal] duración por fase: " +
+        `exploración=${explorationMs}ms, turno_final=${finalTurnMs}ms, ` +
+        `total=${Date.now() - startedAt}ms.`,
     );
 
     const proposalBlock = finalResponse.content.find(isSubmitProposalBlock);
@@ -161,11 +180,13 @@ export async function generateSessionProposal(
 
     return { success: true, data: validation.data };
   } catch (error) {
+    const phaseMs = Date.now() - phaseStartedAt;
+    const totalMs = Date.now() - startedAt;
     if (controller.signal.aborted) {
       console.error(
         "[generateSessionProposal] TIMEOUT: se abortó la petición al superar " +
           `${timeoutMs}ms.`,
-        { code: "TIMEOUT" },
+        { code: "TIMEOUT", phase: currentPhase, phaseMs, totalMs },
       );
       return {
         success: false,
@@ -181,6 +202,9 @@ export async function generateSessionProposal(
       {
         code: "API_ERROR",
         message: error instanceof Error ? error.message : String(error),
+        phase: currentPhase,
+        phaseMs,
+        totalMs,
         // Guardado con typeof (no solo instanceof) porque en tests el SDK va
         // mockeado por completo y Anthropic.APIError puede no existir como
         // constructor real; en producción sí es siempre una función.
