@@ -10,6 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { Card } from "@/components/card";
 import type { ComparisonDatasetPoint } from "./align-comparison-series";
 
 // Mismos tipos que get-progress-report.ts, pero con `date` como string ISO:
@@ -133,7 +134,7 @@ function SingleMetricChart({
 
   return (
     <div className="flex flex-col gap-2">
-      <h3 className="text-sm font-semibold">{heading}</h3>
+      <h3 className="text-sm font-semibold text-ink">{heading}</h3>
       {hasAnyValue ? (
         <div className={`h-56 w-full ${colorClassName}`}>
           <ResponsiveContainer width="100%" height="100%">
@@ -195,7 +196,7 @@ function ComparisonChart({
 
   return (
     <div className="flex flex-col gap-2">
-      <h3 className="text-sm font-semibold">{heading}</h3>
+      <h3 className="text-sm font-semibold text-ink">{heading}</h3>
       {hasAnyValue ? (
         <div className={`h-64 w-full ${COMPARISON_ACTUAL_COLOR_VAR}`}>
           <ResponsiveContainer width="100%" height="100%">
@@ -446,33 +447,37 @@ export function ProgressCharts({
 
   return (
     <div className="flex flex-col gap-8">
-      <section className="flex flex-col gap-2">
-        <h2 className="text-lg font-semibold">Peso corporal</h2>
-        <BodyWeightChart
-          data={bodyWeight}
-          comparison={comparison?.bodyWeight}
-          comparisonLabels={comparison?.labels}
-        />
+      <section>
+        <Card className="flex flex-col gap-2">
+          <h2 className="text-lg font-semibold text-ink">Peso corporal</h2>
+          <BodyWeightChart
+            data={bodyWeight}
+            comparison={comparison?.bodyWeight}
+            comparisonLabels={comparison?.labels}
+          />
+        </Card>
       </section>
 
       {exercise ? (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-lg font-semibold">
-            Progreso: {exercise.exercise}
-          </h2>
-          {exercise.type === "STRENGTH" ? (
-            <StrengthCharts
-              points={exercise.points}
-              comparison={strengthComparison}
-              comparisonLabels={comparison?.labels}
-            />
-          ) : (
-            <CardioCharts
-              points={exercise.points}
-              comparison={cardioComparison}
-              comparisonLabels={comparison?.labels}
-            />
-          )}
+        <section>
+          <Card className="flex flex-col gap-2">
+            <h2 className="text-lg font-semibold text-ink">
+              Progreso: {exercise.exercise}
+            </h2>
+            {exercise.type === "STRENGTH" ? (
+              <StrengthCharts
+                points={exercise.points}
+                comparison={strengthComparison}
+                comparisonLabels={comparison?.labels}
+              />
+            ) : (
+              <CardioCharts
+                points={exercise.points}
+                comparison={cardioComparison}
+                comparisonLabels={comparison?.labels}
+              />
+            )}
+          </Card>
         </section>
       ) : null}
     </div>

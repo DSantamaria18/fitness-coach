@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { Card } from "@/components/card";
 import { deleteWeightEntry, updateWeightEntry } from "./actions";
 
 // Las fechas viajan como ISO string (no Date) desde el Server Component
@@ -39,7 +40,7 @@ export function WeightHistorySection({
 
   return (
     <section className="flex flex-col gap-4">
-      <h2 className="text-lg font-semibold">Peso corporal</h2>
+      <h2 className="text-lg font-semibold text-ink">Peso corporal</h2>
 
       {entries.length === 0 ? (
         <p className="text-sm text-black/60 dark:text-white/60">
@@ -48,35 +49,36 @@ export function WeightHistorySection({
       ) : (
         <ul className="flex flex-col gap-2">
           {entries.map((entry) => (
-            <li
-              key={entry.id}
-              className="rounded-md border border-black/10 px-4 py-3 dark:border-white/15"
-            >
-              {editingId === entry.id ? (
-                <WeightEntryEditForm
-                  entry={entry}
-                  onCancel={() => setEditingId(null)}
-                />
-              ) : (
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex flex-col">
-                    <span className="font-medium">{entry.weightKg} kg</span>
-                    <span className="text-sm text-black/60 dark:text-white/60">
-                      {formatDate(entry.date)}
-                    </span>
+            <li key={entry.id}>
+              <Card>
+                {editingId === entry.id ? (
+                  <WeightEntryEditForm
+                    entry={entry}
+                    onCancel={() => setEditingId(null)}
+                  />
+                ) : (
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex flex-col">
+                      <span className="font-mono font-medium tabular-nums text-ink">
+                        {entry.weightKg} kg
+                      </span>
+                      <span className="text-sm text-black/60 dark:text-white/60">
+                        {formatDate(entry.date)}
+                      </span>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(entry.id)}
+                        className="text-sm font-medium underline"
+                      >
+                        Editar
+                      </button>
+                      <DeleteWeightButton id={entry.id} />
+                    </div>
                   </div>
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setEditingId(entry.id)}
-                      className="text-sm font-medium underline"
-                    >
-                      Editar
-                    </button>
-                    <DeleteWeightButton id={entry.id} />
-                  </div>
-                </div>
-              )}
+                )}
+              </Card>
             </li>
           ))}
         </ul>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { Card } from "@/components/card";
 import { deleteSessionEntry, updateSessionEntry } from "./actions";
 import {
   SessionEntriesEditor,
@@ -92,7 +93,7 @@ export function SessionHistorySection({
 
   return (
     <section className="flex flex-col gap-4">
-      <h2 className="text-lg font-semibold">Sesiones de entreno</h2>
+      <h2 className="text-lg font-semibold text-ink">Sesiones de entreno</h2>
 
       {entries.length === 0 ? (
         <p className="text-sm text-black/60 dark:text-white/60">
@@ -101,48 +102,49 @@ export function SessionHistorySection({
       ) : (
         <ul className="flex flex-col gap-2">
           {entries.map((entry) => (
-            <li
-              key={entry.id}
-              className="rounded-md border border-black/10 px-4 py-3 dark:border-white/15"
-            >
-              {editingId === entry.id ? (
-                <SessionEntryEditForm
-                  entry={entry}
-                  exercises={exercises}
-                  onCancel={() => setEditingId(null)}
-                />
-              ) : (
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-sm text-black/60 dark:text-white/60">
-                      {formatDate(entry.date)}
-                    </span>
-                    <ul className="flex flex-col gap-0.5 text-sm">
-                      {entry.ejercicios.map((ejercicio, index) => (
-                        <li key={index}>
-                          <span className="font-medium">
-                            {ejercicio.ejercicio}
-                          </span>
-                          :{" "}
-                          {ejercicio.tipo === "fuerza"
-                            ? ejercicio.series.map(formatSerie).join(", ")
-                            : formatCardioSummary(ejercicio)}
-                        </li>
-                      ))}
-                    </ul>
+            <li key={entry.id}>
+              <Card>
+                {editingId === entry.id ? (
+                  <SessionEntryEditForm
+                    entry={entry}
+                    exercises={exercises}
+                    onCancel={() => setEditingId(null)}
+                  />
+                ) : (
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm text-black/60 dark:text-white/60">
+                        {formatDate(entry.date)}
+                      </span>
+                      <ul className="flex flex-col gap-0.5 text-sm">
+                        {entry.ejercicios.map((ejercicio, index) => (
+                          <li key={index}>
+                            <span className="font-medium text-ink">
+                              {ejercicio.ejercicio}
+                            </span>
+                            :{" "}
+                            <span className="font-mono tabular-nums">
+                              {ejercicio.tipo === "fuerza"
+                                ? ejercicio.series.map(formatSerie).join(", ")
+                                : formatCardioSummary(ejercicio)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="flex shrink-0 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(entry.id)}
+                        className="text-sm font-medium underline"
+                      >
+                        Editar
+                      </button>
+                      <DeleteSessionButton id={entry.id} />
+                    </div>
                   </div>
-                  <div className="flex shrink-0 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setEditingId(entry.id)}
-                      className="text-sm font-medium underline"
-                    >
-                      Editar
-                    </button>
-                    <DeleteSessionButton id={entry.id} />
-                  </div>
-                </div>
-              )}
+                )}
+              </Card>
             </li>
           ))}
         </ul>

@@ -16,7 +16,7 @@ export default async function SesionPage() {
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-6 p-6">
-      <h1 className="text-xl font-semibold">Registrar sesión</h1>
+      <h1 className="text-xl font-semibold text-ink">Registrar sesión</h1>
       <SessionForm
         exercises={exercises.map((exercise) => ({
           id: exercise.id,
