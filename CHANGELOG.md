@@ -334,6 +334,10 @@ Proyecto sin versión publicada todavía.
   actualizado para que la IA rellene `comentario_ia` con su propia observación (técnica,
   progresión) y trate `notas` como feedback de David de solo lectura, a considerar junto al RPE
   para decidir la progresión. Ver DECISIONS.md.
+- Quitado "Remo (máquina)" del catálogo sembrado por `prisma/seed.ts` (cardio). Solo afecta al
+  seed: no borra el ejercicio de bases de datos ya sembradas (dev/prod) ni de sesiones
+  históricas que lo usen — para eso existe el borrado real desde `/ajustes`
+  (`delete-exercise.ts`), no aplicado aquí a petición explícita de David.
 
 ### Changed
 

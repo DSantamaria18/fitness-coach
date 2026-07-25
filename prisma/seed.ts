@@ -38,7 +38,6 @@ const exercises: { name: string; type: ExerciseType }[] = [
   { name: "Plancha", type: ExerciseType.STRENGTH },
   { name: "Elevación de piernas", type: ExerciseType.STRENGTH },
   { name: "Carrera", type: ExerciseType.CARDIO },
-  { name: "Remo (máquina)", type: ExerciseType.CARDIO },
   { name: "Natación", type: ExerciseType.CARDIO },
   { name: "Escaladores", type: ExerciseType.CARDIO },
   { name: "Jumping jacks", type: ExerciseType.CARDIO },
