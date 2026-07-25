@@ -105,9 +105,8 @@ describe("generateSessionProposal", () => {
       await generateSessionProposal("user-1");
 
       const [params] = toolRunnerMock.mock.calls.at(-1)!;
-      const userMessage = (
-        params as { messages: Array<{ content: string }> }
-      ).messages[0].content;
+      const userMessage = (params as { messages: Array<{ content: string }> })
+        .messages[0].content;
       expect(userMessage).toContain("2026-07-25T13:08:46.000Z");
     } finally {
       vi.useRealTimers();
