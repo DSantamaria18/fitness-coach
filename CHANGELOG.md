@@ -498,3 +498,10 @@ Proyecto sin versión publicada todavía.
   la página soporta ambos temas explícitamente — algunos motores móviles en modo standalone no
   activan `prefers-color-scheme` de forma fiable sin ella. Añadido `colorScheme: "light dark"`
   al `viewport` de `layout.tsx`. Ver DECISIONS.md.
+- **BL-019 nunca reconstruyó el layout del editor de ejercicios de sesión** (detectado por
+  David con captura real de `/sesion`, 2026-07-25 — el tema oscuro ya funcionaba, pero fuerza y
+  cardio seguían con filas `flex-wrap` de campo suelto, no la tabla del mock aprobado). Las
+  rondas anteriores de BL-019 solo migraron color; la estructura de `SessionEntriesEditor`
+  nunca se tocó. Reconstruido a `<table>`: fuerza con columnas Serie/Peso/Reps/Tempo/RPE (RPE
+  como badge circular, componente `RpeInput` compartido); cardio con una fila por métrica
+  (etiqueta + input) y el mismo badge circular para su campo RPE. Ver DECISIONS.md.
