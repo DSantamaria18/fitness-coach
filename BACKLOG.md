@@ -89,8 +89,13 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
 ## Iteraciones futuras ya acordadas (no implementar todavía)
 
 - **[BL-011]** **Integración con wearable** (pasos, sueño, frecuencia cardiaca). Justificación: ampliar el
-  seguimiento más allá del entreno de fuerza. Dificultad: alta (depende de APIs externas de
-  terceros, aún por decidir cuál).
+  seguimiento más allá del entreno de fuerza. La app de la pulsera de David ya exporta
+  diariamente a una hoja de cálculo en Google Drive, lo que simplifica el enfoque: en vez de
+  integrar contra la API propietaria del fabricante (OAuth por vendor, descubrir endpoints),
+  basta con leer esa hoja vía Google Sheets API (autenticación con service account, sin login
+  interactivo) e importar periódicamente (mismo patrón cron de GitHub Actions que
+  `seed-prod.yml`). Dificultad: baja-media (definir el mapeo de columnas de la hoja al esquema,
+  idempotencia del import por fecha para no duplicar filas al re-ejecutar).
 - **[BL-012]** **Fotos, medidas corporales y registro de comidas.** Justificación: cobertura completa del
   seguimiento físico. Dificultad: media-alta (gestión de archivos/imágenes, almacenamiento).
 - **[BL-013]** **Login web con huella/passkey (WebAuthn)** en vez de usuario/contraseña. Justificación:
