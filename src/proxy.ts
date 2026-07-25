@@ -10,8 +10,13 @@ const { auth } = NextAuth(authConfig);
 export default auth;
 
 // Protege todas las rutas salvo login, la API de NextAuth, el servidor MCP
-// (api/mcp), el healthcheck (api/health) y los assets estáticos/internos de
-// Next.js (que no deben requerir sesión).
+// (api/mcp), el healthcheck (api/health), el manifest/iconos PWA (BL-026) y
+// los assets estáticos/internos de Next.js (que no deben requerir sesión).
+//
+// manifest.webmanifest/icon/apple-icon quedan fuera por la misma razón que
+// favicon.ico: Next los enlaza en el <head> de TODAS las páginas, incluida
+// /login — sin esta excepción, el propio favicon del login quedaría detrás
+// de un 307 a /login.
 //
 // api/mcp queda fuera A PROPÓSITO: ningún cliente MCP (la skill
 // "sesion-entrenamiento", un chat con el conector configurado) tiene cookie
@@ -30,6 +35,6 @@ export default auth;
 // seguro exponerlo: no devuelve ningún dato sensible (ver route.ts).
 export const config = {
   matcher: [
-    "/((?!api/auth|api/mcp|api/health|_next/static|_next/image|favicon.ico).*)",
+    "/((?!api/auth|api/mcp|api/health|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon).*)",
   ],
 };
