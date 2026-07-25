@@ -2489,4 +2489,22 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-07-25
+- **Decisión:** Corregido `generateSessionProposal` (falló en producción real probando la PWA
+  recién instalada): el mensaje inicial ahora incluye explícitamente la fecha/hora actual
+  (`new Date().toISOString()`), en vez de dejar que el modelo la adivine.
+- **Alternativas consideradas:** validar/corregir la fecha después de generada (descartado:
+  arregla el síntoma, no la causa — el modelo seguiría sin saber "ahora" para el resto de su
+  razonamiento, p. ej. al decidir si una racha sigue activa); relajar `validateSession` para
+  aceptar fechas futuras cercanas (descartado: la validación es correcta, el problema es que
+  el input que recibía estaba mal fundamentado).
+- **Lecciones aprendidas:** ninguna llamada directa al SDK de Mensajes de Anthropic (`client.
+  beta.messages.toolRunner`/`.create`) tiene, por sí sola, noción de la fecha/hora real — a
+  diferencia de un chat en Claude Code, donde el propio harness la inyecta en el contexto de
+  cada turno (por eso la skill standalone nunca sufrió este bug). Cualquier prompt que le pida
+  al modelo generar algo dependiente de "hoy/ahora" fuera de ese harness necesita
+  proporcionárselo explícitamente — no asumir que el modelo "sabe qué día es".
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

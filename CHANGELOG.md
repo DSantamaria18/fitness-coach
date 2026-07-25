@@ -469,3 +469,9 @@ Proyecto sin versión publicada todavía.
   de peso y progresión": para ejercicios a peso corporal, la IA no propone ningún número, lo
   indica como "a peso corporal" y deja el campo de peso sin informar. Ver DECISIONS.md
   2026-07-24.
+- **Generación de sesión con IA fallaba con "La fecha no puede ser futura"** (detectado por
+  David probando la PWA en real, 2026-07-25): nada en el prompt de `generateSessionProposal`
+  le decía al modelo la fecha/hora real actual, así que tenía que adivinarla para rellenar
+  `fecha` en `submit_session_proposal` — a veces adivinaba una posterior al instante real de
+  validación. Corregido inyectando la fecha/hora real (`new Date().toISOString()`) en el
+  mensaje inicial. Ver DECISIONS.md.

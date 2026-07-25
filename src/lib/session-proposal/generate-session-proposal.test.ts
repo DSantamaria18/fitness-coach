@@ -88,6 +88,32 @@ describe("generateSessionProposal", () => {
     });
   });
 
+  // Root cause de un fallo real en producción (2026-07-25): validateSession
+  // rechazaba la propuesta con "La fecha no puede ser futura" porque nada en
+  // el prompt le decía al modelo qué fecha/hora era realmente "ahora" — tenía
+  // que adivinarla para rellenar el campo `fecha` de submit_session_proposal,
+  // y a veces adivinaba mal. La skill standalone en Claude Code no sufre esto
+  // porque el propio harness inyecta la fecha real en el contexto; esta
+  // llamada directa al SDK de Mensajes no tenía ese equivalente.
+  it("incluye la fecha y hora actuales en el mensaje inicial, para que el modelo no tenga que adivinar 'hoy'", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-25T13:08:46.000Z"));
+    toolRunnerMock.mockReturnValue(fakeExplorationRunner());
+    createMock.mockResolvedValue(fakeFinalResponse(VALID_PROPOSAL_INPUT));
+
+    try {
+      await generateSessionProposal("user-1");
+
+      const [params] = toolRunnerMock.mock.calls.at(-1)!;
+      const userMessage = (
+        params as { messages: Array<{ content: string }> }
+      ).messages[0].content;
+      expect(userMessage).toContain("2026-07-25T13:08:46.000Z");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("fuerza tool_choice al tool de salida en el turno final", async () => {
     toolRunnerMock.mockReturnValue(fakeExplorationRunner());
     createMock.mockResolvedValue(fakeFinalResponse(VALID_PROPOSAL_INPUT));
