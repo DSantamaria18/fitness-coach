@@ -2639,6 +2639,8 @@ confirmado con Playwright contra la URL real, no una hipótesis.
   simplemente nunca existió — la petición del usuario puede presuponer un comportamiento actual
   que no es el real, y sin ese hallazgo el cambio de esquema habría quedado sin efecto observable
   para ejercicios generados por IA.
+- **Validado por David** en producción real (tras el fix del incidente de migración pendiente,
+  ver entrada siguiente): BL-027 queda cerrado.
 
 ---
 
