@@ -318,6 +318,21 @@ Proyecto sin versión publicada todavía.
 
 ### Changed
 
+- **[BL-019]** Rediseño de navegación y aspecto visual, validado antes de implementar con un
+  mock estático aprobado por David. Navegación: la barra superior con menú hamburguesa
+  (`nav-bar.tsx`, BL-009) se sustituye por una barra de pestañas inferior fija con las 4
+  secciones de uso frecuente (Sesión, Peso, Historial, Informe) siempre visibles; Ajustes y
+  cerrar sesión pasan a una franja superior propia, también siempre visible. El indicador de
+  sección (`section-indicator.tsx`, BL-010) se retira por redundante: cada página ya tiene su
+  propio `<h1>` y ahora la pestaña activa lo refuerza. Visual: tokens de color en
+  `globals.css` (`stone`/`surface`/`ink`/`iron`/`ember`/`steel`/`ok`, claro y oscuro) con dos
+  acentos con significado propio — ámbar ("ascua") para esfuerzo/acción primaria, azul-grisáceo
+  ("acero") para dato secundario —, componente `Card` compartido que sustituye los contenedores
+  ad-hoc de cada página, y `font-mono tabular-nums` en las columnas de datos (peso, reps, RPE,
+  volumen) para que se lean como una tabla real. Implementado en dos PRs paralelas e
+  independientes (navegación y tokens visuales, sin solape de ficheros) por los dos Developers
+  del equipo, revisadas y verificadas en navegador real (375px/1024px, claro/oscuro) antes de
+  mergear. Ver DECISIONS.md 2026-07-25.
 - **[BL-020]** Actualizadas `actions/checkout` y `actions/setup-node` de v4 a v5 en todos los
   workflows de GitHub Actions (`ci.yml`, `seed-prod.yml`). Mantenimiento de rutina: GitHub
   avisaba de que v4 targetea una versión de Node deprecada (detectado por TechOps al validar

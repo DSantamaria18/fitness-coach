@@ -191,34 +191,50 @@ cambio relevante.
 
 ## Navegación global
 
-- Barra de navegación (`src/components/nav-bar.tsx`, client component) con enlaces a Peso,
-  Sesión, Historial, Informe y Ajustes, visible en todas las páginas vía `layout.tsx`. Resalta
-  la ruta activa con `aria-current="page"` (comparando con `usePathname()`).
+- **[BL-019]** Barra de pestañas inferior fija (`src/components/nav-bar.tsx`, client component)
+  con las 4 secciones de uso frecuente (Sesión, Peso, Historial, Informe), icono+etiqueta,
+  siempre visible (sin colapso ni menú hamburguesa). Resalta la pestaña activa con
+  `aria-current="page"` (comparando con `usePathname()`) y color de acento `text-ember` (token
+  de `globals.css`). Franja superior separada, también siempre visible, con el enlace a Ajustes
+  (icono de engranaje) y el botón de cerrar sesión. Sustituye el diseño anterior de barra
+  superior con menú hamburguesa (BL-009, ver DECISIONS.md 2026-07-25 y 2026-07-20) — validado
+  antes de implementar con un mock estático aprobado por David.
 - Solo se muestra con sesión iniciada: `src/components/nav-bar-gate.tsx` (Server Component,
   separado de `layout.tsx` para poder testearse con Testing Library sin arrastrar la envoltura
   `<html>/<body>`) comprueba `auth()` del lado del servidor y omite la nav por completo si no
-  hay usuario autenticado, para no mostrar la estructura de navegación en `/login`.
-- Diseño mobile-first: fila horizontal de enlaces con altura de toque de 44px cada uno (uso
-  principal desde el móvil, ver SPEC.md §2/§6).
+  hay usuario autenticado. Solo depende de la sesión, no de la ruta — si hay sesión activa y se
+  visita `/login` directamente, la barra sigue apareciendo (inconsistencia visual menor, no de
+  seguridad, ver BACKLOG.md BL-030).
+- Diseño mobile-first: altura de toque de 44px mínimo por pestaña (uso principal desde el
+  móvil, ver SPEC.md §2/§6).
 - `/` deja de ser el scaffold por defecto de `create-next-app`: ahora redirige server-side a
   `/historial` si hay sesión, o a `/login` si no la hay (defensa en profundidad además de la
   protección ya existente en `src/proxy.ts`).
-- **[BL-008]** Botón "Cerrar sesión" al final de la barra de navegación. Pide confirmación
-  nativa (`window.confirm`) y, si se confirma, invoca la Server Action `logout()`
+- **[BL-008]** Botón "Cerrar sesión" en la franja superior. Pide confirmación nativa
+  (`window.confirm`) y, si se confirma, invoca la Server Action `logout()`
   (`src/app/actions.ts`), que llama a `signOut({ redirectTo: "/login" })` de Auth.js.
-- **[BL-009]** Menú hamburguesa por debajo del breakpoint `sm` (640px): los 5 enlaces y el botón
-  de logout colapsan detrás de un botón con `aria-expanded`/`aria-label` ("Abrir menú"/"Cerrar
-  menú"), estado `useState`. Se cierra al pulsar Escape, al hacer clic fuera del menú, al hacer
-  clic en cualquier enlace (además de al navegar realmente), y automáticamente en cuanto cambia
-  la ruta. En `sm:` y superior la barra se comporta exactamente igual que antes (fila
-  horizontal, sin hamburguesa). Sin librería de menús — un `useState` más las clases
-  `hidden`/`flex`/`sm:flex` de Tailwind ya establecidas en el proyecto.
-- **[BL-010]** Indicador de sección activa (`SectionIndicator`) junto al título de cada página,
-  derivado de la misma fuente que la nav-bar (`NAV_LINKS`). No es un breadcrumb jerárquico —
-  la app solo tiene un nivel de navegación (5 secciones planas) — sino un refuerzo textual de
-  qué sección estás viendo, útil sobre todo donde el `<h1>` de la página no repite literalmente
-  el label de la nav (p. ej. "Registrar peso" en `/peso`, cuyo label en la nav es "Peso"). Se
-  autooculta fuera de las 5 secciones (`/login`, `/`).
+- El indicador de sección activa (`SectionIndicator`, BL-010) se retiró como parte de BL-019:
+  quedó redundante porque cada página ya tiene su propio `<h1>` y ahora la pestaña activa de la
+  barra inferior refuerza esa misma información.
+
+## Sistema visual: tokens y `Card` compartido (BL-019)
+
+- Tokens de color en `src/app/globals.css` (`--stone`/`--surface`/`--ink`/`--iron`/`--ember`/
+  `--steel`/`--ok`), definidos en `:root` y redefinidos bajo `@media (prefers-color-scheme:
+  dark)`, expuestos como utilidades Tailwind vía el bloque `@theme inline` ya existente
+  (`bg-surface`, `text-ink`, `text-ember`, etc.). Sustituyen la paleta plana blanco/negro/zinc
+  anterior por dos acentos con significado propio: ámbar ("ascua") para esfuerzo/acción
+  primaria, azul-grisáceo ("acero") para dato secundario.
+- Componente `Card` (`src/components/card.tsx`) — contenedor visual simple (fondo, borde,
+  esquinas redondeadas, sombra ligera) que sustituye los `div` ad-hoc con estilos propios que
+  hasta ahora repetía cada página. Aplicado en `/peso`, `/sesion`
+  (`session-entries-editor.tsx`), `/historial` (`weight-history-section.tsx`,
+  `session-history-section.tsx`) e `/informe` (`StatCard`, `progress-charts.tsx`).
+- `font-mono tabular-nums` en las columnas de datos (peso, reps, tempo, RPE, volumen,
+  estadísticas del informe) para que se lean alineadas como una tabla real.
+- Validado antes de implementar con un mock estático (HTML/CSS aislado, no parte del código de
+  producción) aprobado por David, y desarrollado en paralelo a la navegación (BL-019 arriba) en
+  una PR independiente, sin solape de ficheros entre ambas.
 
 ## Informe de progreso
 

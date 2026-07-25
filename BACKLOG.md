@@ -15,14 +15,6 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   credenciales, y decidir el disparador — cron interno choca con el auto-stop de Fly.io free
   tier, así que probablemente un GitHub Actions programado contra un endpoint propio).
 
-- **[BL-019]** **Rediseño de UX**: reorganizar la navegación y los flujos entre las secciones
-  existentes (`/sesion`, `/historial`, `/peso`, `/informe`, `/ajustes`), no solo un pulido visual.
-  Justificación: la navegación actual (barra plana en `nav-bar.tsx`) se pensó para un puñado de
-  páginas; a medida que crecen las funcionalidades (catálogo de ejercicios, informes, futuras
-  iteraciones 2/3 de wearables/fotos/comidas) puede quedarse corta o confusa. Dificultad: media
-  (requiere antes una propuesta de nueva estructura de navegación/flujos a validar con David,
-  más el trabajo de implementación en sí — no se aborda sin una fase de diseño previa acordada).
-
 - **[BL-021]** **Bot de Telegram como canal adicional de entrada/salida**: poder registrar peso
   corporal y sesiones de entreno, y consultar el informe de progreso, conversando con un bot de
   Telegram — además de la webapp, no en sustitución de ella. Justificación: canal más rápido e
@@ -85,6 +77,16 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   alta (requiere decidir la fuente del contenido — grabación propia, licencia de terceros, o
   generación por IA —, almacenamiento de vídeo/GIF por ejercicio del catálogo, y el coste que
   implique según la fuente elegida).
+
+- **[BL-030]** **`NavBar` aparece en `/login` si ya hay sesión activa**: `NavBarGate` solo
+  comprueba si existe sesión (`auth()`), no si la ruta es `/login` — si el navegador conserva una
+  sesión válida y se visita `/login` directamente, se ve la barra de navegación (franja superior +
+  pestañas inferior) superpuesta al formulario de login. Justificación: detectado por el Tech Lead
+  al verificar en navegador real la integración de BL-019 (2026-07-25); no es un fallo de
+  seguridad (la sesión sigue siendo válida, no hay bypass de autenticación), solo una
+  inconsistencia visual menor, preexistente a BL-019 (no la introdujo el rediseño de navegación).
+  Dificultad: baja (añadir una comprobación de ruta en `NavBarGate`, o redirigir `/login` a la
+  primera sección si ya hay sesión).
 
 ## Iteraciones futuras ya acordadas (no implementar todavía)
 
