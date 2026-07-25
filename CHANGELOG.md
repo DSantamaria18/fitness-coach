@@ -316,6 +316,13 @@ Proyecto sin versión publicada todavía.
   (`claude mcp add --scope user --transport http ...`) y cómo verificarla (`claude mcp list` /
   `/mcp`). Ver DECISIONS.md 2026-07-21.
 
+### Changed
+
+- **[BL-020]** Actualizadas `actions/checkout` y `actions/setup-node` de v4 a v5 en todos los
+  workflows de GitHub Actions (`ci.yml`, `seed-prod.yml`). Mantenimiento de rutina: GitHub
+  avisaba de que v4 targetea una versión de Node deprecada (detectado por TechOps al validar
+  la primera ejecución real de `seed-prod.yml`, 2026-07-21). Sin cambios de comportamiento.
+
 ### Fixed
 
 - `session.user` no incluía el `id` del usuario autenticado (faltaban los callbacks `jwt` y
