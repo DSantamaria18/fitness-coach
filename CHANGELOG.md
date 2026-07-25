@@ -342,6 +342,12 @@ Proyecto sin versión publicada todavía.
   de Prisma pendientes contra la Turso de producción vía `scripts/apply-turso-migrations.ts`.
   Corrige un bug real: la migración de BL-027 (`aiComment`) nunca se aplicó a producción y
   rompía `/historial`. Ver DECISIONS.md.
+- Corregido un bug real en la generación de sesión con IA: la propuesta fallaba con
+  `INVALID_OUTPUT` cuando la IA mandaba `null` explícito en un campo numérico opcional (p. ej.
+  las 9 métricas de cardio) en vez de omitirlo — `z.number().optional()` solo aceptaba
+  `undefined`, no `null`. `validate-session.ts` ahora normaliza `null` a ausente en todos los
+  campos opcionales del esquema compartido (formulario manual, propuesta IA in-app y
+  `log_session`/`edit_session` MCP). Ver DECISIONS.md.
 
 ### Changed
 

@@ -100,6 +100,48 @@ describe("validateSession", () => {
     expect(result.success).toBe(true);
   });
 
+  // Bug real en producción (ver DECISIONS.md 2026-07-25): la IA a veces manda
+  // `null` explícito en vez de omitir un campo opcional — z.number().optional()
+  // por sí solo rechaza `null` y tumbaba la sesión entera.
+  it("treats null as absent for every optional field of a strength entry", () => {
+    const result = validateSession({
+      fecha: new Date().toISOString(),
+      ejercicios: [
+        baseFuerza({
+          notas: null,
+          comentario_ia: null,
+          series: [{ reps: 5, peso_kg: null, tempo: null, RPE: null }],
+        }),
+      ],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("treats null as absent for every optional numeric field of a cardio entry", () => {
+    const result = validateSession({
+      fecha: new Date().toISOString(),
+      ejercicios: [
+        baseCardio({
+          duracion: null,
+          distancia_km: null,
+          velocidad_media: null,
+          ritmo_medio: null,
+          frecuencia_cardiaca_media: null,
+          frecuencia_cardiaca_maxima: null,
+          pasos: null,
+          frecuencia_paso: null,
+          kcal: null,
+          RPE: null,
+          notas: null,
+          comentario_ia: null,
+        }),
+      ],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it("accepts a cardio entry with comentario_ia and without notas", () => {
     const result = validateSession({
       fecha: new Date().toISOString(),
