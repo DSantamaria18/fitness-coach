@@ -446,7 +446,7 @@ export function SessionEntriesEditor({
                             inputMode="decimal"
                             placeholder="ej: 82,5"
                             title="Peso añadido a la serie, además de tu peso corporal. Déjalo vacío si el ejercicio es a peso corporal, sin lastre."
-                            aria-label={`Peso serie ${index + 1}`}
+                            aria-label="Peso (kg)"
                             value={serie.peso_kg}
                             onChange={(event) =>
                               updateSerie(
@@ -463,7 +463,7 @@ export function SessionEntriesEditor({
                           <input
                             type="number"
                             inputMode="numeric"
-                            aria-label={`Reps serie ${index + 1}`}
+                            aria-label="Reps"
                             value={serie.reps}
                             onChange={(event) =>
                               updateSerie(
@@ -479,7 +479,7 @@ export function SessionEntriesEditor({
                         <td className="py-1.5 pr-2">
                           <input
                             type="text"
-                            aria-label={`Tempo serie ${index + 1}`}
+                            aria-label="Tempo"
                             value={serie.tempo}
                             onChange={(event) =>
                               updateSerie(
@@ -494,7 +494,7 @@ export function SessionEntriesEditor({
                         </td>
                         <td className="py-1.5 pr-2 text-center">
                           <RpeInput
-                            ariaLabel={`RPE serie ${index + 1}`}
+                            ariaLabel="RPE"
                             value={serie.RPE}
                             onChange={(value) =>
                               updateSerie(registro.key, index, "RPE", value)
