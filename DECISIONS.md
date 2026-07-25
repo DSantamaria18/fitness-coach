@@ -2578,15 +2578,26 @@ confirmado con Playwright contra la URL real, no una hipótesis.
   tratamiento en ambos tipos de registro para no verse inconsistente entre tarjetas de una
   misma sesión).
 - **Verificación:** typecheck, lint y 425/425 tests en verde (TDD regla 5: ningún test afirma
-  clases CSS ni estructura DOM interna, así que el cambio de layout no rompió nada). Sin
-  verificación en navegador real logueado — bloqueada por el clasificador de credenciales
-  (mismo bloqueo documentado en la entrada de BL-019 de más arriba); pendiente que David
-  verifique visualmente contra el preview de Vercel de la PR.
-- **Lecciones aprendidas:** un "rediseño visual" y una "reconstrucción de layout" son alcances
-  distintos — migrar clases de color no implica que la estructura DOM coincida con el mock. La
-  entrada de BL-019 de más arriba ya lo señalaba para el resto de la app; este componente
-  concreto se había quedado fuera de esa migración de tokens porque sí tenía clases migradas
-  (parecía "hecho" a simple vista), ocultando que la estructura seguía sin tocar.
+  clases CSS ni estructura DOM interna, así que el cambio de layout no rompió nada). CI (e2e)
+  atrapó una regresión real en el primer push: `aria-label="Peso serie 1"` (etc.) en vez del
+  nombre accesible plano ("Peso (kg)", "Reps", "Tempo", "RPE") que
+  `e2e/sesion.spec.ts`/`e2e/sesion-ia.spec.ts` usan vía `getByLabel` — corregido en un segundo
+  commit sobre la misma PR (#52). Sin verificación en navegador real logueado por mi parte
+  —bloqueada por el clasificador de credenciales (mismo bloqueo documentado en la entrada de
+  BL-019 de más arriba)—, pero David validó visualmente el resultado final tras el merge y dio
+  el cierre por bueno.
+- **Lecciones aprendidas:**
+  - Un "rediseño visual" y una "reconstrucción de layout" son alcances distintos — migrar
+    clases de color no implica que la estructura DOM coincida con el mock. La entrada de
+    BL-019 de más arriba ya lo señalaba para el resto de la app; este componente concreto se
+    había quedado fuera de esa migración de tokens porque sí tenía clases migradas (parecía
+    "hecho" a simple vista), ocultando que la estructura seguía sin tocar.
+  - El nombre accesible de un `<input>` (`aria-label`, o el texto de un `<label>` que lo
+    envuelve) es parte del contrato que un test E2E con `getByLabel` verifica, no un detalle
+    interno de implementación — cambiarlo al reestructurar el layout (aquí, para desambiguar
+    entre series añadiendo "serie N") rompe el test aunque el comportamiento funcional no haya
+    cambiado. Antes de tocar el nombre accesible de un campo ya cubierto por E2E, greppear
+    `getByLabel`/`getByRole` en `e2e/` por ese texto exacto.
 
 ---
 
