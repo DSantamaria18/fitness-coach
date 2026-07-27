@@ -352,6 +352,11 @@ Proyecto sin versión publicada todavía.
   bajo el límite de función de Vercel de 300s) y añadido logging de duración por fase
   (exploración/turno final) para diagnosticar futuros timeouts sin tener que reproducirlos.
   Ver DECISIONS.md.
+- Añadidos 4 ejercicios al catálogo sembrado por `prisma/seed.ts` (fuerza), para progresión
+  hacia la primera dominada con el nuevo material de barra/paralelas de David: "Dominadas
+  negativas", "Suspensión en barra", "Remo invertido en barra" y "Fondos en paralelas". Solo
+  afecta al seed: como con "Remo (máquina)" más arriba, una base de datos ya sembrada (prod
+  incluida) no los recibe hasta re-sembrar o darlos de alta a mano desde `/ajustes`.
 
 ### Changed
 
