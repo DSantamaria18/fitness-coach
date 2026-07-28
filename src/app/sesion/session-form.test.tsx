@@ -29,6 +29,7 @@ const exercises = [
 describe("SessionForm", () => {
   beforeEach(() => {
     mockedGenerateSessionProposalAction.mockReset();
+    window.sessionStorage.clear();
   });
 
   it("renderiza el campo de fecha, el selector de ejercicios, el botón de IA y el botón de guardar", () => {
@@ -194,5 +195,65 @@ describe("SessionForm", () => {
     // el botón de guardar sigue deshabilitado como antes de pulsar IA.
     expect(screen.getByRole("button", { name: /^guardar$/i })).toBeDisabled();
     expect(screen.getByLabelText(/añadir ejercicio/i)).toBeInTheDocument();
+  });
+
+  it("recupera la propuesta de IA precargada tras un remontaje del formulario (recarga de página)", async () => {
+    mockedGenerateSessionProposalAction.mockResolvedValue({
+      success: true,
+      fecha: "2026-01-15",
+      registros: [
+        {
+          key: "registro-ia-1",
+          tipo: "fuerza",
+          ejercicio: "Sentadilla",
+          notas: "",
+          comentario_ia: "",
+          series: [{ reps: "10", peso_kg: "10", tempo: "", RPE: "7" }],
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    const { unmount } = render(<SessionForm exercises={exercises} />);
+
+    await user.click(
+      screen.getByRole("button", { name: /generar propuesta con ia/i }),
+    );
+    await screen.findByRole("heading", { name: "Sentadilla" });
+    unmount();
+
+    render(<SessionForm exercises={exercises} />);
+
+    expect(
+      screen.getByRole("heading", { name: "Sentadilla" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^guardar$/i })).toBeEnabled();
+  });
+
+  it("borra el borrador guardado cuando la sesión se registra con éxito", () => {
+    window.sessionStorage.setItem(
+      "sesion-draft",
+      JSON.stringify({
+        fecha: "2026-01-15",
+        registros: [
+          {
+            key: "registro-ia-1",
+            tipo: "fuerza",
+            ejercicio: "Sentadilla",
+            notas: "",
+            comentario_ia: "",
+            series: [{ reps: "10", peso_kg: "10", tempo: "", RPE: "7" }],
+          },
+        ],
+      }),
+    );
+    mockedUseActionState.mockReturnValueOnce([
+      { success: true },
+      vi.fn(),
+      false,
+    ]);
+
+    render(<SessionForm exercises={exercises} />);
+
+    expect(window.sessionStorage.getItem("sesion-draft")).toBeNull();
   });
 });

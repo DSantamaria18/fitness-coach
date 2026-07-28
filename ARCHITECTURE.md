@@ -172,6 +172,12 @@ avanza el roadmap de implementación (ver plan de fases acordado).
   necesita el catálogo de ejercicios, no el `userId`), así que sin esta declaración Next
   intentaría prerenderizarla como página estática en build time y fallaría al llamar a la
   base de datos.
+- **Borrador en `sessionStorage`** (`src/app/sesion/session-form.tsx`): `registros`/`fecha`
+  (tanto la propuesta de IA como lo introducido a mano) se guardan en `sessionStorage`
+  (`sesion-draft`) en cada cambio y se restauran al montar, para sobrevivir a una recarga real
+  de página (móvil descartando la pestaña en background al volver al foco, refresh manual)
+  antes de guardar — sin esto solo vivían en `useState` y se perdían por completo. Se borra al
+  guardar la sesión con éxito para no arrastrar un borrador viejo a la siguiente visita.
 
 ## Historial y edición de sesión de entreno
 

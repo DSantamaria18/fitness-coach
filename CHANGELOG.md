@@ -382,6 +382,12 @@ Proyecto sin versión publicada todavía.
 
 ### Fixed
 
+- La propuesta de sesión con IA (y cualquier dato ya introducido a mano en `/sesion`) se
+  perdía si la página se recargaba de verdad antes de guardar — típicamente el móvil
+  descartando la pestaña en background y recargándola al volver al foco — porque
+  `registros`/`fecha` solo vivían en `useState` del componente cliente, sin ninguna
+  persistencia. `session-form.tsx` ahora guarda un borrador en `sessionStorage` en cada
+  cambio, lo restaura al montar, y lo borra al guardar la sesión con éxito.
 - `session.user` no incluía el `id` del usuario autenticado (faltaban los callbacks `jwt` y
   `session` en `auth.config.ts`), lo que hacía que cualquier ruta que dependiera de
   `session.user.id` tratara al usuario como no autenticado. Detectado durante la verificación
