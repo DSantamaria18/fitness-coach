@@ -529,6 +529,10 @@ propósito — no sobre-diseñar la más simple, regla 4 CLAUDE.md).
     `listExercises()` — solo devuelve ejercicios con `aiRecommendable: true`, para que la IA
     nunca proponga cardio espontáneo (surf, salida al monte, escalada, natación); ese cardio
     sigue siendo válido para `log_session`/`edit_session`, que no filtran por el catálogo.
+    `listRecommendableExercises()` además usa `select` explícito (`id`, `name`, `type`,
+    `createdAt`) para excluir `instructionsEs`/`imageUrl`/`gifUrl` (enriquecimiento de UI, ver
+    FEATURES.md "Imagen e instrucciones por ejercicio") — ese contenido no aporta nada a la
+    IA para elegir ejercicio y solo añadiría tokens de entrada de pago en cada generación.
 - Cada resultado de tool se traduce a un `CallToolResult` de MCP con `content` (texto JSON, que
   el propio protocolo espera de cualquier tool) y `structuredContent` — `{data: ...}` en éxito,
   `{error: {code, message}, isError: true}` en fallo —, reflejando el contrato de error de

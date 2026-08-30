@@ -381,6 +381,22 @@ Proyecto sin versión publicada todavía.
   explícito (no solo "cuando tengas algo útil"), y se instruye a comparar con el
   `comentario_ia` de las 2-3 sesiones anteriores del mismo ejercicio antes de escribir, para no
   repetir la misma observación sesión tras sesión.
+- **Imagen e instrucciones por ejercicio (BL-029)**: nuevos campos `Exercise.instructionsEs`,
+  `imageUrl` y `gifUrl` (nullable, migración `add_exercise_media_fields`), enriquecidos a partir
+  de `exercises-dataset` (texto en español bajo MIT; imagen/GIF © Gym visual, redistribuidos con
+  permiso — atribución "© Gym visual — gymvisual.com" obligatoria y visible en la UI, ver
+  NOTICE.md del dataset y DECISIONS.md). Nuevo componente `ExerciseMediaInfo` (imagen estática
+  con toggle a la animación GIF, instrucciones y atribución) integrado en `/ajustes` (botón "Ver
+  técnica" por fila) y en `/sesion`/`/historial` (mismo botón junto al selector de "Añadir
+  ejercicio", para el ejercicio actualmente seleccionado). 28 ejercicios enriquecidos: 21 ya
+  existentes con match verificado uno a uno contra el GIF real (nunca automático — el matching
+  por nombre daba falsos positivos, ver DECISIONS.md), y 7 ejercicios compuestos nuevos
+  (Flexiones inclinadas, Dominadas, Dominadas supinas, Step-up con mancuernas, Puente de
+  glúteos, Burpees, Bear crawl) priorizados sobre aislados y sin depender de barra. Datos y
+  mapeo en `prisma/exercise-media.json`; medios vendorizados en `public/exercise-media/`
+  (~2.6 MB, 28 pares imagen+GIF de 180×180). `listRecommendableExercises()` usa `select`
+  explícito para no incluir este enriquecimiento en el tool `list_exercises` de la IA — no
+  aporta nada a la elección de ejercicio y solo sumaría tokens de pago en cada generación.
 
 ### Changed
 

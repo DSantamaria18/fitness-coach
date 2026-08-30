@@ -32,12 +32,25 @@ export default async function AjustesPage() {
       <BackupStatus lastBackup={lastBackup?.toISOString() ?? null} />
 
       <ExercisesSection
-        exercises={exercises.map(({ id, name, type, aiRecommendable }) => ({
-          id,
-          name,
-          type,
-          aiRecommendable,
-        }))}
+        exercises={exercises.map(
+          ({
+            id,
+            name,
+            type,
+            aiRecommendable,
+            instructionsEs,
+            imageUrl,
+            gifUrl,
+          }) => ({
+            id,
+            name,
+            type,
+            aiRecommendable,
+            instructionsEs,
+            imageUrl,
+            gifUrl,
+          }),
+        )}
       />
     </main>
   );

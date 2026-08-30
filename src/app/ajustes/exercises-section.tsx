@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { ExerciseMediaInfo } from "@/components/exercise-media-info";
 import {
   createExerciseAction,
   deleteExerciseAction,
@@ -12,6 +13,9 @@ export type ExerciseCatalogEntry = {
   name: string;
   type: "STRENGTH" | "CARDIO";
   aiRecommendable: boolean;
+  instructionsEs: string | null;
+  imageUrl: string | null;
+  gifUrl: string | null;
 };
 
 // Mismas etiquetas que el desplegable de "añadir ejercicio" en /sesion (ver
@@ -78,6 +82,8 @@ function ExerciseGroup({
   editingId: string | null;
   setEditingId: (id: string | null) => void;
 }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   if (entries.length === 0) return null;
 
   return (
@@ -95,25 +101,50 @@ function ExerciseGroup({
                 onCancel={() => setEditingId(null)}
               />
             ) : (
-              <div className="flex items-center justify-between gap-4">
-                <span className="flex items-center gap-2 font-medium">
-                  {exercise.name}
-                  {!exercise.aiRecommendable ? (
-                    <span className="rounded-full bg-iron/10 px-2 py-0.5 text-xs font-normal text-iron">
-                      Espontáneo
-                    </span>
-                  ) : null}
-                </span>
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setEditingId(exercise.id)}
-                    className="text-sm font-medium underline"
-                  >
-                    Editar
-                  </button>
-                  <DeleteExerciseButton id={exercise.id} />
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="flex items-center gap-2 font-medium">
+                    {exercise.name}
+                    {!exercise.aiRecommendable ? (
+                      <span className="rounded-full bg-iron/10 px-2 py-0.5 text-xs font-normal text-iron">
+                        Espontáneo
+                      </span>
+                    ) : null}
+                  </span>
+                  <div className="flex gap-3">
+                    {exercise.instructionsEs || exercise.imageUrl ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedId(
+                            expandedId === exercise.id ? null : exercise.id,
+                          )
+                        }
+                        className="text-sm font-medium underline"
+                      >
+                        {expandedId === exercise.id
+                          ? "Ocultar técnica"
+                          : "Ver técnica"}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => setEditingId(exercise.id)}
+                      className="text-sm font-medium underline"
+                    >
+                      Editar
+                    </button>
+                    <DeleteExerciseButton id={exercise.id} />
+                  </div>
                 </div>
+                {expandedId === exercise.id ? (
+                  <ExerciseMediaInfo
+                    name={exercise.name}
+                    instructionsEs={exercise.instructionsEs}
+                    imageUrl={exercise.imageUrl}
+                    gifUrl={exercise.gifUrl}
+                  />
+                ) : null}
               </div>
             )}
           </li>

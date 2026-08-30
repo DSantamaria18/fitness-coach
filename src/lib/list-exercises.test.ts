@@ -40,9 +40,9 @@ describe("listRecommendableExercises", () => {
     findManyMock.mockReset();
   });
 
-  it("filters the catalog down to aiRecommendable: true, ordered by name", async () => {
+  it("filters the catalog down to aiRecommendable: true, ordered by name, without the media enrichment fields", async () => {
     const catalog = [
-      { id: "ex-1", name: "Carrera", type: "CARDIO", aiRecommendable: true },
+      { id: "ex-1", name: "Carrera", type: "CARDIO", createdAt: new Date() },
     ];
     findManyMock.mockResolvedValue(catalog as never);
 
@@ -51,6 +51,7 @@ describe("listRecommendableExercises", () => {
     expect(findManyMock).toHaveBeenCalledWith({
       where: { aiRecommendable: true },
       orderBy: { name: "asc" },
+      select: { id: true, name: true, type: true, createdAt: true },
     });
     expect(result).toEqual(catalog);
   });
