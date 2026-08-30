@@ -24,24 +24,45 @@ const exercises = [
     name: "Sentadilla",
     type: "STRENGTH" as const,
     aiRecommendable: true,
+    instructionsEs: null,
+    imageUrl: null,
+    gifUrl: null,
   },
   {
     id: "ex-2",
     name: "Press banca",
     type: "STRENGTH" as const,
     aiRecommendable: true,
+    instructionsEs: null,
+    imageUrl: null,
+    gifUrl: null,
   },
   {
     id: "ex-3",
     name: "Bicicleta",
     type: "CARDIO" as const,
     aiRecommendable: true,
+    instructionsEs: null,
+    imageUrl: null,
+    gifUrl: null,
   },
   {
     id: "ex-4",
     name: "Surf",
     type: "CARDIO" as const,
     aiRecommendable: false,
+    instructionsEs: null,
+    imageUrl: null,
+    gifUrl: null,
+  },
+  {
+    id: "ex-5",
+    name: "Flexiones",
+    type: "STRENGTH" as const,
+    aiRecommendable: true,
+    instructionsEs: "Comienza en una posición de plancha alta...",
+    imageUrl: "/exercise-media/0662.jpg",
+    gifUrl: "/exercise-media/0662.gif",
   },
 ];
 
@@ -68,8 +89,36 @@ describe("ExercisesSection", () => {
     expect(screen.getByText("Press banca")).toBeInTheDocument();
     expect(screen.getByText("Bicicleta")).toBeInTheDocument();
     expect(screen.getByText("Surf")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "Editar" })).toHaveLength(4);
-    expect(screen.getAllByRole("button", { name: "Borrar" })).toHaveLength(4);
+    expect(screen.getByText("Flexiones")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Editar" })).toHaveLength(5);
+    expect(screen.getAllByRole("button", { name: "Borrar" })).toHaveLength(5);
+  });
+
+  it("solo muestra 'Ver técnica' para ejercicios con enriquecimiento, y despliega instrucciones+imagen al pulsarlo", async () => {
+    const user = userEvent.setup();
+    render(<ExercisesSection exercises={exercises} />);
+
+    expect(
+      screen.queryByRole("button", { name: /ver técnica/i }),
+    ).toBeInTheDocument();
+
+    const sentadillaRow = screen.getByText("Sentadilla").closest("li");
+    expect(
+      within(sentadillaRow!).queryByRole("button", { name: /ver técnica/i }),
+    ).not.toBeInTheDocument();
+
+    const flexionesRow = screen.getByText("Flexiones").closest("li");
+    await user.click(
+      within(flexionesRow!).getByRole("button", { name: /ver técnica/i }),
+    );
+
+    expect(
+      within(flexionesRow!).getByText(/posición de plancha alta/i),
+    ).toBeInTheDocument();
+    expect(within(flexionesRow!).getByRole("img")).toHaveAttribute(
+      "src",
+      "/exercise-media/0662.jpg",
+    );
   });
 
   it("marca con una etiqueta 'Espontáneo' los ejercicios con aiRecommendable: false", () => {

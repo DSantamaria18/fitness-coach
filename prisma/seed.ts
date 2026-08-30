@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { readFileSync } from "node:fs";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { PrismaClient, ExerciseType } from "../src/generated/prisma/client";
 import { resolveDatasourceConfig } from "../src/lib/prisma-datasource-config";
@@ -66,7 +67,34 @@ const exercises: {
     aiRecommendable: false,
   },
   { name: "Escalada", type: ExerciseType.CARDIO, aiRecommendable: false },
+  // Añadidos junto a la primera ronda de imágenes/instrucciones (ver
+  // prisma/exercise-media.json y DECISIONS.md 2026-08-30): movimientos
+  // compuestos con el material de David, priorizados sobre aislados,
+  // verificados uno a uno contra el GIF real antes de aprobarlos.
+  { name: "Flexiones inclinadas", type: ExerciseType.STRENGTH },
+  { name: "Dominadas", type: ExerciseType.STRENGTH },
+  { name: "Dominadas supinas", type: ExerciseType.STRENGTH },
+  { name: "Step-up con mancuernas", type: ExerciseType.STRENGTH },
+  { name: "Puente de glúteos", type: ExerciseType.STRENGTH },
+  { name: "Burpees", type: ExerciseType.CARDIO },
+  { name: "Bear crawl", type: ExerciseType.CARDIO },
 ];
+
+// Enriquecimiento de imagen/instrucciones (ver prisma/exercise-media.json):
+// datos derivados de exercises-dataset (MIT, instrucciones en español) y
+// medios © Gym visual, redistribuidos con permiso — atribución obligatoria
+// en la UI donde se muestren (ver NOTICE.md del dataset original y
+// DECISIONS.md 2026-08-30). Los ficheros binarios ya viven en
+// public/exercise-media/<datasetId>.{jpg,gif}.
+const exerciseMedia: {
+  name: string;
+  datasetId: string;
+  instructionsEs: string;
+  image: string;
+  gif: string;
+}[] = JSON.parse(
+  readFileSync(new URL("./exercise-media.json", import.meta.url), "utf-8"),
+);
 
 async function main() {
   for (const exercise of exercises) {
@@ -77,6 +105,17 @@ async function main() {
         aiRecommendable: exercise.aiRecommendable ?? true,
       },
       create: exercise,
+    });
+  }
+
+  for (const media of exerciseMedia) {
+    await prisma.exercise.updateMany({
+      where: { name: media.name },
+      data: {
+        instructionsEs: media.instructionsEs,
+        imageUrl: `/exercise-media/${media.datasetId}.jpg`,
+        gifUrl: `/exercise-media/${media.datasetId}.gif`,
+      },
     });
   }
 

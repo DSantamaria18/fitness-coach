@@ -106,7 +106,6 @@ describe("POST /api/mcp", () => {
         id: "ex-1",
         name: "Sentadilla",
         type: "STRENGTH",
-        aiRecommendable: true,
         createdAt: new Date("2026-01-01"),
       },
     ]);

@@ -8,6 +8,7 @@ import {
 } from "@/lib/session-proposal/build-initial-registros";
 import { parseMinutesSeconds } from "@/lib/duration-format";
 import { Card } from "@/components/card";
+import { ExerciseMediaInfo } from "@/components/exercise-media-info";
 
 // Componente compartido entre /sesion (crear) y /historial (editar): antes
 // vivía duplicado dentro de session-form.tsx. Se extrajo aquí (en vez de a
@@ -20,7 +21,14 @@ import { Card } from "@/components/card";
 // módulo "use client" — ver DECISIONS.md 2026-07-19.
 
 export type ExerciseType = "STRENGTH" | "CARDIO";
-export type ExerciseOption = { id: string; name: string; type: ExerciseType };
+export type ExerciseOption = {
+  id: string;
+  name: string;
+  type: ExerciseType;
+  instructionsEs: string | null;
+  imageUrl: string | null;
+  gifUrl: string | null;
+};
 
 // "mm:ss": texto libre en formato minutos:segundos (duración/ritmo), que el
 // corredor piensa así en vez de en segundos totales — ver DECISIONS.md.
@@ -220,6 +228,7 @@ export function SessionEntriesEditor({
   const [selectedExercise, setSelectedExercise] = useState(
     exercises[0]?.name ?? "",
   );
+  const [showTechnique, setShowTechnique] = useState(false);
   const today = todayIso();
 
   const exerciseByName = new Map(
@@ -360,7 +369,10 @@ export function SessionEntriesEditor({
           <select
             id="exercise-picker"
             value={selectedExercise}
-            onChange={(event) => setSelectedExercise(event.target.value)}
+            onChange={(event) => {
+              setSelectedExercise(event.target.value);
+              setShowTechnique(false);
+            }}
             // min-w-0 anula el min-width:auto por defecto de los hijos flex:
             // sin él, un <select> con una opción larga (p. ej. "Elevaciones
             // laterales con mancuernas", añadida al ampliar el catálogo de
@@ -393,6 +405,26 @@ export function SessionEntriesEditor({
             Añadir
           </button>
         </div>
+        {exerciseByName.get(selectedExercise)?.instructionsEs ||
+        exerciseByName.get(selectedExercise)?.imageUrl ? (
+          <button
+            type="button"
+            onClick={() => setShowTechnique((prev) => !prev)}
+            className="self-start text-sm font-medium underline"
+          >
+            {showTechnique ? "Ocultar técnica" : "Ver técnica"}
+          </button>
+        ) : null}
+        {showTechnique ? (
+          <ExerciseMediaInfo
+            name={selectedExercise}
+            instructionsEs={
+              exerciseByName.get(selectedExercise)?.instructionsEs ?? null
+            }
+            imageUrl={exerciseByName.get(selectedExercise)?.imageUrl ?? null}
+            gifUrl={exerciseByName.get(selectedExercise)?.gifUrl ?? null}
+          />
+        ) : null}
       </div>
 
       {registros.map((registro) => (

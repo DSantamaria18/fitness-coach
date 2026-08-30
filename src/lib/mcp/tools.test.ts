@@ -249,7 +249,6 @@ describe("listExercisesTool", () => {
         id: "ex-1",
         name: "Sentadilla",
         type: "STRENGTH",
-        aiRecommendable: true,
         createdAt: new Date(),
       },
     ]);
@@ -263,7 +262,6 @@ describe("listExercisesTool", () => {
           id: "ex-1",
           name: "Sentadilla",
           type: "STRENGTH",
-          aiRecommendable: true,
           createdAt: expect.any(Date),
         },
       ],

@@ -53,18 +53,6 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   API de Claude — el modelo a usar se fija explícitamente en el encargo cuando se aborde, según
   regla ya acordada del equipo).
 
-- **[BL-029]** **Vídeo o GIF animado explicando la ejecución de cada ejercicio**, al estilo de
-  lyfta.app. Justificación: propuesto por David; ayuda a recordar la técnica correcta de
-  ejercicios menos frecuentes sin depender de la memoria o de buscar fuera de la app. Dificultad:
-  alta (requiere decidir la fuente del contenido — grabación propia, licencia de terceros, o
-  generación por IA —, almacenamiento de vídeo/GIF por ejercicio del catálogo, y el coste que
-  implique según la fuente elegida). Candidato de fuente detectado al revisar
-  `github.com/arvids-unavailable/openGym` (2026-08-30): usa el dataset público
-  `hasaneyldrm/exercises-dataset` (imágenes/GIFs por ejercicio) en vez de grabación propia — más
-  barato que las otras dos opciones, pero sujeto a los términos de licencia del dataset upstream
-  (a verificar antes de usarlo) y a que cubra el vocabulario de ejercicios en español del
-  catálogo actual.
-
 - **[BL-031]** **Reglas de progresión automática (lineal, doble progresión) y 1RM estimado por
   ejercicio de fuerza**, como funciones puras testeables independientes de la IA. Justificación:
   hoy la progresión de peso/reps solo la decide la IA al generar la sesión (heurística en
@@ -75,6 +63,17 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   incompatible), que implementa esto como funciones puras en `frontend/src/lib/`. Dificultad:
   media (diseño de las fórmulas y su testing es sencillo; decidir cómo se combina con la
   heurística ya existente de la IA sin duplicar lógica es la parte no trivial).
+
+- **[BL-032]** **Ampliar más grupos musculares con imagen/instrucciones de `exercises-dataset`**
+  (hombros, core, más variantes de brazo) — la primera ronda (2026-08-30) cubrió solo empuje,
+  tracción, piernas/glúteos y cardio con 8 ejercicios nuevos + 21 existentes enriquecidos,
+  verificados uno a uno con David (id de dataset + GIF confirmado antes de implementar). Cada
+  ronda adicional exige el mismo nivel de verificación manual (el matching automático produce
+  falsos positivos — ver DECISIONS.md 2026-08-30) y respetar el criterio ya acordado: solo
+  ejercicios compuestos (prioridad sobre aislados), sin barra, y sin duplicar lo ya existente.
+  Justificación: pedido explícitamente por David al aprobar la primera tanda. Dificultad: media
+  (el trabajo no es de código, es de curación — cada exercise-media.json nuevo requiere la misma
+  ronda de confirmación por enlace a GIF).
 
 - **[BL-030]** **`NavBar` aparece en `/login` si ya hay sesión activa**: `NavBarGate` solo
   comprueba si existe sesión (`auth()`), no si la ruta es `/login` — si el navegador conserva una

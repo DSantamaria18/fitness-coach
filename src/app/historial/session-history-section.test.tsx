@@ -19,8 +19,22 @@ const mockedUseActionState = vi.mocked(useActionState);
 const deleteSessionEntryMock = vi.mocked(deleteSessionEntry);
 
 const exercises = [
-  { id: "ex-1", name: "Sentadilla", type: "STRENGTH" as const },
-  { id: "ex-2", name: "Carrera", type: "CARDIO" as const },
+  {
+    id: "ex-1",
+    name: "Sentadilla",
+    type: "STRENGTH" as const,
+    instructionsEs: null,
+    imageUrl: null,
+    gifUrl: null,
+  },
+  {
+    id: "ex-2",
+    name: "Carrera",
+    type: "CARDIO" as const,
+    instructionsEs: null,
+    imageUrl: null,
+    gifUrl: null,
+  },
 ];
 
 const strengthSession = {

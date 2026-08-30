@@ -206,6 +206,37 @@ cambio relevante.
 - El comentario de `schema.prisma` sobre `Exercise` ("catálogo cerrado") queda desactualizado
   por esta feature y se corrige en el propio esquema.
 
+## Imagen e instrucciones por ejercicio (BL-029)
+
+- Campos opcionales `Exercise.instructionsEs`, `imageUrl`, `gifUrl` (nullable — no todos los
+  ejercicios del catálogo tienen enriquecimiento). Datos derivados de
+  `github.com/hasaneyldrm/exercises-dataset` (instrucciones en español, licencia MIT) más
+  imagen/GIF a 180×180 (© Gym visual, redistribuidos con permiso — la atribución "© Gym visual —
+  gymvisual.com" es obligatoria y se muestra siempre que se renderiza el medio, ver NOTICE.md
+  del dataset original y DECISIONS.md 2026-08-30).
+- Componente `ExerciseMediaInfo` (`src/components/exercise-media-info.tsx`): imagen estática por
+  defecto con botón para alternar a la animación GIF, texto de instrucciones y atribución. No
+  renderiza nada si el ejercicio no tiene enriquecimiento.
+- Integrado en dos sitios: botón "Ver técnica" por fila en el catálogo de `/ajustes`, y el mismo
+  botón junto al selector "Añadir ejercicio" de `SessionEntriesEditor` (compartido entre
+  `/sesion` y `/historial`), mostrando la técnica del ejercicio actualmente seleccionado en el
+  desplegable — se oculta automáticamente al cambiar de ejercicio.
+- 28 ejercicios enriquecidos en esta primera ronda: 21 ya existentes en el catálogo (matching
+  verificado uno a uno con enlace al GIF real antes de aprobar cada uno — el matching automático
+  por nombre producía falsos positivos, ver DECISIONS.md) y 7 ejercicios nuevos, todos
+  compuestos y sin barra (Flexiones inclinadas, Dominadas, Dominadas supinas, Step-up con
+  mancuernas, Puente de glúteos, Burpees, Bear crawl). Ampliar a más grupos musculares queda en
+  BACKLOG.md (BL-032) — cada ronda exige el mismo nivel de verificación manual.
+- Datos y mapeo por nombre en `prisma/exercise-media.json`, aplicados en `prisma/seed.ts` tras
+  el upsert del catálogo base (`upsert` idempotente por nombre, igual que el resto del seed).
+  Medios binarios vendorizados en `public/exercise-media/<datasetId>.{jpg,gif}` (~2.6 MB
+  totales), no servidos en directo desde el dataset original.
+- `listRecommendableExercises()` (el `list_exercises` que consulta la IA) usa un `select`
+  explícito que excluye `instructionsEs`/`imageUrl`/`gifUrl`: es contenido de UI, no algo que la
+  IA necesite para elegir ejercicio, e incluirlo solo añadiría tokens de entrada de pago en cada
+  generación de sesión. `listExercises()` (usado por `/sesion`, `/historial`, `/ajustes`) sigue
+  devolviendo la fila completa.
+
 ## Navegación global
 
 - **[BL-019]** Barra de pestañas inferior fija (`src/components/nav-bar.tsx`, client component)

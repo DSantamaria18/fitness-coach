@@ -2753,4 +2753,53 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-08-30
+- **Decisión:** implementado BL-029 (imagen + instrucciones por ejercicio) con
+  `github.com/hasaneyldrm/exercises-dataset` como fuente: instrucciones en español bajo MIT,
+  imagen/GIF a 180×180 © Gym visual redistribuidos con permiso. El matching entre el catálogo de
+  David y el dataset se hizo **manual, uno a uno, con enlace al GIF real** antes de cada
+  aprobación — no automático. Motivo: un primer intento de matching por substring produjo falsos
+  positivos claros ("high"+"knee" casaba con "cable high row (**knee**ling)" porque "kneeling"
+  contiene "knee"; "run" casaba con "c**run**ch"). En una app de fitness, enlazar un ejercicio a
+  la técnica incorrecta es activamente engañoso, no un detalle cosmético — se descartó cualquier
+  heurística de similitud de nombres como base para decidir sin revisión humana.
+- **Alcance de la ampliación de catálogo:** el dataset tiene 619 ejercicios solo de
+  bodyweight/mancuernas (el material de David), muchos casi duplicados entre sí (variantes
+  "alternate"/"kneeling"/"(male)"/"(female)" del mismo movimiento). Importarlos todos habría roto
+  la premisa de catálogo curado de la que depende `SKILL.md` para la regla de variedad. Acordado
+  con David: ampliación moderada y curada, priorizando movimientos compuestos sobre aislados
+  (pedido explícito de David), sin ejercicios de barra (no tiene), y solo añadiendo los que ya
+  encajan con material confirmado (mancuernas ≤10kg, banco, esterilla, agarres/paralelas, cinta).
+  Primera ronda: 7 nuevos (Flexiones inclinadas, Dominadas, Dominadas supinas, Step-up con
+  mancuernas, Puente de glúteos, Burpees, Bear crawl). Ampliar más grupos queda en BACKLOG.md
+  (BL-032) para rondas futuras con el mismo nivel de verificación.
+- **Ejercicios existentes sin match aceptado:** Sentadilla, Hip thrust, Suspensión en barra,
+  Jumping jacks, Puente de glúteos a una pierna (variante unilateral), Plancha, Dominadas
+  negativas, Rodillas altas — David revisó los candidatos disponibles y ninguno era un match
+  fiel (o no existía versión simple en el dataset), así que se quedan sin enriquecer. No es un
+  error de curación: es preferible no mostrar nada a mostrar la técnica equivocada.
+- **Detectado de paso, corregido en la misma ronda:** `SKILL.md` (sección "Activo") instruía a
+  proponer "surf" como ejercicio, y la sesión de cardio mencionaba "burpees al fallo al final",
+  pero ni "Surf" ni "Burpees" existían nunca en el catálogo — violaba la propia regla de "solo
+  nombres de `list_exercises` son válidos" (mismo patrón que el gap de "surf" corregido en la
+  ronda anterior, ver entrada previa). "Burpees" ya se añade en esta ronda; "Surf" pasó a
+  espontáneo en la ronda anterior (aiRecommendable: false) y sigue así.
+- **Licencia de los medios:** los binarios (imagen+GIF) se vendorizan en
+  `public/exercise-media/` en vez de servirse en directo desde GitHub — evita depender de la
+  disponibilidad del repo origen y deja claro qué versión exacta se usa. La atribución "© Gym
+  visual — gymvisual.com" (exigida por NOTICE.md del dataset) se renderiza siempre que se
+  muestra el medio, nunca como texto opcional. David confirmó haber revisado los Términos y
+  Condiciones de gymvisual.com para uso personal antes de aprobar esta implementación.
+- **`select` explícito en `listRecommendableExercises()`:** el nuevo enriquecimiento
+  (`instructionsEs`/`imageUrl`/`gifUrl`) no debe viajar en el tool `list_exercises` que consulta
+  la IA — son campos de UI, y ese tool call es una llamada de pago a la API de Claude en cada
+  generación de sesión. Añadir contenido de texto largo (instrucciones completas) ahí habría
+  subido el coste de cada generación sin aportar nada a la decisión de qué ejercicio proponer.
+- **Verificación:** 450/450 tests en verde (7 nuevos: `ExerciseMediaInfo` con 3 casos propios,
+  toggle "Ver técnica" en `/ajustes` y en `SessionEntriesEditor`), typecheck y lint limpios,
+  migración `add_exercise_media_fields` aplicada en local. Pendiente disparar `migrate-prod.yml`
+  tras el merge.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

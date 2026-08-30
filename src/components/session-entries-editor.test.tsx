@@ -12,8 +12,22 @@ import type { RegistroState } from "@/lib/session-proposal/build-initial-registr
 // input oculto "ejercicios"), no los detalles internos — ver DECISIONS.md.
 
 const exercises = [
-  { id: "ex-1", name: "Sentadilla", type: "STRENGTH" as const },
-  { id: "ex-2", name: "Carrera", type: "CARDIO" as const },
+  {
+    id: "ex-1",
+    name: "Sentadilla",
+    type: "STRENGTH" as const,
+    instructionsEs: null,
+    imageUrl: null,
+    gifUrl: null,
+  },
+  {
+    id: "ex-2",
+    name: "Carrera",
+    type: "CARDIO" as const,
+    instructionsEs: null,
+    imageUrl: null,
+    gifUrl: null,
+  },
 ];
 
 // Host de prueba: SessionEntriesEditor recibe `registros` como prop
@@ -224,5 +238,61 @@ describe("SessionEntriesEditor", () => {
       "Progresión sugerida: +2,5 kg la próxima sesión",
     );
     expect(entrada.notas).toBe("Me dolió el hombro");
+  });
+
+  it("muestra 'Ver técnica' solo cuando el ejercicio seleccionado tiene enriquecimiento, y lo oculta al cambiar de ejercicio", async () => {
+    const user = userEvent.setup();
+    const exercisesWithMedia = [
+      {
+        id: "ex-1",
+        name: "Sentadilla",
+        type: "STRENGTH" as const,
+        instructionsEs: null,
+        imageUrl: null,
+        gifUrl: null,
+      },
+      {
+        id: "ex-3",
+        name: "Flexiones",
+        type: "STRENGTH" as const,
+        instructionsEs: "Comienza en plancha alta...",
+        imageUrl: "/exercise-media/0662.jpg",
+        gifUrl: "/exercise-media/0662.gif",
+      },
+    ];
+    function HarnessWithMedia() {
+      const [registros, setRegistros] = useState<RegistroState[]>([]);
+      return (
+        <form>
+          <SessionEntriesEditor
+            exercises={exercisesWithMedia}
+            registros={registros}
+            onRegistrosChange={setRegistros}
+          />
+        </form>
+      );
+    }
+    render(<HarnessWithMedia />);
+
+    expect(
+      screen.queryByRole("button", { name: /ver técnica/i }),
+    ).not.toBeInTheDocument();
+
+    await user.selectOptions(
+      screen.getByLabelText(/añadir ejercicio/i),
+      "Flexiones",
+    );
+    await user.click(screen.getByRole("button", { name: /ver técnica/i }));
+
+    expect(screen.getByText(/comienza en plancha alta/i)).toBeInTheDocument();
+
+    await user.selectOptions(
+      screen.getByLabelText(/añadir ejercicio/i),
+      "Sentadilla",
+    );
+
+    expect(
+      screen.queryByRole("button", { name: /ver técnica|ocultar técnica/i }),
+    ).not.toBeInTheDocument();
   });
 });

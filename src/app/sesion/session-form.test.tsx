@@ -22,8 +22,22 @@ vi.mock("react", async (importOriginal) => {
 const mockedUseActionState = vi.mocked(useActionState);
 
 const exercises = [
-  { id: "ex-1", name: "Sentadilla", type: "STRENGTH" as const },
-  { id: "ex-2", name: "Carrera", type: "CARDIO" as const },
+  {
+    id: "ex-1",
+    name: "Sentadilla",
+    type: "STRENGTH" as const,
+    instructionsEs: null,
+    imageUrl: null,
+    gifUrl: null,
+  },
+  {
+    id: "ex-2",
+    name: "Carrera",
+    type: "CARDIO" as const,
+    instructionsEs: null,
+    imageUrl: null,
+    gifUrl: null,
+  },
 ];
 
 describe("SessionForm", () => {

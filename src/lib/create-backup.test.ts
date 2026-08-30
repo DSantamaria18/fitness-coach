@@ -88,6 +88,9 @@ describe("createBackup", () => {
         name: "Press banca",
         type: "STRENGTH",
         aiRecommendable: true,
+        instructionsEs: null,
+        imageUrl: null,
+        gifUrl: null,
         createdAt: new Date("2026-01-01T00:00:00.000Z"),
       },
     ]);
@@ -140,7 +143,8 @@ describe("createBackup", () => {
       CREATE TABLE "Exercise" (
         "id" TEXT NOT NULL PRIMARY KEY, "name" TEXT NOT NULL,
         "type" TEXT NOT NULL, "createdAt" DATETIME NOT NULL,
-        "aiRecommendable" BOOLEAN NOT NULL DEFAULT true
+        "aiRecommendable" BOOLEAN NOT NULL DEFAULT true,
+        "instructionsEs" TEXT, "imageUrl" TEXT, "gifUrl" TEXT
       );
       CREATE TABLE "BodyWeight" (
         "id" TEXT NOT NULL PRIMARY KEY, "userId" TEXT NOT NULL,

@@ -52,6 +52,9 @@ export default async function HistorialPage() {
           id: exercise.id,
           name: exercise.name,
           type: exercise.type,
+          instructionsEs: exercise.instructionsEs,
+          imageUrl: exercise.imageUrl,
+          gifUrl: exercise.gifUrl,
         }))}
       />
     </main>
