@@ -17,37 +17,68 @@ describe("createExercise", () => {
     createMock.mockReset();
   });
 
-  it("crea un ejercicio con nombre y tipo válidos", async () => {
+  it("crea un ejercicio con nombre y tipo válidos, recomendable por IA por defecto", async () => {
     createMock.mockResolvedValue({
       id: "ex-1",
-      name: "Surf",
+      name: "Carrera",
       type: "CARDIO",
+      aiRecommendable: true,
       createdAt: new Date(),
     } as never);
 
-    const result = await createExercise({ name: "Surf", type: "CARDIO" });
+    const result = await createExercise({ name: "Carrera", type: "CARDIO" });
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data).toEqual({ id: "ex-1", name: "Surf", type: "CARDIO" });
+      expect(result.data).toEqual({
+        id: "ex-1",
+        name: "Carrera",
+        type: "CARDIO",
+        aiRecommendable: true,
+      });
     }
     expect(createMock).toHaveBeenCalledWith({
-      data: { name: "Surf", type: "CARDIO" },
+      data: { name: "Carrera", type: "CARDIO", aiRecommendable: true },
     });
   });
 
   it("recorta espacios en el nombre antes de guardarlo", async () => {
     createMock.mockResolvedValue({
       id: "ex-1",
-      name: "Surf",
+      name: "Carrera",
       type: "CARDIO",
+      aiRecommendable: true,
       createdAt: new Date(),
     } as never);
 
-    await createExercise({ name: "  Surf  ", type: "CARDIO" });
+    await createExercise({ name: "  Carrera  ", type: "CARDIO" });
 
     expect(createMock).toHaveBeenCalledWith({
-      data: { name: "Surf", type: "CARDIO" },
+      data: { name: "Carrera", type: "CARDIO", aiRecommendable: true },
+    });
+  });
+
+  it("crea un ejercicio espontáneo (aiRecommendable: false) cuando se pide explícitamente", async () => {
+    createMock.mockResolvedValue({
+      id: "ex-2",
+      name: "Surf",
+      type: "CARDIO",
+      aiRecommendable: false,
+      createdAt: new Date(),
+    } as never);
+
+    const result = await createExercise({
+      name: "Surf",
+      type: "CARDIO",
+      aiRecommendable: false,
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.aiRecommendable).toBe(false);
+    }
+    expect(createMock).toHaveBeenCalledWith({
+      data: { name: "Surf", type: "CARDIO", aiRecommendable: false },
     });
   });
 

@@ -19,9 +19,30 @@ const renameExerciseActionMock = vi.mocked(renameExerciseAction);
 const deleteExerciseActionMock = vi.mocked(deleteExerciseAction);
 
 const exercises = [
-  { id: "ex-1", name: "Sentadilla", type: "STRENGTH" as const },
-  { id: "ex-2", name: "Press banca", type: "STRENGTH" as const },
-  { id: "ex-3", name: "Bicicleta", type: "CARDIO" as const },
+  {
+    id: "ex-1",
+    name: "Sentadilla",
+    type: "STRENGTH" as const,
+    aiRecommendable: true,
+  },
+  {
+    id: "ex-2",
+    name: "Press banca",
+    type: "STRENGTH" as const,
+    aiRecommendable: true,
+  },
+  {
+    id: "ex-3",
+    name: "Bicicleta",
+    type: "CARDIO" as const,
+    aiRecommendable: true,
+  },
+  {
+    id: "ex-4",
+    name: "Surf",
+    type: "CARDIO" as const,
+    aiRecommendable: false,
+  },
 ];
 
 describe("ExercisesSection", () => {
@@ -46,8 +67,21 @@ describe("ExercisesSection", () => {
     expect(screen.getByText("Sentadilla")).toBeInTheDocument();
     expect(screen.getByText("Press banca")).toBeInTheDocument();
     expect(screen.getByText("Bicicleta")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "Editar" })).toHaveLength(3);
-    expect(screen.getAllByRole("button", { name: "Borrar" })).toHaveLength(3);
+    expect(screen.getByText("Surf")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Editar" })).toHaveLength(4);
+    expect(screen.getAllByRole("button", { name: "Borrar" })).toHaveLength(4);
+  });
+
+  it("marca con una etiqueta 'Espontáneo' los ejercicios con aiRecommendable: false", () => {
+    render(<ExercisesSection exercises={exercises} />);
+
+    const surfRow = screen.getByText("Surf").closest("li");
+    expect(within(surfRow!).getByText("Espontáneo")).toBeInTheDocument();
+
+    const bicicletaRow = screen.getByText("Bicicleta").closest("li");
+    expect(
+      within(bicicletaRow!).queryByText("Espontáneo"),
+    ).not.toBeInTheDocument();
   });
 
   it("crea un ejercicio nuevo y limpia el formulario tras el éxito", async () => {
@@ -65,7 +99,23 @@ describe("ExercisesSection", () => {
     const formData = createExerciseActionMock.mock.calls[0]![1];
     expect(formData.get("name")).toBe("Surf");
     expect(formData.get("type")).toBe("CARDIO");
+    expect(formData.get("aiRecommendable")).toBe("on");
     expect(nameInput.value).toBe("");
+  });
+
+  it("crea un ejercicio espontáneo al desmarcar 'Recomendable por IA'", async () => {
+    createExerciseActionMock.mockResolvedValue({ success: true });
+    const user = userEvent.setup();
+    render(<ExercisesSection exercises={exercises} />);
+
+    await user.type(screen.getByLabelText(/nombre/i), "Escalada");
+    await user.selectOptions(screen.getByLabelText(/tipo/i), "CARDIO");
+    await user.click(screen.getByLabelText(/recomendable por ia/i));
+    await user.click(screen.getByRole("button", { name: /añadir ejercicio/i }));
+
+    expect(await screen.findByText(/ejercicio añadido/i)).toBeInTheDocument();
+    const formData = createExerciseActionMock.mock.calls[0]![1];
+    expect(formData.get("aiRecommendable")).toBeNull();
   });
 
   it("muestra el error del alta cuando el nombre ya existe", async () => {
@@ -96,13 +146,30 @@ describe("ExercisesSection", () => {
     const typeSelect = within(row!).getByLabelText(
       /tipo/i,
     ) as HTMLSelectElement;
+    const aiRecommendableCheckbox = within(row!).getByLabelText(
+      /recomendable por ia/i,
+    ) as HTMLInputElement;
     expect(nameInput.value).toBe("Sentadilla");
     expect(typeSelect.value).toBe("STRENGTH");
+    expect(aiRecommendableCheckbox.checked).toBe(true);
 
     await user.click(within(row!).getByRole("button", { name: /cancelar/i }));
 
     expect(within(row!).queryByLabelText(/nombre/i)).not.toBeInTheDocument();
     expect(screen.getByText("Sentadilla")).toBeInTheDocument();
+  });
+
+  it("prellena el checkbox desmarcado al editar un ejercicio espontáneo", async () => {
+    const user = userEvent.setup();
+    render(<ExercisesSection exercises={exercises} />);
+
+    const row = screen.getByText("Surf").closest("li");
+    await user.click(within(row!).getByRole("button", { name: "Editar" }));
+
+    const aiRecommendableCheckbox = within(row!).getByLabelText(
+      /recomendable por ia/i,
+    ) as HTMLInputElement;
+    expect(aiRecommendableCheckbox.checked).toBe(false);
   });
 
   it("llama a renameExerciseAction con el id del ejercicio al guardar la edición", async () => {

@@ -2710,4 +2710,47 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-08-30
+- **Decisión:** nuevo campo `Exercise.aiRecommendable` (boolean, `@default(true)`) en vez de una
+  tabla/enum de "categoría de ejercicio" separada. `listRecommendableExercises()` (filtro
+  `aiRecommendable: true`) sustituye a `listExercises()` únicamente en los dos puntos donde la
+  IA elige qué proponer (`list_exercises` del servidor MCP y del generador de sesión in-app,
+  `src/lib/session-proposal/tools.ts`); todo el resto de consumidores del catálogo
+  (`/sesion`, `/historial`, `/informe`, `/ajustes`) siguen usando `listExercises()` sin cambios,
+  para que el cardio espontáneo (surf, salida al monte, escalada, natación) se pueda seguir
+  registrando a mano aunque la IA no lo proponga.
+- **Contexto:** pedido por David — quería distinguir el cardio que la IA puede recomendar
+  (Carrera, Escaladores, Jumping jacks, Rodillas altas) del que hace de forma espontánea y solo
+  quiere loguear. Al revisar el catálogo se detectó además que `SKILL.md` nunca mencionaba
+  core/abdominales entre los grupos musculares de Fuerza 1/Fuerza 2 (solo pecho, dorsal, hombro,
+  brazo, sentadillas) pese a que "Plancha" y "Elevación de piernas" ya estaban en el catálogo —
+  la IA nunca los proponía por ese hueco de prompt, no por un bug de código. Y que la sesión
+  "Activo" instruía a proponer "surf" sin que "Surf" formara parte nunca del catálogo,
+  contradiciendo la propia regla de "solo nombres de `list_exercises` son válidos" — corregido
+  en la misma ronda.
+- **Alternativas descartadas:** (a) un enum `ExerciseCategory` con más de dos valores —
+  descartado por sobre-ingeniería: hoy solo hace falta una distinción binaria; (b) filtrar en el
+  prompt de `SKILL.md` en vez de en la query — descartado porque ya falló una vez (el propio
+  hueco de "core" de este mismo informe): dejar la exclusión en manos de que el modelo la infiera
+  del texto es frágil, mejor que el catálogo que recibe ya venga filtrado.
+- **Feedback repetitivo de `comentario_ia`:** no es un bug de código — el campo funciona como se
+  diseñó en BL-027, pero la instrucción de `SKILL.md` ("rellénalo cuando tengas algo útil que
+  decir") era débil en la práctica. Reforzada: vacío es ahora el valor por defecto explícito, y
+  se instruye a comparar con el `comentario_ia` de las 2-3 sesiones anteriores del mismo
+  ejercicio antes de escribir nada.
+- **Sobre openGym (`github.com/arvids-unavailable/openGym`, revisado a petición de David):**
+  tracker de gimnasio self-hosted (React/Vite + Node sin framework + JSON planos, sin DB,
+  WebAuthn), sin ninguna integración con Claude/MCP. Descartado adoptarlo o fusionarlo —
+  arquitectura incompatible (JSON vs. Turso/Prisma) y no resuelve el requisito central de esta
+  app (conector MCP con la skill de Claude). Dos ideas anotadas en BACKLOG.md sin implementar:
+  enriquecer el catálogo con imágenes/instrucciones de un dataset público, y formalizar reglas
+  de progresión (lineal/doble progresión, 1RM estimado) como funciones puras testeables.
+- **Verificación:** tests actualizados en `create-exercise.test.ts`, `rename-exercise.test.ts`,
+  `list-exercises.test.ts`, `src/lib/mcp/tools.test.ts`, `session-proposal/tools.test.ts` y
+  `exercises-section.test.tsx` (alta/edición del checkbox, etiqueta "Espontáneo"). Migración
+  `add_ai_recommendable_to_exercise` aplicada en local; pendiente de disparar `migrate-prod.yml`
+  tras el merge (ver regla del equipo en CLAUDE.md).
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

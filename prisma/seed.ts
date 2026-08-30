@@ -13,9 +13,18 @@ const prisma = new PrismaClient({ adapter });
 
 // Catálogo inicial sembrado a partir de los ejercicios que ya usaba la
 // skill "sesion-entrenamiento" (SPEC.md §3). Ampliable por David más
-// adelante directamente en base de datos o vía una futura pantalla de
-// administración (ver BACKLOG.md).
-const exercises: { name: string; type: ExerciseType }[] = [
+// adelante directamente en base de datos o vía la pantalla de
+// administración en /ajustes (ver FEATURES.md).
+//
+// aiRecommendable: false marca cardio que David hace de forma espontánea
+// (surf, salida al monte, escalada, natación) — sigue siendo válido para
+// loguear la sesión a mano, pero la IA no debe proponerlo por iniciativa
+// propia (list_exercises solo devuelve el resto, ver DECISIONS.md).
+const exercises: {
+  name: string;
+  type: ExerciseType;
+  aiRecommendable?: boolean;
+}[] = [
   { name: "Sentadilla", type: ExerciseType.STRENGTH },
   { name: "Peso muerto", type: ExerciseType.STRENGTH },
   { name: "Press banca", type: ExerciseType.STRENGTH },
@@ -42,17 +51,31 @@ const exercises: { name: string; type: ExerciseType }[] = [
   { name: "Remo invertido en barra", type: ExerciseType.STRENGTH },
   { name: "Fondos en paralelas", type: ExerciseType.STRENGTH },
   { name: "Carrera", type: ExerciseType.CARDIO },
-  { name: "Natación", type: ExerciseType.CARDIO },
   { name: "Escaladores", type: ExerciseType.CARDIO },
   { name: "Jumping jacks", type: ExerciseType.CARDIO },
   { name: "Rodillas altas", type: ExerciseType.CARDIO },
+  {
+    name: "Natación",
+    type: ExerciseType.CARDIO,
+    aiRecommendable: false,
+  },
+  { name: "Surf", type: ExerciseType.CARDIO, aiRecommendable: false },
+  {
+    name: "Salida al monte",
+    type: ExerciseType.CARDIO,
+    aiRecommendable: false,
+  },
+  { name: "Escalada", type: ExerciseType.CARDIO, aiRecommendable: false },
 ];
 
 async function main() {
   for (const exercise of exercises) {
     await prisma.exercise.upsert({
       where: { name: exercise.name },
-      update: { type: exercise.type },
+      update: {
+        type: exercise.type,
+        aiRecommendable: exercise.aiRecommendable ?? true,
+      },
       create: exercise,
     });
   }

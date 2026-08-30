@@ -7,7 +7,9 @@ vi.mock("@/lib/get-body-weight-history", () => ({
 vi.mock("@/lib/create-session", () => ({ createSession: vi.fn() }));
 vi.mock("@/lib/update-session", () => ({ updateSession: vi.fn() }));
 vi.mock("@/lib/get-session-history", () => ({ getSessionHistory: vi.fn() }));
-vi.mock("@/lib/list-exercises", () => ({ listExercises: vi.fn() }));
+vi.mock("@/lib/list-exercises", () => ({
+  listRecommendableExercises: vi.fn(),
+}));
 vi.mock("@/lib/get-progress-report", () => ({ getProgressReport: vi.fn() }));
 
 import { createBodyWeight } from "@/lib/create-body-weight";
@@ -15,7 +17,7 @@ import { getBodyWeightHistory } from "@/lib/get-body-weight-history";
 import { createSession } from "@/lib/create-session";
 import { updateSession } from "@/lib/update-session";
 import { getSessionHistory } from "@/lib/get-session-history";
-import { listExercises } from "@/lib/list-exercises";
+import { listRecommendableExercises } from "@/lib/list-exercises";
 import { getProgressReport } from "@/lib/get-progress-report";
 import {
   logWeightTool,
@@ -32,7 +34,7 @@ const getBodyWeightHistoryMock = vi.mocked(getBodyWeightHistory);
 const createSessionMock = vi.mocked(createSession);
 const updateSessionMock = vi.mocked(updateSession);
 const getSessionHistoryMock = vi.mocked(getSessionHistory);
-const listExercisesMock = vi.mocked(listExercises);
+const listExercisesMock = vi.mocked(listRecommendableExercises);
 const getProgressReportMock = vi.mocked(getProgressReport);
 
 const USER_ID = "user-1";
@@ -238,13 +240,16 @@ describe("getSessionHistoryTool", () => {
 });
 
 describe("listExercisesTool", () => {
-  // list-exercises.ts es catálogo global: ignora userId e input.
-  it("returns the exercise catalog, ignoring userId and input", async () => {
+  // list-exercises.ts es catálogo global: ignora userId e input. Usa
+  // listRecommendableExercises (no listExercises) para que la IA nunca vea
+  // el cardio espontáneo marcado aiRecommendable: false.
+  it("returns the AI-recommendable exercise catalog, ignoring userId and input", async () => {
     listExercisesMock.mockResolvedValue([
       {
         id: "ex-1",
         name: "Sentadilla",
         type: "STRENGTH",
+        aiRecommendable: true,
         createdAt: new Date(),
       },
     ]);
@@ -258,6 +263,7 @@ describe("listExercisesTool", () => {
           id: "ex-1",
           name: "Sentadilla",
           type: "STRENGTH",
+          aiRecommendable: true,
           createdAt: expect.any(Date),
         },
       ],
