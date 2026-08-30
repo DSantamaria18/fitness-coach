@@ -112,6 +112,11 @@ cada una → DECISIONS.md, entrada 2026-07-24 "Consolidar lecciones de proceso")
 - Tras mergear una PR con migración de esquema Prisma nueva, disparar `migrate-prod.yml`
   contra producción (Turso) — no es automático. Olvidarlo ya rompió `/historial` en real (ver
   DECISIONS.md 2026-07-25, columna `aiComment` de BL-027).
+- Si esa misma PR también toca `prisma/seed.ts` (no solo `schema.prisma`), disparar además
+  `seed-prod.yml` — son dos workflows y dos confirmaciones independientes, aunque hagan falta
+  ambos en el mismo PR. `migrate-prod.yml` solo añade columnas; sin `seed-prod.yml` quedan a
+  `NULL`/sin insertar. Olvidarlo ya dejó datos sin sembrar en prod tras la PR #61 (ver
+  DECISIONS.md 2026-08-30).
 - QA reporta explícitamente si la rama va detrás de `master` (commits behind) en rondas con
   varias PRs paralelas sobre base compartida.
 - Al probar formularios en navegador real, usar valores que respeten restricciones nativas HTML
