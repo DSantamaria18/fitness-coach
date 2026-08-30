@@ -2802,4 +2802,23 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-08-30
+- **Incidente:** tras mergear PR #61 (BL-029, imagen/instrucciones por ejercicio) se disparó
+  `migrate-prod.yml` (añade las columnas) pero no `seed-prod.yml` (rellena los datos vía
+  `upsert`). David reportó que no veía los cambios en prod — las columnas existían pero estaban
+  a `NULL`, y los 7 ejercicios nuevos nunca se insertaron. Mismo patrón que el incidente de
+  BL-027 (columna `aiComment` ausente en Turso por olvidar `migrate-prod.yml`), pero con el
+  workflow hermano: cuando una feature añade **datos** de seed además de columnas, hacen falta
+  los **dos** disparos manuales tras el merge, no solo uno.
+- **Corrección aplicada:** se disparó `seed-prod.yml` manualmente (confirmado por David), upsert
+  no destructivo, sin incidentes.
+- **Lección para el checklist del equipo:** al planificar el post-merge de cualquier PR que
+  toque `prisma/seed.ts` (no solo `schema.prisma`), verificar explícitamente si hace falta
+  también `seed-prod.yml` además de `migrate-prod.yml` — son dos decisiones y dos disparos
+  independientes aunque se necesiten en el mismo PR. Pendiente de proponer a David añadir esto
+  como línea explícita en el checklist de CLAUDE.md (equipo_de_agentes), igual que ya existe la
+  de `migrate-prod.yml`.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_
