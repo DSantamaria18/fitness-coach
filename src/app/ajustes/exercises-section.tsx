@@ -11,6 +11,7 @@ export type ExerciseCatalogEntry = {
   id: string;
   name: string;
   type: "STRENGTH" | "CARDIO";
+  aiRecommendable: boolean;
 };
 
 // Mismas etiquetas que el desplegable de "añadir ejercicio" en /sesion (ver
@@ -95,7 +96,14 @@ function ExerciseGroup({
               />
             ) : (
               <div className="flex items-center justify-between gap-4">
-                <span className="font-medium">{exercise.name}</span>
+                <span className="flex items-center gap-2 font-medium">
+                  {exercise.name}
+                  {!exercise.aiRecommendable ? (
+                    <span className="rounded-full bg-iron/10 px-2 py-0.5 text-xs font-normal text-iron">
+                      Espontáneo
+                    </span>
+                  ) : null}
+                </span>
                 <div className="flex gap-3">
                   <button
                     type="button"
@@ -160,6 +168,16 @@ function ExerciseCreateForm() {
         </label>
       </div>
 
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          name="aiRecommendable"
+          type="checkbox"
+          defaultChecked
+          className="h-4 w-4"
+        />
+        Recomendable por IA
+      </label>
+
       {state && "error" in state ? (
         <p role="alert" className="text-sm text-red-600 dark:text-red-400">
           {state.error}
@@ -220,6 +238,16 @@ function ExerciseEditForm({
           </select>
         </label>
       </div>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          name="aiRecommendable"
+          type="checkbox"
+          defaultChecked={exercise.aiRecommendable}
+          className="h-4 w-4"
+        />
+        Recomendable por IA
+      </label>
 
       {state && "error" in state ? (
         <p role="alert" className="text-sm text-red-600 dark:text-red-400">

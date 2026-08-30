@@ -4,11 +4,11 @@ vi.mock("@/lib/get-session-history", () => ({
   getSessionHistory: vi.fn(),
 }));
 vi.mock("@/lib/list-exercises", () => ({
-  listExercises: vi.fn(),
+  listRecommendableExercises: vi.fn(),
 }));
 
 import { getSessionHistory } from "@/lib/get-session-history";
-import { listExercises } from "@/lib/list-exercises";
+import { listRecommendableExercises } from "@/lib/list-exercises";
 import {
   createGetSessionHistoryTool,
   createListExercisesTool,
@@ -17,7 +17,7 @@ import {
 } from "./tools";
 
 const getSessionHistoryMock = vi.mocked(getSessionHistory);
-const listExercisesMock = vi.mocked(listExercises);
+const listExercisesMock = vi.mocked(listRecommendableExercises);
 
 describe("createGetSessionHistoryTool", () => {
   beforeEach(() => {
@@ -88,9 +88,14 @@ describe("createListExercisesTool", () => {
     listExercisesMock.mockReset();
   });
 
-  it("llama a listExercises() sin argumentos y devuelve el catálogo serializado", async () => {
+  it("llama a listRecommendableExercises() sin argumentos y devuelve el catálogo serializado", async () => {
     listExercisesMock.mockResolvedValue([
-      { id: "ex-1", name: "Sentadilla", type: "STRENGTH" },
+      {
+        id: "ex-1",
+        name: "Sentadilla",
+        type: "STRENGTH",
+        aiRecommendable: true,
+      },
     ] as never);
     const tool = createListExercisesTool();
 
@@ -98,7 +103,12 @@ describe("createListExercisesTool", () => {
 
     expect(listExercisesMock).toHaveBeenCalledWith();
     expect(JSON.parse(result as string)).toEqual([
-      { id: "ex-1", name: "Sentadilla", type: "STRENGTH" },
+      {
+        id: "ex-1",
+        name: "Sentadilla",
+        type: "STRENGTH",
+        aiRecommendable: true,
+      },
     ]);
   });
 });

@@ -22,6 +22,7 @@ describe("renameExercise", () => {
       id: "ex-1",
       name: "Press de banca con mancuernas",
       type: "STRENGTH",
+      aiRecommendable: true,
       createdAt: new Date(),
     } as never);
 
@@ -36,11 +37,41 @@ describe("renameExercise", () => {
         id: "ex-1",
         name: "Press de banca con mancuernas",
         type: "STRENGTH",
+        aiRecommendable: true,
       });
     }
     expect(updateMock).toHaveBeenCalledWith({
       where: { id: "ex-1" },
-      data: { name: "Press de banca con mancuernas", type: "STRENGTH" },
+      data: {
+        name: "Press de banca con mancuernas",
+        type: "STRENGTH",
+        aiRecommendable: true,
+      },
+    });
+  });
+
+  it("permite marcar un ejercicio como no recomendable por IA (cardio espontáneo)", async () => {
+    updateMock.mockResolvedValue({
+      id: "ex-3",
+      name: "Surf",
+      type: "CARDIO",
+      aiRecommendable: false,
+      createdAt: new Date(),
+    } as never);
+
+    const result = await renameExercise("ex-3", {
+      name: "Surf",
+      type: "CARDIO",
+      aiRecommendable: false,
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.aiRecommendable).toBe(false);
+    }
+    expect(updateMock).toHaveBeenCalledWith({
+      where: { id: "ex-3" },
+      data: { name: "Surf", type: "CARDIO", aiRecommendable: false },
     });
   });
 

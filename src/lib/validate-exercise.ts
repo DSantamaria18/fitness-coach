@@ -7,6 +7,7 @@ import { z } from "zod";
 export const exerciseInputSchema = z.object({
   name: z.string().trim().min(1),
   type: z.enum(["STRENGTH", "CARDIO"]),
+  aiRecommendable: z.boolean().default(true),
 });
 
 export type ExerciseInput = z.input<typeof exerciseInputSchema>;

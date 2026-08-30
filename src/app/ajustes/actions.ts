@@ -26,6 +26,10 @@ export async function createExerciseAction(
   const result = await createExercise({
     name: formData.get("name"),
     type: formData.get("type"),
+    // Checkbox HTML: solo se envía en el FormData cuando está marcado, así
+    // que su ausencia se traduce explícitamente a `false` en vez de dejar
+    // que el default(true) del schema lo cuele sin querer.
+    aiRecommendable: formData.get("aiRecommendable") === "on",
   });
   if (!result.success) {
     return { error: result.error.message };
@@ -59,6 +63,7 @@ export async function renameExerciseAction(
   const result = await renameExercise(id, {
     name: formData.get("name"),
     type: formData.get("type"),
+    aiRecommendable: formData.get("aiRecommendable") === "on",
   });
   if (!result.success) {
     return { error: result.error.message };

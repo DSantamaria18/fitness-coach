@@ -357,6 +357,30 @@ Proyecto sin versión publicada todavía.
   negativas", "Suspensión en barra", "Remo invertido en barra" y "Fondos en paralelas". Solo
   afecta al seed: como con "Remo (máquina)" más arriba, una base de datos ya sembrada (prod
   incluida) no los recibe hasta re-sembrar o darlos de alta a mano desde `/ajustes`.
+- **Distinción entre cardio recomendable por IA y cardio espontáneo**: nuevo campo
+  `Exercise.aiRecommendable` (boolean, `@default(true)`, migración
+  `add_ai_recommendable_to_exercise`). `list_exercises` (skill vía MCP y generación IA in-app)
+  ahora usa `listRecommendableExercises()`, que filtra `aiRecommendable: true` — el registro
+  manual (`/sesion`, `/historial`, `/ajustes`) sigue viendo el catálogo completo vía
+  `listExercises()` sin cambios. Checkbox "Recomendable por IA" añadido al alta/edición de
+  ejercicio en `/ajustes`, con etiqueta "Espontáneo" en la lista cuando está desmarcado. Seed
+  actualizado: "Natación", "Surf" (nuevo), "Salida al monte" (nuevo) y "Escalada" (nuevo) pasan
+  a `aiRecommendable: false`; el resto del catálogo cardio (Carrera, Escaladores, Jumping
+  jacks, Rodillas altas) se mantiene recomendable. `SKILL.md` actualizado para no razonar sobre
+  el filtro (ya viene aplicado) y para registrar el cardio espontáneo cuando David lo mencione
+  en conversación aunque no aparezca en `list_exercises`.
+- Corregida una inconsistencia en `SKILL.md`: la sesión "Activo" instruía a proponer "surf" como
+  ejercicio, pero "Surf" nunca formó parte del catálogo — violaba la propia regla de "solo
+  nombres de `list_exercises` son válidos". Ahora "Activo" usa el catálogo recomendable normal,
+  y solo registra Surf/monte/escalada cuando David cuenta que los hizo.
+- **Core en la rotación de fuerza**: `SKILL.md` no mencionaba core/abdominales entre los grupos
+  musculares de Fuerza 1/Fuerza 2 (solo pecho, dorsal, hombro, brazo, sentadillas), así que la
+  IA nunca proponía "Plancha" ni "Elevación de piernas" pese a estar en el catálogo. Añadido
+  explícitamente.
+- Reforzada la regla de `comentario_ia` en `SKILL.md`: vacío es ahora el valor por defecto
+  explícito (no solo "cuando tengas algo útil"), y se instruye a comparar con el
+  `comentario_ia` de las 2-3 sesiones anteriores del mismo ejercicio antes de escribir, para no
+  repetir la misma observación sesión tras sesión.
 
 ### Changed
 

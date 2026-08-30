@@ -58,7 +58,23 @@ implementa, se mueve de aquí a [CHANGELOG.md](CHANGELOG.md) conservando su cód
   ejercicios menos frecuentes sin depender de la memoria o de buscar fuera de la app. Dificultad:
   alta (requiere decidir la fuente del contenido — grabación propia, licencia de terceros, o
   generación por IA —, almacenamiento de vídeo/GIF por ejercicio del catálogo, y el coste que
-  implique según la fuente elegida).
+  implique según la fuente elegida). Candidato de fuente detectado al revisar
+  `github.com/arvids-unavailable/openGym` (2026-08-30): usa el dataset público
+  `hasaneyldrm/exercises-dataset` (imágenes/GIFs por ejercicio) en vez de grabación propia — más
+  barato que las otras dos opciones, pero sujeto a los términos de licencia del dataset upstream
+  (a verificar antes de usarlo) y a que cubra el vocabulario de ejercicios en español del
+  catálogo actual.
+
+- **[BL-031]** **Reglas de progresión automática (lineal, doble progresión) y 1RM estimado por
+  ejercicio de fuerza**, como funciones puras testeables independientes de la IA. Justificación:
+  hoy la progresión de peso/reps solo la decide la IA al generar la sesión (heurística en
+  `SKILL.md` basada en RPE de la última sesión); una función de dominio explícita permitiría
+  mostrar la progresión sugerida también en `/informe` sin depender de una llamada a la API de
+  Claude, y serviría de base objetiva con la que contrastar lo que la IA propone. Idea tomada de
+  `github.com/arvids-unavailable/openGym` (2026-08-30, sin reutilizar su código — arquitectura
+  incompatible), que implementa esto como funciones puras en `frontend/src/lib/`. Dificultad:
+  media (diseño de las fórmulas y su testing es sencillo; decidir cómo se combina con la
+  heurística ya existente de la IA sin duplicar lógica es la parte no trivial).
 
 - **[BL-030]** **`NavBar` aparece en `/login` si ya hay sesión activa**: `NavBarGate` solo
   comprueba si existe sesión (`auth()`), no si la ruta es `/login` — si el navegador conserva una

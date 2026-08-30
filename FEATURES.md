@@ -186,9 +186,16 @@ cambio relevante.
 - Capa de dominio (`src/lib/create-exercise.ts`, `rename-exercise.ts`, `delete-exercise.ts`),
   mismo estilo de result type `{success:true,data}|{success:false,error:{code,message}}` que
   `create-session.ts`/`update-session.ts`/`delete-session.ts`. Validación compartida
-  (`validate-exercise.ts`, Zod): nombre no vacío (recortado) y tipo `STRENGTH`/`CARDIO`.
-  Catálogo global, sin `userId` (igual que `list-exercises.ts`) — la autenticación se exige en
-  la Server Action (`src/app/ajustes/actions.ts`), no en la capa de dominio.
+  (`validate-exercise.ts`, Zod): nombre no vacío (recortado), tipo `STRENGTH`/`CARDIO` y
+  `aiRecommendable` (boolean, `true` por defecto). Catálogo global, sin `userId` (igual que
+  `list-exercises.ts`) — la autenticación se exige en la Server Action
+  (`src/app/ajustes/actions.ts`), no en la capa de dominio.
+- Checkbox "Recomendable por IA" en el alta y la edición del ejercicio: controla si
+  `list_exercises` puede proponerlo al generar una sesión (ver más abajo, "Generación de
+  sesión con IA"). Los ejercicios con `aiRecommendable: false` se marcan con la etiqueta
+  "Espontáneo" en el listado — siguen siendo válidos para registrar sesiones a mano en
+  `/sesion`, solo quedan fuera de lo que la IA puede elegir por iniciativa propia (uso previsto:
+  cardio que David hace de forma espontánea — surf, salida al monte, escalada, natación).
 - El borrado es real (no soft-delete): si el ejercicio ya tiene `StrengthEntry`/`CardioEntry`
   asociadas, la FK constraint de la base de datos lo bloquea (Prisma `P2003`), traducido a un
   mensaje claro ("No se puede eliminar: ya tiene sesiones registradas.") en vez de un error 500
@@ -377,7 +384,10 @@ cambio relevante.
   - `edit_session` — edita una sesión existente (sustituye por completo su fecha y ejercicios).
   - `get_session_history` — consulta el historial de sesiones, con filtro opcional de fechas
     y/o ejercicio.
-  - `list_exercises` — lista el catálogo cerrado de ejercicios disponibles.
+  - `list_exercises` — lista el catálogo de ejercicios disponibles, filtrado a
+    `aiRecommendable: true` (`listRecommendableExercises()`): el cardio espontáneo (surf,
+    salida al monte, escalada, natación) no aparece aquí, aunque `log_session`/`edit_session`
+    lo siguen aceptando si David lo menciona en conversación.
   - `get_progress_report` — informe de progreso (peso corporal, frecuencia de entreno y,
     filtrando por ejercicio, su evolución específica).
 - Seguridad: cada petición exige un token Bearer válido (`MCP_BEARER_TOKEN`), comparado de

@@ -3,7 +3,7 @@ import { getBodyWeightHistory } from "@/lib/get-body-weight-history";
 import { createSession } from "@/lib/create-session";
 import { updateSession } from "@/lib/update-session";
 import { getSessionHistory } from "@/lib/get-session-history";
-import { listExercises } from "@/lib/list-exercises";
+import { listRecommendableExercises } from "@/lib/list-exercises";
 import { getProgressReport } from "@/lib/get-progress-report";
 import { toMcpToolError, type McpToolError } from "./errors";
 
@@ -81,8 +81,11 @@ export const getSessionHistoryTool: McpToolHandler = async (userId, input) => {
 };
 
 // Catálogo global (SPEC §3): no depende del userId ni acepta filtros.
+// Solo el subconjunto aiRecommendable: true — el cardio espontáneo (surf,
+// salida al monte...) sigue siendo válido para log_session/edit_session,
+// pero la IA no debe proponerlo por iniciativa propia (ver DECISIONS.md).
 export const listExercisesTool: McpToolHandler = async () => {
-  const data = await listExercises();
+  const data = await listRecommendableExercises();
   return { success: true, data };
 };
 

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { getSessionHistory } from "@/lib/get-session-history";
-import { listExercises } from "@/lib/list-exercises";
+import { listRecommendableExercises } from "@/lib/list-exercises";
 import { sessionSchema } from "@/lib/validate-session";
 
 export const SUBMIT_SESSION_PROPOSAL_TOOL_NAME = "submit_session_proposal";
@@ -53,7 +53,10 @@ export function createListExercisesTool() {
       "`ejercicio` de la propuesta final.",
     inputSchema: z.object({}),
     run: async () => {
-      const exercises = await listExercises();
+      // Solo el subconjunto aiRecommendable: true — el cardio espontáneo
+      // (surf, salida al monte...) sigue siendo válido para loguear a mano,
+      // pero la IA no debe proponerlo por iniciativa propia.
+      const exercises = await listRecommendableExercises();
       return JSON.stringify(exercises);
     },
   });

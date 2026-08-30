@@ -6,7 +6,12 @@ import type { ExerciseMutationError } from "@/lib/exercise-mutation-error";
 export type RenameExerciseResult =
   | {
       success: true;
-      data: { id: string; name: string; type: "STRENGTH" | "CARDIO" };
+      data: {
+        id: string;
+        name: string;
+        type: "STRENGTH" | "CARDIO";
+        aiRecommendable: boolean;
+      };
     }
   | {
       success: false;
@@ -42,7 +47,12 @@ export async function renameExercise(
     });
     return {
       success: true,
-      data: { id: exercise.id, name: exercise.name, type: exercise.type },
+      data: {
+        id: exercise.id,
+        name: exercise.name,
+        type: exercise.type,
+        aiRecommendable: exercise.aiRecommendable,
+      },
     };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {

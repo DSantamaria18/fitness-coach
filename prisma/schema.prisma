@@ -52,6 +52,13 @@ model Exercise {
   name      String       @unique
   type      ExerciseType
   createdAt DateTime     @default(now())
+  // Controla si list_exercises (el tool que consulta la IA al generar una
+  // sesión, ver src/lib/session-proposal/tools.ts) puede proponer este
+  // ejercicio. false para cardio que David hace de forma espontánea (surf,
+  // salida al monte, escalada...) y quiere poder loguear manualmente sin que
+  // la IA lo recomiende. @default(true) para no alterar el catálogo
+  // existente al aplicar la migración.
+  aiRecommendable Boolean @default(true)
 
   strengthEntries StrengthEntry[]
   cardioEntries   CardioEntry[]

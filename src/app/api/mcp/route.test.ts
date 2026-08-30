@@ -13,14 +13,16 @@ vi.mock("@/lib/prisma", () => ({
     bodyWeight: { create: vi.fn(), findMany: vi.fn() },
   },
 }));
-vi.mock("@/lib/list-exercises", () => ({ listExercises: vi.fn() }));
+vi.mock("@/lib/list-exercises", () => ({
+  listRecommendableExercises: vi.fn(),
+}));
 
 import { prisma } from "@/lib/prisma";
-import { listExercises } from "@/lib/list-exercises";
+import { listRecommendableExercises } from "@/lib/list-exercises";
 import { POST } from "./route";
 
 const findUniqueMock = vi.mocked(prisma.user.findUnique);
-const listExercisesMock = vi.mocked(listExercises);
+const listExercisesMock = vi.mocked(listRecommendableExercises);
 const bodyWeightCreateMock = vi.mocked(prisma.bodyWeight.create);
 const bodyWeightFindManyMock = vi.mocked(prisma.bodyWeight.findMany);
 
@@ -104,6 +106,7 @@ describe("POST /api/mcp", () => {
         id: "ex-1",
         name: "Sentadilla",
         type: "STRENGTH",
+        aiRecommendable: true,
         createdAt: new Date("2026-01-01"),
       },
     ]);

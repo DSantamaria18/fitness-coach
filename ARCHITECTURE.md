@@ -525,7 +525,10 @@ propósito — no sobre-diseñar la más simple, regla 4 CLAUDE.md).
     la función de dominio correspondiente y normalizando su error con `toMcpToolError`.
     `edit_session` extrae `id` del input y delega en `updateSession(userId, id, resto)`,
     rechazando con `VALIDATION_ERROR` sin llegar a llamar a Prisma si falta. `list_exercises`
-    ignora `userId` e input (catálogo global).
+    ignora `userId` e input (catálogo global) y usa `listRecommendableExercises()` en vez de
+    `listExercises()` — solo devuelve ejercicios con `aiRecommendable: true`, para que la IA
+    nunca proponga cardio espontáneo (surf, salida al monte, escalada, natación); ese cardio
+    sigue siendo válido para `log_session`/`edit_session`, que no filtran por el catálogo.
 - Cada resultado de tool se traduce a un `CallToolResult` de MCP con `content` (texto JSON, que
   el propio protocolo espera de cualquier tool) y `structuredContent` — `{data: ...}` en éxito,
   `{error: {code, message}, isError: true}` en fallo —, reflejando el contrato de error de
