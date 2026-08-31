@@ -2821,4 +2821,32 @@ confirmado con Playwright contra la URL real, no una hipótesis.
 
 ---
 
+- **Fecha:** 2026-08-31
+- **Decisión:** reclasificar "Escalada" de `CARDIO` a `STRENGTH` en el catálogo
+  (`prisma/seed.ts`) — David señaló que predomina la fuerza de agarre/tren superior/core sobre
+  el componente cardiovascular. `aiRecommendable` se mantiene en `false` (sigue siendo actividad
+  espontánea, no propuesta por la IA).
+- **Hallazgo de modelo de datos:** `Session` separa fuerza y cardio en tablas con columnas
+  incompatibles (`StrengthEntry`+`StrengthSet`: reps/peso/tempo/RPE vs. `CardioEntry`:
+  duración/distancia/pulso). Reclasificar el `Exercise.type` de un ejercicio con sesiones ya
+  registradas no migra esas filas: quedan huérfanas en la tabla del tipo antiguo. No hay
+  transformación automática razonable porque los campos no son derivables entre sí (duración no
+  implica reps).
+- **Convención adoptada para migrar el único caso histórico** (una sesión de 90:00, RPE 8, sin
+  repeticiones reportables): `StrengthSet.reps = 1` (una única "serie" que representa el intento
+  completo; no distorsiona el volumen de `get-progress-report.ts` porque `weightKg` es nulo →
+  `reps * 0 = 0`), `weightKg = null` (peso corporal), `tempo` = duración real en texto libre,
+  `rpe` = el reportado. Aplicada con `scripts/reclassify-escalada.ts` (script puntual,
+  idempotente, falla explícitamente si encuentra más de una `CardioEntry` de Escalada para no
+  aplicar a ciegas la misma duración/RPE a sesiones distintas).
+- **Pendiente tras el merge:** disparar `seed-prod.yml` (actualiza `Exercise.type` vía upsert) y
+  ejecutar `scripts/reclassify-escalada.ts` contra Turso con `TURSO_DATABASE_URL`/
+  `TURSO_AUTH_TOKEN` (migra la fila histórica) — dos pasos independientes, ambos requieren
+  confirmación explícita de David antes de cada disparo real (regla del proyecto).
+- **Lección para el checklist:** antes de reclasificar el `type` de un ejercicio con historial,
+  comprobar primero si tiene entradas registradas — el cambio de catálogo es trivial, pero migrar
+  las filas ya guardadas no lo es por el split de tablas fuerza/cardio.
+
+---
+
 _(se irá completando a medida que se tomen nuevas decisiones durante la implementación.)_

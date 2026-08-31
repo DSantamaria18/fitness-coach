@@ -419,6 +419,11 @@ Proyecto sin versión publicada todavía.
   workflows de GitHub Actions (`ci.yml`, `seed-prod.yml`). Mantenimiento de rutina: GitHub
   avisaba de que v4 targetea una versión de Node deprecada (detectado por TechOps al validar
   la primera ejecución real de `seed-prod.yml`, 2026-07-21). Sin cambios de comportamiento.
+- Reclasificado "Escalada" de `CARDIO` a `STRENGTH` en el catálogo (`prisma/seed.ts`) —
+  predomina la fuerza de agarre/tren superior/core sobre el componente cardiovascular.
+  `aiRecommendable` se mantiene en `false`. La única sesión histórica ya registrada se migra
+  con `scripts/reclassify-escalada.ts` (CardioEntry → StrengthEntry/StrengthSet con reps=1,
+  peso corporal, tempo=duración real, RPE real). Ver DECISIONS.md 2026-08-31.
 
 ### Fixed
 
