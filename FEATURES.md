@@ -195,7 +195,7 @@ cambio relevante.
   sesión con IA"). Los ejercicios con `aiRecommendable: false` se marcan con la etiqueta
   "Espontáneo" en el listado — siguen siendo válidos para registrar sesiones a mano en
   `/sesion`, solo quedan fuera de lo que la IA puede elegir por iniciativa propia (uso previsto:
-  cardio que David hace de forma espontánea — surf, salida al monte, escalada, natación).
+  actividad que David hace de forma espontánea — surf, salida al monte, escalada, natación).
 - El borrado es real (no soft-delete): si el ejercicio ya tiene `StrengthEntry`/`CardioEntry`
   asociadas, la FK constraint de la base de datos lo bloquea (Prisma `P2003`), traducido a un
   mensaje claro ("No se puede eliminar: ya tiene sesiones registradas.") en vez de un error 500
@@ -416,7 +416,7 @@ cambio relevante.
   - `get_session_history` — consulta el historial de sesiones, con filtro opcional de fechas
     y/o ejercicio.
   - `list_exercises` — lista el catálogo de ejercicios disponibles, filtrado a
-    `aiRecommendable: true` (`listRecommendableExercises()`): el cardio espontáneo (surf,
+    `aiRecommendable: true` (`listRecommendableExercises()`): la actividad espontánea (surf,
     salida al monte, escalada, natación) no aparece aquí, aunque `log_session`/`edit_session`
     lo siguen aceptando si David lo menciona en conversación.
   - `get_progress_report` — informe de progreso (peso corporal, frecuencia de entreno y,

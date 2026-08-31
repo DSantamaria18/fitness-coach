@@ -17,7 +17,7 @@ const prisma = new PrismaClient({ adapter });
 // adelante directamente en base de datos o vía la pantalla de
 // administración en /ajustes (ver FEATURES.md).
 //
-// aiRecommendable: false marca cardio que David hace de forma espontánea
+// aiRecommendable: false marca actividad que David hace de forma espontánea
 // (surf, salida al monte, escalada, natación) — sigue siendo válido para
 // loguear la sesión a mano, pero la IA no debe proponerlo por iniciativa
 // propia (list_exercises solo devuelve el resto, ver DECISIONS.md).
@@ -66,7 +66,10 @@ const exercises: {
     type: ExerciseType.CARDIO,
     aiRecommendable: false,
   },
-  { name: "Escalada", type: ExerciseType.CARDIO, aiRecommendable: false },
+  // Reclasificada de CARDIO a STRENGTH (predomina fuerza de agarre/tren
+  // superior/core sobre el componente cardiovascular) — ver DECISIONS.md
+  // 2026-08-31. Migración de datos histórica en scripts/reclassify-escalada.ts.
+  { name: "Escalada", type: ExerciseType.STRENGTH, aiRecommendable: false },
   // Añadidos junto a la primera ronda de imágenes/instrucciones (ver
   // prisma/exercise-media.json y DECISIONS.md 2026-08-30): movimientos
   // compuestos con el material de David, priorizados sobre aislados,

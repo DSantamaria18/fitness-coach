@@ -527,8 +527,9 @@ propósito — no sobre-diseñar la más simple, regla 4 CLAUDE.md).
     rechazando con `VALIDATION_ERROR` sin llegar a llamar a Prisma si falta. `list_exercises`
     ignora `userId` e input (catálogo global) y usa `listRecommendableExercises()` en vez de
     `listExercises()` — solo devuelve ejercicios con `aiRecommendable: true`, para que la IA
-    nunca proponga cardio espontáneo (surf, salida al monte, escalada, natación); ese cardio
-    sigue siendo válido para `log_session`/`edit_session`, que no filtran por el catálogo.
+    nunca proponga actividad espontánea (surf, salida al monte, escalada, natación); esa
+    actividad sigue siendo válida para `log_session`/`edit_session`, que no filtran por el
+    catálogo.
     `listRecommendableExercises()` además usa `select` explícito (`id`, `name`, `type`,
     `createdAt`) para excluir `instructionsEs`/`imageUrl`/`gifUrl` (enriquecimiento de UI, ver
     FEATURES.md "Imagen e instrucciones por ejercicio") — ese contenido no aporta nada a la
