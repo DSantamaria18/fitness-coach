@@ -1,0 +1,58 @@
+# Migración de datos puntual: convierte la única sesión histórica de
+# "Escalada" registrada como CardioEntry en StrengthEntry/StrengthSet, tras
+# la reclasificación de Escalada de CARDIO a STRENGTH en el catálogo (ver
+# scripts/reclassify-escalada.ts y DECISIONS.md 2026-08-31).
+#
+# Workflow de un solo uso (no forma parte del ciclo normal de despliegue,
+# a diferencia de migrate-prod.yml/seed-prod.yml): se mantiene tras su
+# ejecución como registro de qué se disparó y cuándo, pero no se espera
+# volver a dispararlo — el propio script es idempotente y no hace nada si
+# ya no quedan CardioEntry de Escalada pendientes.
+#
+# Disparo manual (nunca en push/PR: esto ESCRIBE en producción):
+#   gh workflow run reclassify-escalada.yml
+#
+# Secrets del repositorio (ya configurados para seed-prod.yml, se reutilizan):
+#   TURSO_DATABASE_URL
+#   TURSO_AUTH_TOKEN
+name: Reclasificar Escalada (migración de datos puntual)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: reclassify-escalada
+  cancel-in-progress: false
+
+jobs:
+  reclassify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Generar cliente Prisma
+        run: npx prisma generate
+
+      - name: Migrar sesión histórica de Escalada a StrengthEntry
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: npx tsx scripts/reclassify-escalada.ts
+
+      - name: Resumen
+        if: success()
+        run: |
+          {
+            echo "### Migración de Escalada completada"
+            echo ""
+            echo "\`scripts/reclassify-escalada.ts\` terminó con éxito (exit 0)"
+            echo "contra la Turso de producción."
+          } >> "$GITHUB_STEP_SUMMARY"
