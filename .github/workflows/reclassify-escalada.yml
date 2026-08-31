@@ -41,6 +41,12 @@ jobs:
       - name: Generar cliente Prisma
         run: npx prisma generate
 
+      - name: Diagnóstico temporal (por qué no hay CardioEntry que migrar)
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: npx tsx scripts/debug-escalada.ts
+
       - name: Migrar sesión histórica de Escalada a StrengthEntry
         env:
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
